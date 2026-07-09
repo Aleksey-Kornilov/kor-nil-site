@@ -1,0 +1,43 @@
+/* home.css — специфика главной страницы. */
+
+.hero {
+  padding-block: var(--space-9) var(--space-8);
+  text-align: center;
+}
+
+.hero-eyebrow {
+  display: inline-block;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent-subtle);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-5);
+}
+
+.hero-title {
+  margin-bottom: var(--space-5);
+  background: linear-gradient(135deg, var(--color-text), var(--color-text-muted));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-lead {
+  max-width: 640px;
+  margin-inline: auto;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  line-height: 1.5;
+  margin-bottom: var(--space-6);
+}
+
+.hero-cta {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}

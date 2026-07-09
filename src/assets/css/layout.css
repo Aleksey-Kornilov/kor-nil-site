@@ -1,0 +1,61 @@
+/* layout.css — контейнеры, сетка, отступы страниц. */
+
+/* Единый контейнер: центрирован, максимум 1180px, отступы по бокам на мобилке */
+.container {
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-inline: var(--space-5);
+}
+
+@media (min-width: 720px) {
+  .container { padding-inline: var(--space-6); }
+}
+
+/* Основная область страницы — с отступом сверху под sticky-шапку */
+.main {
+  padding-top: var(--space-9);
+  padding-bottom: var(--space-9);
+  min-height: calc(100vh - 100px);
+}
+
+/* Секции внутри страницы */
+.section {
+  padding-block: var(--space-8);
+}
+
+.section-title {
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+.section-lead {
+  max-width: 720px;
+  margin-inline: auto;
+  margin-bottom: var(--space-7);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 1.125rem;
+}
+
+/* Сетки для карточек */
+.grid {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.grid-2 { grid-template-columns: 1fr; }
+.grid-3 { grid-template-columns: 1fr; }
+
+@media (min-width: 720px) {
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Плавные переходы между страницами (View Transitions API — Chrome/Safari 2026) */
+@view-transition {
+  navigation: auto;
+}

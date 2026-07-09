@@ -1,0 +1,137 @@
+/* about.css — специфика страницы «Обо мне». */
+
+.about-hero {
+  text-align: center;
+  padding-block-start: var(--space-8);
+  padding-block-end: var(--space-6);
+}
+
+.about-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent), #8a2be2);
+  display: grid;
+  place-items: center;
+  margin: 0 auto var(--space-5);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+}
+.avatar-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  display: grid;
+  place-items: center;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.about-hero h1 {
+  margin-bottom: var(--space-3);
+}
+.about-role {
+  color: var(--color-text-muted);
+  font-size: 1.125rem;
+  margin-bottom: var(--space-6);
+}
+.about-links {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* Основной текст */
+.about-content {
+  padding-block: var(--space-6);
+}
+.prose {
+  max-width: 720px;
+  margin-inline: auto;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+.prose .lead {
+  font-size: 1.1875rem;
+  color: var(--color-text);
+  margin-bottom: var(--space-5);
+}
+.prose p {
+  margin-bottom: var(--space-5);
+  color: var(--color-text);
+}
+.prose p:last-child { margin-bottom: 0; }
+
+/* Стек и навыки */
+.skills-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+@media (min-width: 720px) {
+  .skills-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .skills-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.skill-block {
+  padding: var(--space-6);
+}
+.skill-block h3 {
+  color: var(--color-accent);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 1rem;
+}
+.skill-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.skill-list li {
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  padding-left: var(--space-4);
+  position: relative;
+}
+.skill-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* Что готов делать */
+.offers-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+@media (min-width: 720px) {
+  .offers-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.offer {
+  padding: var(--space-6);
+  text-align: center;
+}
+.offer-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-4);
+  line-height: 1;
+}
+.offer h3 { margin-bottom: var(--space-3); }
+.offer p { color: var(--color-text-muted); line-height: 1.6; }

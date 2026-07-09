@@ -1,0 +1,103 @@
+---
+layout: layouts/base.njk
+pageTitle: "Контакты · Связаться с Алексеем Корниловым"
+pageDescription: "Свяжитесь со мной по вопросам разработки приложений или SEO-продвижения. Email, Telegram, MAX, VK, GitHub — выбирайте удобный канал."
+pageKeywords: "разработчик Самара контакты, flutter разработчик связаться, SEO услуги Самара"
+pageStyles: [contact]
+pageSchema: |
+  {
+    "@type": "ContactPage",
+    "@id": "https://kor-nil.ru/contact/#contactpage",
+    "url": "https://kor-nil.ru/contact/",
+    "name": "Контакты",
+    "description": "Каналы связи с Алексеем Корниловым"
+  }
+---
+
+<section class="section container contact-hero">
+  <p class="hero-eyebrow">Свяжитесь со мной</p>
+  <h1>Готов обсудить проект</h1>
+  <p class="section-lead">
+    Разработка приложений, SEO-продвижение, консультация — напишите удобным способом.
+    Отвечаю в течение дня.
+  </p>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Мессенджеры и почта</h2>
+
+  <div class="grid grid-3 contacts-grid">
+    <a href="mailto:{{ site.contacts.email }}" class="card contact-card">
+      <div class="card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+          <path d="m22 7-10 5L2 7"></path>
+        </svg>
+      </div>
+      <h3 class="card-title">Email</h3>
+      <p class="card-description contact-value">{{ site.contacts.email }}</p>
+    </a>
+
+    <a href="https://t.me/{{ site.contacts.telegram }}" target="_blank" rel="noopener" class="card contact-card">
+      <div class="card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m22 2-11 11"></path>
+          <path d="m22 2-6.5 20-4.5-9-9-4.5z"></path>
+        </svg>
+      </div>
+      <h3 class="card-title">Telegram</h3>
+      <p class="card-description contact-value">@{{ site.contacts.telegram }}</p>
+    </a>
+
+    <a href="{{ site.contacts.vk }}" target="_blank" rel="noopener" class="card contact-card">
+      <div class="card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 2H7a5 5 0 0 0-5 5v10a5 5 0 0 0 5 5h10a5 5 0 0 0 5-5V7a5 5 0 0 0-5-5z"></path>
+          <path d="M8 12h8"></path>
+          <path d="M12 8v8"></path>
+        </svg>
+      </div>
+      <h3 class="card-title">ВКонтакте</h3>
+      <p class="card-description contact-value">vk.com/kornil88</p>
+    </a>
+
+    <a href="{{ site.contacts.github }}" target="_blank" rel="noopener" class="card contact-card">
+      <div class="card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+        </svg>
+      </div>
+      <h3 class="card-title">GitHub</h3>
+      <p class="card-description contact-value">Aleksey-Kornilov</p>
+    </a>
+  </div>
+</section>
+
+<section class="section container">
+  <div class="contact-form-wrap glass">
+    <h2>Написать сразу</h2>
+    <p class="text-muted">Заполните форму — я отвечу на почту в течение дня.</p>
+
+    <form class="contact-form" id="contact-form" novalidate>
+      <div class="field">
+        <label for="cf-name">Ваше имя</label>
+        <input type="text" id="cf-name" name="name" required autocomplete="name" placeholder="Как к вам обращаться">
+      </div>
+      <div class="field">
+        <label for="cf-email">Email для ответа</label>
+        <input type="email" id="cf-email" name="email" required autocomplete="email" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label for="cf-message">Сообщение</label>
+        <textarea id="cf-message" name="message" required rows="5" placeholder="Расскажите вкратце о проекте или задаче"></textarea>
+      </div>
+      <div class="form-footer">
+        <button type="submit" class="btn btn-primary btn-lg">Отправить</button>
+        <p class="form-hint text-small text-muted">Никакого спама. Данные используются только для ответа вам.</p>
+      </div>
+      <div class="form-status" id="cf-status" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+</section>
+
+<script src="/assets/js/contact-form.js" defer></script>

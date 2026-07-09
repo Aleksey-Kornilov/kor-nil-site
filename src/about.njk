@@ -1,0 +1,123 @@
+---
+layout: layouts/base.njk
+pageTitle: "Обо мне · Алексей Корнилов, Full-stack разработчик"
+pageDescription: "С детства увлекаюсь компьютерами. После 17 лет предпринимательства перешёл в разработку. Автор ЧатЯдро, работаю с Flutter, Node.js, PostgreSQL, WebRTC. Ищу позицию Full-stack разработчика."
+pageKeywords: "flutter разработчик Самара, полный стек, опытный full-stack, node.js разработчик, программист Самара, ищу работу разработчик"
+pageStyles: [about]
+pageType: profile
+pageSchema: |
+  {
+    "@type": "AboutPage",
+    "@id": "https://kor-nil.ru/about/#aboutpage",
+    "url": "https://kor-nil.ru/about/",
+    "name": "Обо мне",
+    "description": "Профессиональный профиль Алексея Корнилова",
+    "mainEntity": { "@id": "https://kor-nil.ru#person" }
+  }
+---
+
+<section class="section container about-hero">
+  <div class="about-avatar" aria-hidden="true">
+    <div class="avatar-inner">AK</div>
+  </div>
+  <h1>Алексей Корнилов</h1>
+  <p class="about-role">Full-stack Flutter / Node.js разработчик · Самара</p>
+  <div class="about-links">
+    <a href="mailto:{{ site.contacts.email }}" class="btn btn-primary">Написать на почту</a>
+    <a href="/contact/" class="btn btn-secondary">Все контакты</a>
+  </div>
+</section>
+
+<section class="section container about-content">
+  <div class="prose">
+    <p class="lead">
+      С детства увлекаюсь компьютерами и техникой — всегда что-то дорабатывал, разбирался как устроены вещи. Со временем этот интерес перешёл в предпринимательство: 17 лет управлял собственной компанией, где научился доводить проекты до конца без потери качества.
+    </p>
+
+    <p>
+      В начале 2026 полностью ушёл в разработку. Специализация — full-stack: Flutter для клиента, Node.js для бэкенда, PostgreSQL, WebRTC, PWA. Автор проекта <a href="/projects/chatyadro/">ЧатЯдро</a> — мультитенантной платформы для локальных сообществ. Довёл продукт от нулевого коммита до боевого прода: 22 категории сообществ с ролевой моделью, real-time чат, WebRTC-аудио и голосовые, юридическая инфраструктура под 152-ФЗ.
+    </p>
+
+    <p>
+      Прод-версия работает под нагрузкой на <a href="https://sntchat.ru" target="_blank" rel="noopener">sntchat.ru</a> — несколько сообществ уже используют платформу активно. Независимые каналы stable/beta с автоматическим обновлением клиента.
+    </p>
+
+    <p>
+      Ищу позицию <strong>Full-stack Flutter / Node разработчика</strong> — удалённо или офис Самары. Параллельно продолжаю развивать ЧатЯдро и беру заказы на SEO-продвижение.
+    </p>
+  </div>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Стек и навыки</h2>
+
+  <div class="skills-grid">
+    <div class="skill-block glass">
+      <h3>Frontend</h3>
+      <ul class="skill-list">
+        <li>Flutter 3, Dart 3</li>
+        <li>PWA, Service Worker</li>
+        <li>WebRTC (аудио 1:1)</li>
+        <li>HTML5, CSS3, JavaScript</li>
+        <li>Собственные дизайн-системы</li>
+      </ul>
+    </div>
+
+    <div class="skill-block glass">
+      <h3>Backend</h3>
+      <ul class="skill-list">
+        <li>Node.js 20, Express 5</li>
+        <li>Socket.IO 4 (real-time)</li>
+        <li>PostgreSQL 15, миграции</li>
+        <li>JWT, refresh tokens</li>
+        <li>REST API, Web-Push VAPID</li>
+      </ul>
+    </div>
+
+    <div class="skill-block glass">
+      <h3>Инфраструктура</h3>
+      <ul class="skill-list">
+        <li>Nginx, HTTP/2, gzip</li>
+        <li>Docker, PM2</li>
+        <li>S3 (Yandex Object Storage)</li>
+        <li>Let's Encrypt, авто-SSL</li>
+        <li>Git, GitHub, rsync-деплой</li>
+      </ul>
+    </div>
+
+    <div class="skill-block glass">
+      <h3>Продукт и процессы</h3>
+      <ul class="skill-list">
+        <li>Продуктовое мышление</li>
+        <li>Юридика 152-ФЗ (согласия, журналы)</li>
+        <li>SEO-оптимизация сайтов</li>
+        <li>Управление проектами</li>
+        <li>Работа с клиентами</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Что я готов делать</h2>
+
+  <div class="offers-grid">
+    <article class="offer glass">
+      <div class="offer-icon">💼</div>
+      <h3>Работа в найме</h3>
+      <p>Позиция Full-stack Flutter / Node разработчика. Удалённо или в офис Самары. Готов участвовать в собеседованиях, показывать код, обсуждать задачи.</p>
+    </article>
+
+    <article class="offer glass">
+      <div class="offer-icon">🚀</div>
+      <h3>Разработка на заказ</h3>
+      <p>Мобильные приложения на Flutter, backend на Node.js, PWA, интеграции с внешними API. От концепции до продакшена, включая деплой и поддержку.</p>
+    </article>
+
+    <article class="offer glass">
+      <div class="offer-icon">🔍</div>
+      <h3>SEO-продвижение</h3>
+      <p>Технический аудит, оптимизация под поисковые системы, работа с Core Web Vitals, Schema.org, семантической разметкой.</p>
+    </article>
+  </div>
+</section>

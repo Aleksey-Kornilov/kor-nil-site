@@ -1,0 +1,23 @@
+{#- Базовый layout — оборачивает контент страницы шапкой и футером.
+   Переменные страницы (см. front matter каждой .njk):
+     pageTitle, pageDescription, pageKeywords, pageImage, pageType, pageSchema, pageStyles
+-#}
+<!DOCTYPE html>
+<html lang="{{ site.lang }}" dir="ltr">
+<head>
+{% include "components/head.njk" %}
+</head>
+<body>
+{% include "components/header.njk" %}
+
+<main id="main" class="main">
+{{ content | safe }}
+</main>
+
+{% include "components/footer.njk" %}
+
+{#- JS — загружается в конце для скорости. Загрузка не блокирует рендер. -#}
+<script src="/assets/js/theme-toggle.js"></script>
+<script src="/assets/js/nav.js"></script>
+</body>
+</html>

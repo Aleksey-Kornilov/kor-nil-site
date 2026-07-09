@@ -1,0 +1,132 @@
+{#-
+  <head> — все meta-теги, OpenGraph, Twitter Card, JSON-LD.
+  Переменные:
+    pageTitle       — заголовок этой страницы
+    pageDescription — краткое описание для поисковика (до 155 символов)
+    pageKeywords    — доп. ключевые слова (опционально)
+    pageImage       — путь к OG-картинке (опционально, дефолт /assets/images/og-default.png)
+    pagePath        — путь текущей страницы для canonical
+    pageType        — тип страницы для OG (website / article), по умолчанию website
+-#}
+{% set _title = pageTitle or site.title %}
+{% set _desc = pageDescription or site.description %}
+{% set _image = pageImage or '/assets/images/og-default.png' %}
+{% set _canonical = site.url + (pagePath or page.url) %}
+{% set _ogType = pageType or 'website' %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+{#- SEO: title + description + канонический URL -#}
+<title>{{ _title }}</title>
+<meta name="description" content="{{ _desc }}">
+{%- if pageKeywords %}<meta name="keywords" content="{{ pageKeywords }}">{% endif %}
+<link rel="canonical" href="{{ _canonical }}">
+<meta name="author" content="{{ site.author.name }}">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="format-detection" content="telephone=no">
+
+{#- Open Graph — красивое превью при шаринге в соцсети -#}
+<meta property="og:type" content="{{ _ogType }}">
+<meta property="og:title" content="{{ _title }}">
+<meta property="og:description" content="{{ _desc }}">
+<meta property="og:url" content="{{ _canonical }}">
+<meta property="og:image" content="{{ site.url }}{{ _image }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="{{ site.shortTitle }}">
+<meta property="og:locale" content="{{ site.locale }}">
+
+{#- Twitter Card -#}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ _title }}">
+<meta name="twitter:description" content="{{ _desc }}">
+<meta name="twitter:image" content="{{ site.url }}{{ _image }}">
+
+{#- Тема (адаптивно к системе + под тумблер) -#}
+<meta name="theme-color" content="{{ site.themeColorLight }}" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="{{ site.themeColor }}" media="(prefers-color-scheme: dark)">
+
+{#- Иконки -#}
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+
+{#- Предзагрузка критичного CSS для LCP -#}
+<link rel="preload" href="/assets/css/base.css" as="style">
+<link rel="preload" href="/assets/css/layout.css" as="style">
+
+{#- Основные стили -#}
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/layout.css">
+<link rel="stylesheet" href="/assets/css/components/theme.css">
+<link rel="stylesheet" href="/assets/css/components/nav.css">
+<link rel="stylesheet" href="/assets/css/components/button.css">
+<link rel="stylesheet" href="/assets/css/components/card.css">
+<link rel="stylesheet" href="/assets/css/components/glass.css">
+<link rel="stylesheet" href="/assets/css/components/footer.css">
+{%- if pageStyles %}
+{%- for style in pageStyles %}
+<link rel="stylesheet" href="/assets/css/pages/{{ style }}.css">
+{%- endfor %}
+{%- endif %}
+
+{#- Инициализация темы ДО отрисовки (иначе флэш белого/чёрного) -#}
+<script>
+(function() {
+  const saved = localStorage.getItem('theme');
+  const system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = saved || system;
+})();
+</script>
+
+{#- Schema.org JSON-LD — структурированные данные для поисковиков -#}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": "{{ site.url }}#person",
+      "name": "{{ site.author.name }}",
+      "alternateName": "{{ site.author.shortName }}",
+      "jobTitle": "{{ site.author.role }}",
+      "url": "{{ site.url }}",
+      "email": "mailto:{{ site.contacts.email }}",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "{{ site.author.city }}",
+        "addressCountry": "{{ site.author.country }}"
+      },
+      "sameAs": [
+        {%- set sameAs = [] %}
+        {%- if site.contacts.github %}{%- set sameAs = (sameAs.push(site.contacts.github), sameAs) %}{% endif %}
+        {%- if site.contacts.telegram %}{%- set sameAs = (sameAs.push('https://t.me/' + site.contacts.telegram), sameAs) %}{% endif %}
+        {%- if site.contacts.vk %}{%- set sameAs = (sameAs.push(site.contacts.vk), sameAs) %}{% endif %}
+        {%- for link in sameAs %}"{{ link }}"{% if not loop.last %},{% endif %}{% endfor %}
+      ],
+      "knowsAbout": ["Flutter", "Dart", "Node.js", "PostgreSQL", "WebRTC", "PWA", "SEO"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "{{ site.url }}#website",
+      "url": "{{ site.url }}",
+      "name": "{{ site.shortTitle }}",
+      "description": "{{ site.description }}",
+      "inLanguage": "{{ site.lang }}",
+      "publisher": { "@id": "{{ site.url }}#person" }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "{{ _canonical }}#webpage",
+      "url": "{{ _canonical }}",
+      "name": "{{ _title }}",
+      "description": "{{ _desc }}",
+      "isPartOf": { "@id": "{{ site.url }}#website" },
+      "about": { "@id": "{{ site.url }}#person" },
+      "inLanguage": "{{ site.lang }}"
+    }
+    {%- if pageSchema %},{{ pageSchema | safe }}{% endif %}
+  ]
+}
+</script>

@@ -1,0 +1,99 @@
+/* contact.css — специфика страницы контактов. */
+
+.contact-hero {
+  text-align: center;
+  padding-block-start: var(--space-8);
+  padding-block-end: var(--space-6);
+}
+
+.contacts-grid {
+  gap: var(--space-4);
+}
+
+.contact-card {
+  text-align: left;
+  padding: var(--space-5);
+}
+.contact-card .card-title {
+  font-size: 1rem;
+  margin-bottom: var(--space-2);
+}
+.contact-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+/* Форма связи */
+.contact-form-wrap {
+  padding: var(--space-7);
+  max-width: 720px;
+  margin-inline: auto;
+}
+.contact-form-wrap h2 { margin-bottom: var(--space-3); }
+.contact-form-wrap p { margin-bottom: var(--space-6); }
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.field label {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.field input,
+.field textarea {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: var(--fs-body);
+  font-family: inherit;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+.field input:focus,
+.field textarea:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  background: var(--color-bg-elevated);
+}
+.field textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.form-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+.form-hint { max-width: 420px; margin: 0; }
+
+.form-status {
+  font-size: var(--fs-small);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  display: none;
+}
+.form-status.is-success {
+  display: block;
+  background: rgba(16, 163, 127, 0.1);
+  color: var(--color-success);
+  border: 1px solid rgba(16, 163, 127, 0.3);
+}
+.form-status.is-error {
+  display: block;
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--color-danger);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}

@@ -1,0 +1,199 @@
+---
+layout: layouts/base.njk
+pageTitle: "ЧатЯдро — мультитенантная платформа для локальных сообществ"
+pageDescription: "ЧатЯдро — платформа для СНТ, семьи, школы, работы и других локальных сообществ. Мессенджер, доска объявлений, лента, аудиозвонки, 22 категории с настраиваемыми ролями и модулями."
+pageKeywords: "чатядро, мессенджер для сообществ, приложение для СНТ, платформа для локальных сообществ, PWA, flutter, real-time чат"
+pageStyles: [chatyadro]
+pageType: article
+pageSchema: |
+  {
+    "@type": "SoftwareApplication",
+    "@id": "https://sntchat.ru#app",
+    "name": "ЧатЯдро",
+    "url": "https://sntchat.ru",
+    "applicationCategory": "SocialNetworkingApplication",
+    "operatingSystem": "Web, iOS, Android",
+    "author": { "@id": "https://kor-nil.ru#person" },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "RUB"
+    }
+  }
+---
+
+<section class="section container project-hero">
+  <p class="hero-eyebrow">Мой основной проект</p>
+  <h1>ЧатЯдро</h1>
+  <p class="section-lead">
+    Мультитенантная платформа для локальных сообществ. Мессенджер, лента, аудиозвонки,
+    доска объявлений и 22 категории с настраиваемыми ролями и модулями — всё в одном приложении.
+  </p>
+  <div class="hero-cta">
+    <a href="https://sntchat.ru/install" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+      Попробовать ЧатЯдро →
+    </a>
+    <a href="#features" class="btn btn-secondary btn-lg">Смотреть возможности</a>
+  </div>
+</section>
+
+<section class="section container">
+  <div class="stats-grid">
+    <div class="stat">
+      <div class="stat-value">22</div>
+      <div class="stat-label">категории сообществ</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">3</div>
+      <div class="stat-label">платформы: iOS, Android, Web</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">Live</div>
+      <div class="stat-label">работает в продакшене</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">100%</div>
+      <div class="stat-label">solo-разработка</div>
+    </div>
+  </div>
+</section>
+
+<section id="features" class="section container">
+  <h2 class="section-title">Что делает ЧатЯдро уникальным</h2>
+  <p class="section-lead">
+    Ниша, которую не покрывают ни Telegram, ни Nextdoor, ни MAX/Сферум.
+  </p>
+
+  <div class="feature-list">
+    <article class="feature">
+      <div class="feature-icon">🏘</div>
+      <h3>Мультитенантность</h3>
+      <p>Пользователь создаёт своё сообщество из 22 категорий: СНТ, семья, школа, работа, магазин, автоклуб, спорт, медицина и другие. У каждой категории — свои роли и свои модули.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🎭</div>
+      <h3>Двухуровневые роли</h3>
+      <p>Глобальные роли платформы (user / модератор / админ) + внутрисообщественные роли для каждой категории. Например для СНТ: Председатель, Член правления, Житель, Садовод.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">📱</div>
+      <h3>Работает везде</h3>
+      <p>PWA для iOS/Android (устанавливается на главный экран), нативные Android APK, iOS TestFlight. Один код на всё — Flutter.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">📞</div>
+      <h3>WebRTC-аудиозвонки</h3>
+      <p>Голосовые звонки 1:1 через WebRTC с сигналингом по Socket.IO. Работает в браузере без установки, поверх любой сети. Плюс голосовые сообщения с 3 скоростями и меткой «прослушано».</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🎬</div>
+      <h3>Асинхронный видео-транскод</h3>
+      <p>Видео с iPhone (HEIC/HEVC) конвертируется в MP4 в фоне на сервере. Пользователь не ждёт — сообщение отправляется сразу, готовое видео приходит по socket-событию.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🛡</div>
+      <h3>Автомодератор</h3>
+      <p>Собственный движок модерации с редактируемыми словарями терминов. Порог 3 жалоб → soft-hide, дальше — hard-remove. Аудит-журнал действий администраторов.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">📋</div>
+      <h3>Юридическая инфраструктура</h3>
+      <p>Полное соответствие 152-ФЗ: версионированные согласия юзеров, журнал подписей с IP и SHA256-хешем документа. Готовность к уведомлению в РКН.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🎮</div>
+      <h3>Игры и инструменты</h3>
+      <p>7 встроенных игр (шашки, шахматы, пазл, квиз, морской бой, крестики-нолики, «Балда»). Плюс инструменты сообществ: погода, календари, взносы, SOS.</p>
+    </article>
+  </div>
+</section>
+
+<section id="stack" class="section container">
+  <h2 class="section-title">Стек технологий</h2>
+  <p class="section-lead">Современный full-stack на всех уровнях.</p>
+
+  <div class="stack-grid">
+    <div class="stack-column glass">
+      <h3>Клиент</h3>
+      <ul>
+        <li>Flutter 3.22 · Dart 3</li>
+        <li>PWA (Service Worker, Wake Lock)</li>
+        <li>WebRTC (аудио-звонки)</li>
+        <li>Собственная дизайн-система (glassmorphism)</li>
+        <li>Conditional imports для платформ</li>
+        <li>Optimistic UI с socket-echo</li>
+      </ul>
+    </div>
+
+    <div class="stack-column glass">
+      <h3>Бэкенд</h3>
+      <ul>
+        <li>Node.js 20 · Express 5</li>
+        <li>Socket.IO 4 (single-channel)</li>
+        <li>PostgreSQL 15 (Docker)</li>
+        <li>Yandex Object Storage (S3-compatible)</li>
+        <li>ffmpeg async workers</li>
+        <li>JWT (access 15м + refresh opaque)</li>
+      </ul>
+    </div>
+
+    <div class="stack-column glass">
+      <h3>Инфраструктура</h3>
+      <ul>
+        <li>Nginx (HTTP/2, gzip)</li>
+        <li>PM2 process manager</li>
+        <li>Let's Encrypt (SSL авто-обновление)</li>
+        <li>rclone → Яндекс.Диск (шифрованные бэкапы AES-256)</li>
+        <li>Firebase Cloud Messaging (FCM)</li>
+        <li>Web-Push VAPID</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Как начать пользоваться</h2>
+  <p class="section-lead">Три простых шага — за пару минут вы уже в своём сообществе.</p>
+
+  <div class="how-to-start">
+    <article class="how-step">
+      <div class="how-step-number">1</div>
+      <h3>Установите приложение</h3>
+      <p>Откройте страницу с инструкциями — там есть подробные шаги для iPhone, Android и десктопа. Приложение работает как PWA (устанавливается прямо из браузера).</p>
+    </article>
+
+    <article class="how-step">
+      <div class="how-step-number">2</div>
+      <h3>Зарегистрируйтесь</h3>
+      <p>Быстрая регистрация по номеру телефона. Никаких проверок паспорта — только базовые согласия по 152-ФЗ.</p>
+    </article>
+
+    <article class="how-step">
+      <div class="how-step-number">3</div>
+      <h3>Создайте сообщество</h3>
+      <p>Выберите категорию из 22 доступных, назначьте роли участникам, включите нужные модули — и начинайте общаться.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section container project-cta">
+  <div class="glass project-cta-inner">
+    <h2>Готовы попробовать?</h2>
+    <p>Пошаговая инструкция с картинками — установка на iPhone или Android за 1 минуту.</p>
+    <div class="cta-buttons">
+      <a href="https://sntchat.ru/install" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+        Открыть инструкцию →
+      </a>
+      <a href="https://sntchat.ru" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">
+        Перейти к входу
+      </a>
+    </div>
+  </div>
+</section>

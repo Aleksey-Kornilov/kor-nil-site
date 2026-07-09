@@ -1,0 +1,15 @@
+{
+  "name": "kor-nil-site",
+  "version": "1.0.0",
+  "description": "Сайт-визитка Алексея Корнилова (kor-nil.ru): Full-stack разработка + SEO",
+  "private": true,
+  "scripts": {
+    "dev": "npx @11ty/eleventy --serve --port=8080",
+    "build": "npx @11ty/eleventy",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.0.0",
+    "@11ty/eleventy-plugin-syntaxhighlight": "^5.0.0"
+  }
+}

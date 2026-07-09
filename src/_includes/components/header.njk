@@ -1,0 +1,32 @@
+{#- Верхняя шапка сайта: логотип, меню, тумблер темы. Sticky. -#}
+<header class="site-header" role="banner">
+  <div class="container header-inner">
+    <a href="/" class="brand" aria-label="{{ site.author.name }} — на главную">
+      <span class="brand-mark" aria-hidden="true">k</span>
+      <span class="brand-text">{{ site.shortTitle }}</span>
+    </a>
+
+    <nav class="site-nav" aria-label="Основная навигация">
+      <button class="nav-toggle" aria-label="Открыть меню" aria-expanded="false" aria-controls="nav-menu">
+        <span></span><span></span><span></span>
+      </button>
+      <ul id="nav-menu" class="nav-menu">
+        <li><a href="/" {% if page.url == '/' %}aria-current="page"{% endif %}>Главная</a></li>
+        <li><a href="/projects/chatyadro/" {% if '/projects/chatyadro' in page.url %}aria-current="page"{% endif %}>ЧатЯдро</a></li>
+        <li><a href="/seo/" {% if page.url == '/seo/' %}aria-current="page"{% endif %}>SEO</a></li>
+        <li><a href="/about/" {% if page.url == '/about/' %}aria-current="page"{% endif %}>Обо мне</a></li>
+        <li><a href="/contact/" {% if page.url == '/contact/' %}aria-current="page"{% endif %}>Контакты</a></li>
+      </ul>
+    </nav>
+
+    <button class="theme-toggle" aria-label="Переключить тему">
+      <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+      </svg>
+      <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    </button>
+  </div>
+</header>

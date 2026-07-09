@@ -1,0 +1,42 @@
+{
+  "title": "Алексей Корнилов — Full-stack разработчик и SEO-специалист",
+  "shortTitle": "kor-nil.ru",
+  "description": "Строю веб- и мобильные приложения на Flutter и Node.js, оптимизирую сайты под поисковые системы. Автор проекта ЧатЯдро — платформы для локальных сообществ.",
+  "url": "https://kor-nil.ru",
+  "lang": "ru",
+  "locale": "ru_RU",
+  "author": {
+    "name": "Алексей Корнилов",
+    "shortName": "Aleksey Kornilov",
+    "role": "Full-stack Flutter/Node.js разработчик · SEO-специалист",
+    "city": "Самара",
+    "country": "Россия"
+  },
+  "contacts": {
+    "email": "kornil-88@mail.ru",
+    "telegram": "kornil",
+    "vk": "https://vk.com/kornil88",
+    "github": "https://github.com/Aleksey-Kornilov"
+  },
+  "products": {
+    "chatyadro": {
+      "name": "ЧатЯдро",
+      "url": "https://sntchat.ru",
+      "description": "Мультитенантная платформа для локальных сообществ"
+    }
+  },
+  "seoKeywords": [
+    "flutter разработчик",
+    "flutter developer",
+    "node.js разработчик",
+    "full-stack разработчик Самара",
+    "SEO продвижение сайтов",
+    "SEO специалист",
+    "мессенджер для сообществ",
+    "приложение для СНТ",
+    "разработка PWA",
+    "фрилансер разработка"
+  ],
+  "themeColor": "#0e1621",
+  "themeColorLight": "#f7f8fa"
+}

@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /*.json$
+
+Sitemap: https://kor-nil.ru/sitemap.xml
