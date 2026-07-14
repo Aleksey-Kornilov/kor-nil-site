@@ -1,0 +1,184 @@
+/* seo.css — специфика страницы SEO-услуг. */
+
+.seo-hero {
+  text-align: center;
+  padding-block-start: var(--space-8);
+  padding-block-end: var(--space-6);
+}
+
+/* Цифры кейса */
+.case-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+@media (min-width: 900px) {
+  .case-metrics { grid-template-columns: repeat(4, 1fr); }
+}
+.case-metric {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.case-metric-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-accent);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: var(--space-3);
+}
+.case-metric-label {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+/* Кейс */
+.case {
+  padding: var(--space-7);
+}
+.case-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+}
+@media (min-width: 720px) {
+  .case-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.case-block h3 {
+  color: var(--color-accent);
+  font-size: 1rem;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+.case-block p {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+.case-block ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.case-block li {
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  padding-left: var(--space-4);
+  position: relative;
+}
+.case-block li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0.55em;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* Аудит — список найденных проблем */
+.audit-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+  max-width: 900px;
+  margin-inline: auto;
+}
+.audit-item {
+  padding: var(--space-6);
+}
+.audit-severity {
+  display: inline-block;
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-4);
+}
+.audit-high {
+  color: var(--color-danger);
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+.audit-mid {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+[data-theme="dark"] .audit-mid { color: #fbbf24; }
+
+.audit-item h3 { margin-bottom: var(--space-3); }
+.audit-item p {
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+.audit-item code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.audit-note {
+  max-width: 900px;
+  margin: var(--space-6) auto 0;
+  text-align: center;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+/* Этапы работы */
+.seo-steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+@media (min-width: 720px) {
+  .seo-steps { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .seo-steps { grid-template-columns: repeat(4, 1fr); }
+}
+.seo-step {
+  padding: var(--space-6);
+  text-align: center;
+}
+.seo-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: var(--space-4);
+}
+.seo-step h3 { margin-bottom: var(--space-3); }
+.seo-step p { color: var(--color-text-muted); line-height: 1.6; }
+
+/* CTA */
+.seo-cta-inner {
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+}
+.seo-cta-inner h2 { margin-bottom: var(--space-3); }
+.seo-cta-inner p {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+  max-width: 560px;
+  margin-inline: auto;
+}

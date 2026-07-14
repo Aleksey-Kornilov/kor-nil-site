@@ -36,7 +36,7 @@
       form.reset();
     } catch (err) {
       status.classList.add('is-error');
-      status.textContent = 'Не удалось отправить. Попробуйте написать в Telegram: @' + form.dataset.telegram || 'kornil';
+      status.textContent = 'Не удалось отправить. Попробуйте написать в Telegram: @' + (form.dataset.telegram || 'kornil');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Отправить';
