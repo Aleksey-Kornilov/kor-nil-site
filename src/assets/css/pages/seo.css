@@ -85,6 +85,24 @@
   background: var(--color-accent);
 }
 
+/* График роста поисковой видимости */
+.case-figure {
+  margin-top: var(--space-6);
+}
+.case-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+}
+.case-figure figcaption {
+  margin-top: var(--space-3);
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
 /* Аудит — список найденных проблем */
 .audit-list {
   display: grid;
