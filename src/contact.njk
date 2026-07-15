@@ -91,6 +91,12 @@ pageSchema: |
         <label for="cf-message">Сообщение</label>
         <textarea id="cf-message" name="message" required rows="5" placeholder="Расскажите вкратце о проекте или задаче"></textarea>
       </div>
+      {#- Honeypot: скрытое поле-приманка для спам-ботов. Люди его не видят и не
+         заполняют; если поле пришло непустым — сервер тихо отсеивает запрос. -#}
+      <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">
+        <label for="cf-company">Не заполняйте это поле</label>
+        <input type="text" id="cf-company" name="company" tabindex="-1" autocomplete="off">
+      </div>
       <div class="form-footer">
         <button type="submit" class="btn btn-primary btn-lg">Отправить</button>
         <p class="form-hint text-small text-muted">Никакого спама. Данные используются только для ответа вам.</p>
