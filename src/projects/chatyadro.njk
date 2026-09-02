@@ -1,8 +1,8 @@
 ---
 layout: layouts/base.njk
-pageTitle: "ЧатЯдро — мультитенантная платформа для локальных сообществ"
-pageDescription: "ЧатЯдро — платформа для СНТ, семьи, школы, работы и других локальных сообществ. Чаты, доска объявлений, лента, аудиозвонки, 22 категории с настраиваемыми ролями и модулями."
-pageKeywords: "чатядро, платформа для локальных сообществ, приложение для СНТ, чат для сообщества, PWA, flutter, real-time чат"
+pageTitle: "ЧатЯдро — платформа для локальных сообществ, приложение в RuStore"
+pageDescription: "ЧатЯдро — платформа для СНТ, семьи, школы и других локальных сообществ: чаты, лента, аудиозвонки, доска объявлений, 22 категории с ролями и модулями. Приложение опубликовано в RuStore."
+pageKeywords: "чатядро, платформа для локальных сообществ, приложение для СНТ, чат для сообщества, приложение в RuStore, PWA, flutter, real-time"
 pageStyles: [chatyadro]
 pageType: article
 pageSchema: |
@@ -12,7 +12,10 @@ pageSchema: |
     "name": "ЧатЯдро",
     "url": "https://sntchat.ru",
     "applicationCategory": "SocialNetworkingApplication",
-    "operatingSystem": "Web, iOS, Android",
+    "operatingSystem": "Android, Web",
+    "datePublished": "2026-08-16",
+    "downloadUrl": "https://www.rustore.ru/catalog/app/ru.sntchat.app",
+    "installUrl": "https://www.rustore.ru/catalog/app/ru.sntchat.app",
     "author": { "@id": "https://kor-nil.ru#person" },
     "offers": {
       "@type": "Offer",
@@ -26,12 +29,13 @@ pageSchema: |
   <p class="hero-eyebrow">Мой основной проект</p>
   <h1>ЧатЯдро</h1>
   <p class="section-lead">
-    Мультитенантная платформа для локальных сообществ. Чаты, лента, аудиозвонки,
-    доска объявлений и 22 категории с настраиваемыми ролями и модулями — всё в одном приложении.
+    Платформа для локальных сообществ. Чаты, лента, аудиозвонки, доска объявлений
+    и 22 категории с настраиваемыми ролями и модулями — всё в одном приложении.
+    С августа 2026 года опубликовано в RuStore.
   </p>
   <div class="hero-cta">
-    <a href="https://sntchat.ru/install" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
-      Попробовать ЧатЯдро →
+    <a href="https://www.rustore.ru/catalog/app/ru.sntchat.app" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+      Установить из RuStore →
     </a>
     <a href="#features" class="btn btn-secondary btn-lg">Смотреть возможности</a>
   </div>
@@ -40,22 +44,73 @@ pageSchema: |
 <section class="section container">
   <div class="stats-grid">
     <div class="stat">
+      <div class="stat-value">RuStore</div>
+      <div class="stat-label">модерация пройдена 16.08.2026</div>
+    </div>
+    <div class="stat">
       <div class="stat-value">22</div>
       <div class="stat-label">категории сообществ</div>
     </div>
     <div class="stat">
-      <div class="stat-value">3</div>
-      <div class="stat-label">платформы: iOS, Android, Web</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">Live</div>
-      <div class="stat-label">работает в продакшене</div>
+      <div class="stat-value">88</div>
+      <div class="stat-label">экранов в приложении</div>
     </div>
     <div class="stat">
       <div class="stat-value">100%</div>
       <div class="stat-label">solo-разработка</div>
     </div>
   </div>
+</section>
+
+<section id="release" class="section container">
+  <h2 class="section-title">Путь до магазина</h2>
+  <p class="section-lead">
+    Публикация в RuStore прошла не с первого раза. Показываю как было —
+    умение разобрать отказ полезнее гладкой истории.
+  </p>
+
+  <ol class="release-path">
+    <li class="release-step">
+      <div class="release-date">7 августа 2026</div>
+      <h3>Подача</h3>
+      <p>
+        Карточка магазина, витрина, возрастной рейтинг, 17 типов собираемых данных
+        в разделе «Безопасность» и обоснование каждого запрашиваемого разрешения.
+        Сборка проверена вскрытием APK: состав разрешений и версия — те, что заявлены.
+      </p>
+    </li>
+
+    <li class="release-step release-step--reject">
+      <div class="release-date">11 августа 2026</div>
+      <h3>Отказ</h3>
+      <p>
+        Магазин потребовал подтвердить включение в реестр операторов персональных
+        данных. Отправил карточку реестра и снимок проверки статуса — вопрос
+        оказался юридическим, а не техническим.
+      </p>
+    </li>
+
+    <li class="release-step">
+      <div class="release-date">11 августа 2026, вечер</div>
+      <h3>Повторная сборка</h3>
+      <p>
+        Повторно отправить тот же файл нельзя — магазин требует номер версии выше
+        предыдущего. Пересобрал из боевого коммита в отдельной рабочей копии, подняв
+        только номер версии: так в магазин не уехали правки, которые жили лишь
+        на бете и ни разу не собирались в релизный APK.
+      </p>
+    </li>
+
+    <li class="release-step release-step--done">
+      <div class="release-date">16 августа 2026</div>
+      <h3>Опубликовано</h3>
+      <p>
+        Модерация пройдена, приложение доступно в каталоге. Заметная часть новых
+        участников пришла именно из магазина — видно по версии сборки в журналах
+        сервера. Первые отзывы — на пять звёзд.
+      </p>
+    </li>
+  </ol>
 </section>
 
 <section id="features" class="section container">
@@ -79,8 +134,8 @@ pageSchema: |
 
     <article class="feature">
       <div class="feature-icon">📱</div>
-      <h3>Работает везде</h3>
-      <p>PWA для iOS/Android (устанавливается на главный экран), нативные Android APK, iOS TestFlight. Один код на всё — Flutter.</p>
+      <h3>Где работает</h3>
+      <p>Android — из RuStore или установкой APK с сайта. В браузере на компьютере — как обычный сайт. На iPhone — PWA с главного экрана: в App Store приложения нет, и я об этом говорю прямо. Один код на всё — Flutter.</p>
     </article>
 
     <article class="feature">
@@ -90,27 +145,85 @@ pageSchema: |
     </article>
 
     <article class="feature">
-      <div class="feature-icon">🎬</div>
-      <h3>Асинхронный видео-транскод</h3>
-      <p>Видео с iPhone (HEIC/HEVC) конвертируется в MP4 в фоне на сервере. Пользователь не ждёт — сообщение отправляется сразу, готовое видео приходит по socket-событию.</p>
+      <div class="feature-icon">💬</div>
+      <h3>Чат целиком</h3>
+      <p>Фото и видео одной пачкой, файлы до 50 МБ, отправка контакта карточкой, около 250 смайлов со своими категориями, реакции. Голосования прямо в переписке — с анонимностью, которая соблюдается на сервере: «кто как проголосовал» не отдаётся даже автору.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🎨</div>
+      <h3>Редактор фото перед отправкой</h3>
+      <p>Кисть, подпись, замазка в двух режимах, поворот и обрезка — прямо в приложении, до отправки. С коротким знакомством, где инструменты рисуют себя сами.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🎓</div>
+      <h3>Обучение внутри приложения</h3>
+      <p>22 курса, разложенных по ступеням «Новичок — Уверенный — Профи», с медалями за пройденное. Аудитория нетехническая, поэтому обучение покрывает каждый экран, а не только основные сценарии.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🧩</div>
+      <h3>Модули сообществ</h3>
+      <p>Каждая категория включает свой набор: доска объявлений, календарь, взносы, заметки, «Помощь соседей» (просьбы с откликом и понятным жизненным циклом), «Покупки», строительные калькуляторы. Ненужное отключается в настройках сообщества.</p>
     </article>
 
     <article class="feature">
       <div class="feature-icon">🛡</div>
       <h3>Автомодератор</h3>
-      <p>Собственный движок модерации с редактируемыми словарями терминов. Порог 3 жалоб → soft-hide, дальше — hard-remove. Аудит-журнал действий администраторов.</p>
+      <p>Собственный движок модерации с редактируемыми словарями терминов. Порог 3 жалоб → soft-hide, дальше — hard-remove. Аудит-журнал действий администраторов и разбор жалоб с карточкой объекта.</p>
     </article>
 
     <article class="feature">
       <div class="feature-icon">📋</div>
       <h3>Юридическая инфраструктура</h3>
-      <p>Полное соответствие 152-ФЗ: версионированные согласия юзеров, журнал подписей с IP и SHA256-хешем документа. Готовность к уведомлению в РКН.</p>
+      <p>Соответствие 152-ФЗ: версионированные согласия, журнал подписей с IP и SHA256-хешем документа, включение в реестр операторов персональных данных. Публичные тексты документов собираются из тех же исходников, что и экраны в приложении — расхождение невозможно.</p>
     </article>
 
     <article class="feature">
       <div class="feature-icon">🎮</div>
       <h3>Игры и инструменты</h3>
       <p>7 встроенных игр (шашки, шахматы, пазл, квиз, морской бой, крестики-нолики, «Балда»). Плюс инструменты сообществ: погода, календари, взносы, SOS.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">📰</div>
+      <h3>Ранжирование ленты</h3>
+      <p>Чистая хронология работает плохо: лента открывалась записями двухмесячной давности. Сделал окно свежести, показ непросмотренного вперёд и ограничение — не больше двух постов подряд от одного автора. Порог окна выбран замером на живых данных, а не на глаз.</p>
+    </article>
+  </div>
+</section>
+
+<section id="engineering" class="section container">
+  <h2 class="section-title">Две задачи, которыми доволен</h2>
+  <p class="section-lead">Обе решались по замерам, а не на ощупь.</p>
+
+  <div class="feature-list">
+    <article class="feature">
+      <div class="feature-icon">🎬</div>
+      <h3>Медиа: было / стало</h3>
+      <p>
+        Видео уходили такими, какими их сняла камера, а фото в браузере не сжимались
+        вовсе. Сделал сжатие на устройстве и перекодирование до 720p на сервере:
+        библиотека роликов <strong>630 → 204 МБ</strong>, битрейт <strong>5,7 → 1,9 Мбит/с</strong>,
+        самый тяжёлый ролик <strong>48,2 → 4,6 МБ</strong>, фото <strong>3,8 МБ → 729 КБ</strong>.
+        Плюс превью первым кадром через ffmpeg, кэш файлов на устройстве и проценты
+        загрузки. Видео с iPhone (HEVC) конвертируется в фоне: сообщение уходит сразу,
+        готовый файл приходит по socket-событию.
+      </p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">✍️</div>
+      <h3>Проверка орфографии в браузере</h3>
+      <p>
+        Просьба от пользователя: в PWA нет системной проверки текста. Поднял свой
+        сервис на hunspell ru_RU поверх nspell с ленивой загрузкой словаря и кэшем.
+        Встроенного подборщика не хватило — он исправляет одну ошибку в слове, а
+        «превед» требует двух, поэтому добавил таблицу типичных русских опечаток.
+        Разбор текста сделан в два шага: адреса почты, ссылки и номера отбрасываются
+        целиком, иначе проверка вытаскивала куски из email как отдельные слова.
+      </p>
     </article>
   </div>
 </section>
@@ -123,11 +236,11 @@ pageSchema: |
     <div class="stack-column glass">
       <h3>Клиент</h3>
       <ul>
-        <li>Flutter 3.22 · Dart 3</li>
+        <li>Flutter 3.38 · Dart 3.10</li>
         <li>PWA (Service Worker, Wake Lock)</li>
         <li>WebRTC (аудио-звонки)</li>
         <li>Собственная дизайн-система (glassmorphism)</li>
-        <li>Conditional imports для платформ</li>
+        <li>Rich-text редактор постов (Quill)</li>
         <li>Optimistic UI с socket-echo</li>
       </ul>
     </div>
@@ -166,7 +279,7 @@ pageSchema: |
     <article class="how-step">
       <div class="how-step-number">1</div>
       <h3>Установите приложение</h3>
-      <p>Откройте страницу с инструкциями — там есть подробные шаги для iPhone, Android и десктопа. Приложение работает как PWA (устанавливается прямо из браузера).</p>
+      <p>На Android — из RuStore, в два касания и с автообновлением. На iPhone и компьютере — откройте сайт и добавьте на главный экран: есть пошаговая инструкция с картинками.</p>
     </article>
 
     <article class="how-step">
@@ -186,13 +299,13 @@ pageSchema: |
 <section class="section container project-cta">
   <div class="glass project-cta-inner">
     <h2>Готовы попробовать?</h2>
-    <p>Пошаговая инструкция с картинками — установка на iPhone или Android за 1 минуту.</p>
+    <p>Android — из магазина. iPhone и компьютер — по пошаговой инструкции с картинками.</p>
     <div class="cta-buttons">
-      <a href="https://sntchat.ru/install" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
-        Открыть инструкцию →
+      <a href="https://www.rustore.ru/catalog/app/ru.sntchat.app" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+        Установить из RuStore →
       </a>
-      <a href="https://sntchat.ru" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">
-        Перейти к входу
+      <a href="https://sntchat.ru/install" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">
+        Открыть инструкцию
       </a>
     </div>
   </div>

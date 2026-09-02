@@ -46,6 +46,33 @@
   color: var(--color-text-muted);
 }
 
+/* Путь до магазина — вертикальная лента этапов */
+.release-path {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 760px;
+  display: grid;
+  gap: var(--space-4);
+}
+.release-step {
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+}
+.release-step--reject { border-left-color: var(--color-danger); }
+.release-step--done { border-left-color: var(--color-success); }
+.release-date {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--color-text-subtle);
+  margin-bottom: var(--space-2);
+}
+.release-step h3 { margin-bottom: var(--space-2); }
+.release-step p { color: var(--color-text-muted); line-height: 1.6; }
+
 /* Feature list */
 .feature-list {
   display: grid;
