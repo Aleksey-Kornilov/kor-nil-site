@@ -64,6 +64,45 @@ eleventyNavigation:
 </section>
 
 <section class="section container">
+  <h2 class="section-title">Из блога</h2>
+  <p class="section-lead">Разборы из практики: что делал, что измерил, что получилось.</p>
+  <div class="grid grid-2">
+    {%- for post in collections.posts | head(4) %}
+    <a href="{{ post.url }}" class="card card-link">
+      <p class="post-meta"><time datetime="{{ post.date | date('iso') }}">{{ post.date | date }}</time> · {{ post.templateContent | readingTime }} мин</p>
+      <h3 class="card-title">{{ post.data.title }}</h3>
+      <p class="card-description">{{ post.data.description }}</p>
+      <div class="card-footer">Читать →</div>
+    </a>
+    {%- endfor %}
+  </div>
+  <p class="section-more"><a href="/blog/" class="btn btn-secondary">Все статьи</a></p>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Калькуляторы для стройки и дачи</h2>
+  <p class="section-lead">Те же, что в приложении ЧатЯдро: бесплатно, без регистрации, считают сразу.</p>
+  <div class="grid grid-3">
+    <a href="/tools/kalkulyator-betona/" class="card card-link">
+      <div class="card-icon">🧱</div>
+      <h3 class="card-title">Бетон</h3>
+      <p class="card-description">Объём на плиту, ленту или столбы; цемент в мешках, песок, щебень по маркам М100–М300.</p>
+    </a>
+    <a href="/tools/kalkulyator-kraski/" class="card card-link">
+      <div class="card-icon">🎨</div>
+      <h3 class="card-title">Краска</h3>
+      <p class="card-description">Литры и банки на стены или потолок с учётом слоёв и вычетом окон.</p>
+    </a>
+    <a href="/tools/kalkulyator-peska-shchebnya/" class="card card-link">
+      <div class="card-icon">🚚</div>
+      <h3 class="card-title">Песок и щебень</h3>
+      <p class="card-description">Кубы в тонны и обратно, рейсы Газели и самосвала.</p>
+    </a>
+  </div>
+  <p class="section-more"><a href="/tools/" class="btn btn-secondary">Все калькуляторы</a></p>
+</section>
+
+<section class="section container">
   <h2 class="section-title">Проекты</h2>
 
   <div class="grid grid-3">

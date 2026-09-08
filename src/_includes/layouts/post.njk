@@ -1,0 +1,45 @@
+---
+layout: layouts/base.njk
+---
+{#- Статья блога: шапка (дата, время чтения), текст из Markdown, подвал со ссылками.
+    Front matter статьи: title, description, date, updated (опц.), tags (опц.), image (опц.). -#}
+{%- set posts = collections.posts %}
+{%- set idx = 0 %}
+{%- for p in posts %}{% if p.url == page.url %}{% set idx = loop.index0 %}{% endif %}{% endfor %}
+{%- set newer = posts[idx - 1] if idx > 0 else null %}
+{%- set older = posts[idx + 1] if idx + 1 < posts.length else null %}
+
+<article class="post container">
+  <header class="post-header">
+    <p class="post-meta">
+      <time datetime="{{ page.date | date('iso') }}">{{ page.date | date }}</time>
+      · {{ content | readingTime }} мин чтения
+      {%- if updated %} · обновлено <time datetime="{{ updated | date('iso') }}">{{ updated | date }}</time>{% endif %}
+    </p>
+    <h1 class="post-title">{{ title }}</h1>
+    {%- if description %}<p class="post-lead">{{ description }}</p>{% endif %}
+  </header>
+
+  <div class="prose post-body">
+    {{ content | safe }}
+  </div>
+
+  <footer class="post-footer glass">
+    <p>
+      Вопрос или поправка? Напишите мне в
+      <a href="https://t.me/{{ site.contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>
+      или через <a href="/contact/">форму</a>. Статьи выходят в <a href="/feed.xml">RSS</a>.
+    </p>
+    <p class="post-author">
+      Автор — <a href="/about/">{{ site.author.name }}</a>, {{ site.author.role | lower }}.
+      Основной проект — <a href="/projects/chatyadro/">ЧатЯдро</a>.
+    </p>
+  </footer>
+
+  {%- if newer or older %}
+  <nav class="post-nav" aria-label="Соседние статьи">
+    {%- if older %}<a class="post-nav-link" href="{{ older.url }}" rel="prev"><span>← Раньше</span>{{ older.data.title }}</a>{% else %}<span></span>{% endif %}
+    {%- if newer %}<a class="post-nav-link post-nav-link--next" href="{{ newer.url }}" rel="next"><span>Позже →</span>{{ newer.data.title }}</a>{% endif %}
+  </nav>
+  {%- endif %}
+</article>

@@ -1,0 +1,53 @@
+---
+permalink: /tools/ploshchad-uchastka/
+pageCrumb: "Площадь участка"
+pageTitle: "Площадь участка в сотках онлайн: калькулятор по размерам, периметр для забора"
+pageDescription: "Считает площадь участка в сотках, квадратных метрах и гектарах по длине и ширине, для треугольника, круга и трапеции. Показывает периметр, чтобы прикинуть длину забора."
+pageKeywords: "площадь участка в сотках, калькулятор соток, сколько соток в участке, перевести м2 в сотки, периметр участка для забора"
+pageSchema: |
+  {
+    "@type": "FAQPage",
+    "@id": "https://kor-nil.ru/tools/ploshchad-uchastka/#faq",
+    "mainEntity": [
+      { "@type": "Question", "name": "Сколько квадратных метров в одной сотке?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Одна сотка равна 100 м². Участок 20 × 30 м — это 600 м², то есть 6 соток. В гектаре 100 соток." } },
+      { "@type": "Question", "name": "Как посчитать площадь участка неправильной формы?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Разбейте участок на простые фигуры: прямоугольники, треугольники, трапеции. Посчитайте площадь каждой и сложите." } }
+    ]
+  }
+---
+
+<section class="section container tool-hero">
+  <h1>Площадь участка в сотках</h1>
+  <p class="section-lead">
+    Сотки, квадратные метры, гектары и периметр для забора по размерам участка.
+  </p>
+  <div class="calc glass" data-calc="area">
+    <noscript><p>Для работы калькулятора включите JavaScript.</p></noscript>
+  </div>
+</section>
+
+<section class="section container tool-text">
+  <h2>Как считает калькулятор</h2>
+  <ul>
+    <li><strong>Прямоугольник:</strong> длина × ширина; периметр 2 × (длина + ширина).</li>
+    <li><strong>Треугольник:</strong> основание × высота ÷ 2.</li>
+    <li><strong>Круг:</strong> π × радиус²; периметр 2 × π × радиус.</li>
+    <li><strong>Трапеция:</strong> (верхнее + нижнее основание) ÷ 2 × высота.</li>
+  </ul>
+  <p>Сотка = 100 м², гектар = 10 000 м². Для участка сложной формы разбейте его на простые фигуры и сложите площади.</p>
+
+  <h2>Частые вопросы</h2>
+  <details><summary>Сколько квадратных метров в сотке?</summary><p>100 м². Участок 20 × 30 м — это 6 соток.</p></details>
+  <details><summary>Сколько соток в гектаре?</summary><p>100 соток, или 10 000 м².</p></details>
+  <details><summary>Как узнать длину забора?</summary><p>Это периметр. Для прямоугольника и круга калькулятор показывает его отдельной строкой.</p></details>
+
+  <div class="glass tool-app">
+    <h2>Этот калькулятор есть в приложении ЧатЯдро</h2>
+    <p>Там он считает стоимость земли, газона или плитки по цене за квадратный метр и отправляет расчёт в чат.</p>
+    <a href="https://www.rustore.ru/catalog/app/ru.sntchat.app" target="_blank" rel="noopener" class="btn btn-primary">Установить из RuStore →</a>
+    <a href="/tools/" class="btn btn-secondary">Все калькуляторы</a>
+  </div>
+</section>
+
+<script src="/assets/js/calculators.js" defer></script>

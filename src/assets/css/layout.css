@@ -40,6 +40,9 @@
   font-size: 1.125rem;
 }
 
+/* Ссылка «все …» под сеткой карточек */
+.section-more { text-align: center; margin-top: var(--space-6); }
+
 /* Сетки для карточек */
 .grid {
   display: grid;

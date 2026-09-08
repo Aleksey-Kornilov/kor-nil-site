@@ -57,6 +57,7 @@
 .footer-nav a,
 .footer-contacts a {
   display: inline-block;
+  min-width: 24px;
   padding-block: var(--space-1); /* цель для пальца ≥ 24px (WCAG 2.5.8) */
   color: var(--color-text);
   font-size: var(--fs-small);

@@ -1,0 +1,13 @@
+{
+  "layout": "layouts/post.njk",
+  "tags": ["posts"],
+  "permalink": "/blog/{{ page.fileSlug }}/",
+  "pageType": "article",
+  "pageCrumbParent": { "href": "/blog/", "label": "Блог" },
+  "eleventyComputed": {
+    "pageTitle": "{{ title }} · Блог Алексея Корнилова",
+    "pageDescription": "{{ description }}",
+    "pageCrumb": "{{ crumb or title }}",
+    "pageImage": "{{ image or '/assets/images/og-default.png' }}"
+  }
+}

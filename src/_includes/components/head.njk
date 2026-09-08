@@ -65,6 +65,7 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="alternate" type="application/rss+xml" title="Блог Алексея Корнилова" href="/feed.xml">
 
 {#- CSS: критичная часть инлайном (первая отрисовка без запроса в сеть),
     остальное — один минифицированный бандл с хешем. Сборка: lib/css-bundle.mjs -#}
@@ -174,8 +175,29 @@
       "@id": "{{ _canonical }}#breadcrumb",
       "itemListElement": [
         { "@type": "ListItem", "position": 1, "name": "{{ t.crumbHome }}", "item": "{{ site.url }}{{ t.home }}" },
+        {%- if pageCrumbParent %}
+        { "@type": "ListItem", "position": 2, "name": "{{ pageCrumbParent.label }}", "item": "{{ site.url }}{{ pageCrumbParent.href }}" },
+        { "@type": "ListItem", "position": 3, "name": "{{ pageCrumb }}", "item": "{{ _canonical }}" }
+        {%- else %}
         { "@type": "ListItem", "position": 2, "name": "{{ pageCrumb }}", "item": "{{ _canonical }}" }
+        {%- endif %}
       ]
+    }
+    {%- endif %}
+    {%- if tags and 'posts' in tags %},
+    {
+      "@type": "BlogPosting",
+      "@id": "{{ _canonical }}#post",
+      "mainEntityOfPage": { "@id": "{{ _canonical }}#webpage" },
+      "headline": "{{ title }}",
+      "description": "{{ description }}",
+      "image": "{{ site.url }}{{ _image }}",
+      "datePublished": "{{ page.date | date('iso') }}",
+      "dateModified": "{{ (updated or page.date) | date('iso') }}",
+      "author": { "@id": "{{ site.url }}#person" },
+      "publisher": { "@id": "{{ site.url }}#person" },
+      "inLanguage": "ru",
+      "isPartOf": { "@id": "{{ site.url }}/blog/#blog" }
     }
     {%- endif %}
     {%- if pageSchema %},{{ pageSchema | safe }}{% endif %}

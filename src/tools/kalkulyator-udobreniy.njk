@@ -1,0 +1,65 @@
+---
+permalink: /tools/kalkulyator-udobreniy/
+pageCrumb: "Удобрения"
+pageTitle: "Калькулятор удобрений: сколько внести на грядку и как развести раствор для подкормки"
+pageDescription: "Считает количество удобрения на площадь по норме в граммах на квадратный метр и дозу для раствора на ведро или лейку. Готовые нормы: перегной, навоз, зола, селитра, суперфосфат, мочевина, комплексное NPK."
+pageKeywords: "калькулятор удобрений, норма внесения удобрений на м2, сколько селитры на 10 литров воды, как развести мочевину, расчёт удобрений на грядку"
+pageSchema: |
+  {
+    "@type": "FAQPage",
+    "@id": "https://kor-nil.ru/tools/kalkulyator-udobreniy/#faq",
+    "mainEntity": [
+      { "@type": "Question", "name": "Сколько селитры разводить на 10 литров воды?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Ориентировочно 15 г на 10 л воды для подкормки. Точную норму смотрите на упаковке конкретного удобрения." } },
+      { "@type": "Question", "name": "Сколько золы вносить на квадратный метр?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Примерно 150 г на 1 м². На грядку 10 м² понадобится около 1,5 кг." } }
+    ]
+  }
+---
+
+<section class="section container tool-hero">
+  <h1>Калькулятор удобрений</h1>
+  <p class="section-lead">
+    Сколько удобрения внести на грядку по норме и сколько граммов развести в ведре или лейке.
+  </p>
+  <div class="calc glass" data-calc="fertilizer">
+    <noscript><p>Для работы калькулятора включите JavaScript.</p></noscript>
+  </div>
+</section>
+
+<section class="section container tool-text">
+  <h2>Как считает калькулятор</h2>
+  <ul>
+    <li><strong>Внесение на площадь:</strong> граммы = площадь (м²) × норма (г на 1 м²). От 1000 г результат показывается в килограммах.</li>
+    <li><strong>Раствор:</strong> граммы = концентрация (г на 10 л) × объём воды ÷ 10.</li>
+  </ul>
+
+  <h2>Ориентировочные нормы</h2>
+  <table>
+    <thead><tr><th>Удобрение</th><th>На площадь, г/м²</th><th>В раствор, г на 10 л</th></tr></thead>
+    <tbody>
+      <tr><td>Перегной, компост</td><td>5000</td><td>—</td></tr>
+      <tr><td>Навоз</td><td>4000</td><td>—</td></tr>
+      <tr><td>Зола</td><td>150</td><td>—</td></tr>
+      <tr><td>Селитра</td><td>20</td><td>15</td></tr>
+      <tr><td>Суперфосфат</td><td>40</td><td>—</td></tr>
+      <tr><td>Мочевина</td><td>—</td><td>10</td></tr>
+      <tr><td>Коровяк, настой</td><td>—</td><td>500</td></tr>
+      <tr><td>Комплексное NPK</td><td>30</td><td>20</td></tr>
+    </tbody>
+  </table>
+  <p>Нормы примерные, уточняйте на упаковке конкретного удобрения. Подкормку лучше делать по влажной почве, утром или вечером.</p>
+
+  <h2>Частые вопросы</h2>
+  <details><summary>Сколько селитры на 10 литров воды?</summary><p>Ориентировочно 15 г. Точная норма на упаковке.</p></details>
+  <details><summary>Сколько золы на квадратный метр?</summary><p>Около 150 г, то есть 1,5 кг на грядку в 10 м².</p></details>
+
+  <div class="glass tool-app">
+    <h2>Этот калькулятор есть в приложении ЧатЯдро</h2>
+    <p>Там он считает стоимость по цене за килограмм и отправляет расчёт соседям по СНТ одной кнопкой.</p>
+    <a href="https://www.rustore.ru/catalog/app/ru.sntchat.app" target="_blank" rel="noopener" class="btn btn-primary">Установить из RuStore →</a>
+    <a href="/tools/" class="btn btn-secondary">Все калькуляторы</a>
+  </div>
+</section>
+
+<script src="/assets/js/calculators.js" defer></script>

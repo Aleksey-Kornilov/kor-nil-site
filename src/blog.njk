@@ -1,0 +1,42 @@
+---
+layout: layouts/base.njk
+permalink: /blog/
+pageCrumb: "Блог"
+pageTitle: "Блог · Flutter, Node.js, SEO — разборы из практики"
+pageDescription: "Технические разборы из реальных проектов: публикация в RuStore, сжатие видео в Flutter, проверка орфографии в PWA, Lighthouse 100 на Eleventy. Без воды, с цифрами."
+pageKeywords: "блог flutter, блог node.js, rustore публикация, eleventy, seo разбор"
+pageSchema: |
+  {
+    "@type": "Blog",
+    "@id": "https://kor-nil.ru/blog/#blog",
+    "url": "https://kor-nil.ru/blog/",
+    "name": "Блог Алексея Корнилова",
+    "inLanguage": "ru",
+    "author": { "@id": "https://kor-nil.ru#person" }
+  }
+---
+
+<section class="section container blog-hero">
+  <p class="hero-eyebrow">Блог</p>
+  <h1>Разборы из практики</h1>
+  <p class="section-lead">
+    Что делал, что измерил, что получилось. Flutter, Node.js, SEO и всё, что вокруг
+    <a href="/projects/chatyadro/">ЧатЯдра</a>. Подписка — <a href="/feed.xml">RSS</a>.
+  </p>
+</section>
+
+<section class="section container">
+  <div class="post-list">
+    {%- for post in collections.posts %}
+    <a href="{{ post.url }}" class="card card-link post-card">
+      <p class="post-meta">
+        <time datetime="{{ post.date | date('iso') }}">{{ post.date | date }}</time>
+        · {{ post.templateContent | readingTime }} мин
+      </p>
+      <h2 class="card-title">{{ post.data.title }}</h2>
+      <p class="card-description">{{ post.data.description }}</p>
+      <div class="card-footer">Читать →</div>
+    </a>
+    {%- endfor %}
+  </div>
+</section>

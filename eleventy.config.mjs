@@ -1,6 +1,7 @@
 // Конфигурация Eleventy v3 (ES modules).
 // Собирает src/ → dist/, копирует assets как есть, использует Nunjucks для шаблонов.
 
+import markdownIt from 'markdown-it';
 import { buildCss, writeBundle, resetCssCache } from './lib/css-bundle.mjs';
 
 export default async function (eleventyConfig) {
@@ -26,6 +27,24 @@ export default async function (eleventyConfig) {
   eleventyConfig.addGlobalData('lang', 'ru');
   eleventyConfig.addGlobalData('criticalCss', () => buildCss().critical);
   eleventyConfig.addGlobalData('cssBundleUrl', () => buildCss().bundleUrl);
+
+  // Markdown для статей блога: html внутри разрешён, ссылки распознаются, типографика («ёлочки», тире).
+  eleventyConfig.setLibrary('md', markdownIt({ html: true, linkify: true, typographer: true, quotes: '«»‚‘' }));
+
+  // Статьи блога: src/blog/*.md, новые сверху.
+  eleventyConfig.addCollection('posts', (api) =>
+    api.getFilteredByTag('posts').sort((a, b) => (b.date - a.date) || ((b.data.order || 0) - (a.data.order || 0)))
+  );
+
+  // Время чтения по тексту без тегов (≈180 слов в минуту для русского).
+  eleventyConfig.addFilter('readingTime', (html) => {
+    const words = String(html || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.round(words / 180));
+  });
+  // Первые N элементов коллекции.
+  eleventyConfig.addFilter('head', (arr, n) => (arr || []).slice(0, n));
+  // Дата для RSS (RFC 822).
+  eleventyConfig.addFilter('rfc822', (d) => new Date(d).toUTCString());
 
   // Глобальный фильтр: год для футера («© 2026 Aleksey Kornilov»).
   eleventyConfig.addFilter('year', () => new Date().getFullYear());

@@ -1,0 +1,95 @@
+/* tools.css — калькуляторы (/tools/): хаб и формы (разметку строит calculators.js). */
+
+.tools-hero { text-align: center; padding-block: var(--space-7) var(--space-4); }
+.tools-hero h1 { font-size: var(--fs-hero); margin-bottom: var(--space-4); }
+
+.tool-hero { padding-block: var(--space-4) var(--space-2); }
+.tool-hero h1 { margin-bottom: var(--space-3); }
+.tool-hero .section-lead { text-align: left; margin-inline: 0; margin-bottom: var(--space-4); }
+
+/* Форма калькулятора */
+.calc { max-width: 720px; }
+.calc-form { display: grid; gap: var(--space-5); padding: var(--space-6); }
+.calc-form, .calc-result { border-radius: var(--radius-lg); }
+
+.calc-chips { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.calc-chips legend { font-size: var(--fs-small); font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--space-2); }
+.calc-chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.calc-chip label {
+  display: inline-block;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.calc-chip label:hover { color: var(--color-text); border-color: var(--color-border-strong); }
+.calc-chip input:checked + label { background: var(--color-accent); border-color: var(--color-accent); color: white; }
+[data-theme="dark"] .calc-chip input:checked + label { color: #0e1621; }
+.calc-chip input:focus-visible + label { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.calc-hint { font-size: var(--fs-small); color: var(--color-text-muted); margin-top: var(--space-2); }
+
+.calc-fields { display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
+@media (min-width: 560px) { .calc-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.calc-field label { display: block; font-size: var(--fs-small); font-weight: 600; margin-bottom: var(--space-1); }
+.calc-input { display: flex; align-items: center; gap: var(--space-2); }
+.calc-input input {
+  flex: 1; min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  font-size: 1.0625rem; /* ≥16px — iOS не зумит поле */
+}
+.calc-input input:focus { outline: 2px solid var(--color-accent); outline-offset: 1px; border-color: transparent; }
+.calc-unit { font-size: var(--fs-small); color: var(--color-text-subtle); white-space: nowrap; max-width: 45%; }
+
+.calc-presets { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.calc-presets:empty { display: none; }
+.calc-presets-label { font-size: var(--fs-small); color: var(--color-text-muted); }
+.calc-preset {
+  padding: var(--space-1) var(--space-3);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-xl);
+  font-size: var(--fs-tiny);
+  color: var(--color-text-muted);
+}
+.calc-preset:hover { color: var(--color-text); border-style: solid; }
+
+/* Результат */
+.calc-result { padding: var(--space-5); background: var(--color-accent-subtle); border: 1px solid var(--color-border); }
+.calc-empty { color: var(--color-text-muted); font-size: var(--fs-small); margin: 0; }
+.calc-main-label { font-size: var(--fs-small); color: var(--color-text-muted); }
+.calc-main-value { font-size: 2rem; font-weight: 800; color: var(--color-accent); letter-spacing: -0.02em; line-height: 1.1; margin-block: var(--space-1) var(--space-4); }
+.calc-rows { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2) var(--space-4); margin: 0 0 var(--space-4); font-size: var(--fs-small); }
+.calc-rows dt { color: var(--color-text-muted); }
+.calc-rows dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.calc-rows .calc-total { font-weight: 800; color: var(--color-text); border-top: 1px solid var(--color-border); padding-top: var(--space-2); }
+.calc-note { font-size: var(--fs-tiny); color: var(--color-text-subtle); margin: 0 0 var(--space-4); line-height: 1.5; }
+.calc-result .btn { margin-top: var(--space-1); }
+
+/* Стоимость (свёрнуто) */
+.calc-cost summary { cursor: pointer; font-weight: 600; color: var(--color-accent); font-size: var(--fs-small); padding-block: var(--space-2); }
+.calc-cost-body { display: grid; gap: var(--space-4); padding-top: var(--space-3); }
+.calc-cost-table:empty { display: none; }
+
+/* Текст под калькулятором */
+.tool-text { max-width: 720px; }
+.tool-text h2 { margin-block: var(--space-7) var(--space-4); }
+.tool-text p, .tool-text li { color: var(--color-text-muted); line-height: 1.65; margin-bottom: var(--space-3); }
+.tool-text table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); margin-bottom: var(--space-5); display: block; overflow-x: auto; }
+.tool-text th, .tool-text td { text-align: left; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.tool-text th { color: var(--color-text-muted); font-weight: 600; }
+.tool-text details { margin-bottom: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.tool-text summary { cursor: pointer; font-weight: 600; }
+.tool-text details p { margin-top: var(--space-3); margin-bottom: 0; }
+.tool-app { margin-top: var(--space-7); padding: var(--space-5) var(--space-6); }
+.tool-app p { margin-bottom: var(--space-4); color: var(--color-text-muted); }
+
+/* Хаб */
+.tools-grid { display: grid; gap: var(--space-5); grid-template-columns: 1fr; }
+@media (min-width: 720px) { .tools-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .tools-grid { grid-template-columns: repeat(3, 1fr); } }

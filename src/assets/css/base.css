@@ -126,6 +126,14 @@ h3 { font-size: var(--fs-h3); }
 .text-muted { color: var(--color-text-muted); }
 .text-small { font-size: var(--fs-small); }
 
+/* Ссылки внутри текста отличаются не только цветом (WCAG 1.4.1) */
+.section-lead a, .prose a, .post-body a, .tool-text a, .card-description a, .post-footer a {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
 /* Утилиты доступности */
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;

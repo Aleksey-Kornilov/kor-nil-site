@@ -4,13 +4,41 @@
     "home": "/",
     "siteTitle": "Алексей Корнилов — Full-stack разработчик и SEO-специалист",
     "siteDescription": "Строю веб- и мобильные приложения на Flutter и Node.js, оптимизирую сайты под поисковые системы. Автор проекта ЧатЯдро — платформы для локальных сообществ.",
-    "author": { "name": "Алексей Корнилов", "role": "Full-stack Flutter/Node.js разработчик · SEO-специалист", "city": "Самара", "country": "Россия" },
+    "author": {
+      "name": "Алексей Корнилов",
+      "role": "Full-stack Flutter/Node.js разработчик · SEO-специалист",
+      "city": "Самара",
+      "country": "Россия"
+    },
     "nav": [
-      { "href": "/", "label": "Главная" },
-      { "href": "/projects/chatyadro/", "label": "ЧатЯдро" },
-      { "href": "/seo/", "label": "SEO" },
-      { "href": "/about/", "label": "Обо мне" },
-      { "href": "/contact/", "label": "Контакты" }
+      {
+        "href": "/",
+        "label": "Главная"
+      },
+      {
+        "href": "/projects/chatyadro/",
+        "label": "ЧатЯдро"
+      },
+      {
+        "href": "/blog/",
+        "label": "Блог"
+      },
+      {
+        "href": "/tools/",
+        "label": "Калькуляторы"
+      },
+      {
+        "href": "/seo/",
+        "label": "SEO"
+      },
+      {
+        "href": "/about/",
+        "label": "Обо мне"
+      },
+      {
+        "href": "/contact/",
+        "label": "Контакты"
+      }
     ],
     "navLabel": "Основная навигация",
     "menuOpen": "Открыть меню",
@@ -25,19 +53,41 @@
     "vk": "ВКонтакте",
     "rights": "Все права защищены.",
     "sitemap": "Карта сайта",
-    "switch": { "label": "EN", "href": "/en/", "title": "English version", "lang": "en" }
+    "switch": {
+      "label": "EN",
+      "href": "/en/",
+      "title": "English version",
+      "lang": "en"
+    }
   },
   "en": {
     "locale": "en_US",
     "home": "/en/",
     "siteTitle": "Aleksey Kornilov — Full-stack Flutter/Node.js developer",
     "siteDescription": "I build web and mobile apps with Flutter and Node.js. Author of ChatYadro, a social platform for local communities, published on RuStore. Open to remote full-stack roles.",
-    "author": { "name": "Aleksey Kornilov", "role": "Full-stack Flutter/Node.js developer · SEO", "city": "Samara", "country": "Russia" },
+    "author": {
+      "name": "Aleksey Kornilov",
+      "role": "Full-stack Flutter/Node.js developer · SEO",
+      "city": "Samara",
+      "country": "Russia"
+    },
     "nav": [
-      { "href": "/en/", "label": "Home" },
-      { "href": "/en/projects/chatyadro/", "label": "ChatYadro" },
-      { "href": "/en/about/", "label": "About" },
-      { "href": "/en/contact/", "label": "Contact" }
+      {
+        "href": "/en/",
+        "label": "Home"
+      },
+      {
+        "href": "/en/projects/chatyadro/",
+        "label": "ChatYadro"
+      },
+      {
+        "href": "/en/about/",
+        "label": "About"
+      },
+      {
+        "href": "/en/contact/",
+        "label": "Contact"
+      }
     ],
     "navLabel": "Main navigation",
     "menuOpen": "Open menu",
@@ -52,6 +102,11 @@
     "vk": "VK",
     "rights": "All rights reserved.",
     "sitemap": "Sitemap",
-    "switch": { "label": "RU", "href": "/", "title": "Русская версия", "lang": "ru" }
+    "switch": {
+      "label": "RU",
+      "href": "/",
+      "title": "Русская версия",
+      "lang": "ru"
+    }
   }
 }
