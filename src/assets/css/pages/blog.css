@@ -102,3 +102,38 @@
   .post-nav { grid-template-columns: 1fr; }
   .post-nav-link--next { text-align: left; }
 }
+
+/* Комментарии (comments.js) */
+.comments { margin-top: var(--space-7); }
+.comments-title { margin-bottom: var(--space-5); }
+.comments-list { display: grid; gap: var(--space-4); margin-bottom: var(--space-6); }
+.comments-empty { color: var(--color-text-muted); font-size: var(--fs-small); }
+.comment {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+}
+.comment--reply { margin-left: var(--space-6); border-left: 3px solid var(--color-accent-subtle); }
+.comment-meta { font-size: var(--fs-small); color: var(--color-text-muted); margin-bottom: var(--space-2); }
+.comment-meta strong { color: var(--color-text); }
+.comment-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; margin: 0 0 var(--space-2); }
+.comment-actions { display: flex; gap: var(--space-4); margin: 0; }
+.comments-link { font-size: var(--fs-small); color: var(--color-accent); padding-block: var(--space-1); }
+.comments-link:hover { text-decoration: underline; }
+.comment-edit textarea, .comments-form textarea, .comments-form input {
+  width: 100%; padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+  background: var(--color-bg-elevated); font-size: 1rem;
+}
+.comment-edit textarea:focus, .comments-form textarea:focus, .comments-form input:focus { outline: 2px solid var(--color-accent); outline-offset: 1px; border-color: transparent; }
+.comment-edit-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.comments-form { padding: var(--space-6); display: grid; gap: var(--space-4); }
+.comments-form h3 { margin: 0; }
+.comments-form .field label { display: block; font-size: var(--fs-small); font-weight: 600; margin-bottom: var(--space-1); }
+.comments-form .form-footer { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
+.comments-form .form-hint { margin: 0; max-width: 420px; }
+.comments-reply-note { font-size: var(--fs-small); color: var(--color-text-muted); margin: 0; }
+.comments-status { margin: 0; font-size: var(--fs-small); min-height: 1.2em; }
+.comments-status.is-error { color: var(--color-danger); }
+.comments-status.is-success { color: var(--color-success); }

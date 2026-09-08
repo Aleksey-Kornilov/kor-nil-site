@@ -26,7 +26,7 @@ layout: layouts/base.njk
 
   <footer class="post-footer glass">
     <p>
-      Вопрос или поправка? Напишите мне в
+      Вопрос или поправка? Напишите в <a href="#comments">комментариях</a> ниже, в
       <a href="https://t.me/{{ site.contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>
       или через <a href="/contact/">форму</a>. Статьи выходят в <a href="/feed.xml">RSS</a>.
     </p>
@@ -36,6 +36,10 @@ layout: layouts/base.njk
     </p>
   </footer>
 
+  <section class="comments" data-slug="{{ page.fileSlug }}" id="comments">
+    <noscript><p>Для комментариев нужен JavaScript.</p></noscript>
+  </section>
+
   {%- if newer or older %}
   <nav class="post-nav" aria-label="Соседние статьи">
     {%- if older %}<a class="post-nav-link" href="{{ older.url }}" rel="prev"><span>← Раньше</span>{{ older.data.title }}</a>{% else %}<span></span>{% endif %}
@@ -43,3 +47,4 @@ layout: layouts/base.njk
   </nav>
   {%- endif %}
 </article>
+<script src="/assets/js/comments.js" defer></script>
