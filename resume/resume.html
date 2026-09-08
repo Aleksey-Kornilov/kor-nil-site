@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Алексей Корнилов — резюме</title>
+<style>
+  /* Резюме печатается в PDF headless-Хромом (scripts/build-resume.sh). Одна страница A4. */
+  @page { size: A4; margin: 14mm 15mm 14mm 15mm; }
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.2pt; line-height: 1.4; color: #1a1d21;
+  }
+  a { color: #2f6db5; text-decoration: none; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
+           padding-bottom: 9px; border-bottom: 2px solid #4a90e2; margin-bottom: 11px; }
+  h1 { font-size: 21pt; letter-spacing: -0.02em; line-height: 1.1; }
+  .role { font-size: 11.5pt; color: #4a90e2; font-weight: 600; margin-top: 3px; }
+  .meta { color: #555b63; margin-top: 3px; font-size: 9.5pt; }
+  .contacts { text-align: right; font-size: 9.5pt; line-height: 1.55; white-space: nowrap; }
+  .contacts span { color: #8a9099; }
+  h2 { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.12em; color: #4a90e2;
+       margin: 11px 0 5px; padding-bottom: 2px; border-bottom: 1px solid #dfe3e8; }
+  p.summary { margin-top: 2px; }
+  .job { display: grid; grid-template-columns: 1fr auto; gap: 0 16px; margin-bottom: 5px; }
+  .job h3 { font-size: 10.8pt; }
+  .job .where { color: #555b63; font-size: 9.5pt; }
+  .job .when { color: #555b63; font-size: 9.5pt; white-space: nowrap; text-align: right; }
+  .job ul { grid-column: 1 / -1; padding-left: 15px; margin-top: 3px; }
+  li { margin-bottom: 1.5px; }
+  li b { font-weight: 600; }
+  .stack { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 18px; }
+  .stack h4 { font-size: 9.5pt; margin-bottom: 1px; }
+  .stack p { font-size: 9.5pt; color: #3a3f47; }
+  .two { display: grid; grid-template-columns: 1.15fr 1fr; gap: 0 22px; }
+  footer { margin-top: 9px; font-size: 8.5pt; color: #8a9099; text-align: right; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Алексей Корнилов</h1>
+    <div class="role">Full-stack разработчик · Flutter / Node.js</div>
+    <div class="meta">Самара · удалённо или офис · полная занятость</div>
+  </div>
+  <div class="contacts">
+    <a href="mailto:kornil-88@mail.ru">kornil-88@mail.ru</a><br>
+    <a href="https://t.me/kornil">t.me/kornil</a><br>
+    <a href="https://kor-nil.ru">kor-nil.ru</a> <span>· сайт</span><br>
+    <a href="https://github.com/Aleksey-Kornilov">github.com/Aleksey-Kornilov</a>
+  </div>
+</header>
+
+<p class="summary">
+  Строю веб- и мобильные приложения на Flutter и Node.js: один код на Android, веб и PWA, real-time
+  на Socket.IO, аудиозвонки на WebRTC, PostgreSQL. Автор и единственный разработчик
+  <a href="https://sntchat.ru">ЧатЯдра</a> — платформы для локальных сообществ, опубликованной в RuStore.
+  До разработки 17 лет руководил собственной компанией: умею доводить проект до результата,
+  говорить с заказчиком и отвечать за продукт целиком. Отдельная компетенция — SEO.
+</p>
+
+<h2>Опыт</h2>
+
+<div class="job">
+  <div>
+    <h3>ЧатЯдро — автор, full-stack разработчик</h3>
+    <div class="where">sntchat.ru · платформа для локальных сообществ: СНТ, семья, школа, работа и др.</div>
+  </div>
+  <div class="when">март 2026 — н. в.</div>
+  <ul>
+    <li><b>Продукт от нулевого коммита до магазина.</b> 88 экранов, 22 категории сообществ с ролями и
+        модулями (доска объявлений, календарь, взносы, помощь соседей, калькуляторы), лента с ранжированием,
+        7 игр, обучение из 22 курсов. Опубликовано в RuStore 16.08.2026, несколько сообществ пользуются ежедневно.</li>
+    <li><b>Клиент:</b> Flutter 3.38 / Dart 3.10, один код на Android, веб и PWA (Service Worker, Web-Push, Wake Lock);
+        собственная дизайн-система; редактор фото перед отправкой; optimistic UI с socket-echo.</li>
+    <li><b>Бэкенд:</b> Node.js 20, Express 5, Socket.IO 4, PostgreSQL 15, JWT с refresh-токенами, S3-хранилище,
+        фоновые ffmpeg-воркеры, FCM и VAPID-пуши. Nginx, PM2, Docker, шифрованные бэкапы.</li>
+    <li><b>Аудиозвонки 1:1 на WebRTC</b> с сигналингом по Socket.IO, голосовые сообщения, чат с медиа,
+        файлами, контактами и голосованиями (анонимность соблюдается на сервере).</li>
+    <li><b>Медиа-пайплайн по замерам:</b> сжатие на устройстве и перекодирование до 720p на сервере —
+        библиотека роликов 630 → 204 МБ, самый тяжёлый ролик 48 → 4,6 МБ, фото 3,8 МБ → 729 КБ.</li>
+    <li><b>Соответствие 152-ФЗ:</b> версионированные согласия, журнал подписей с хешем документа,
+        включение в реестр операторов ПД; автомодератор с аудит-журналом. Публикация в RuStore прошла
+        через отказ по юридическому основанию — разобрал и прошёл модерацию за 5 дней.</li>
+  </ul>
+</div>
+
+<div class="job">
+  <div>
+    <h3>Собственная компания — руководитель</h3>
+    <div class="where">Самара · управление бизнесом, клиентами и проектами</div>
+  </div>
+  <div class="when">17 лет, до 2026</div>
+  <ul>
+    <li>Полный цикл: клиенты, исполнители, сроки, деньги, ответственность за результат.</li>
+    <li>Параллельно занимался сайтами и SEO-продвижением — в разработку пришёл осознанно, не с нуля.</li>
+  </ul>
+</div>
+
+<div class="two">
+<div>
+  <h2>SEO-проекты</h2>
+  <ul style="padding-left:15px">
+    <li><b>cookai.ru</b> — кулинарный сайт, 1439 рецептов. Переработка контента под запросы,
+        структура, техническая оптимизация: <b>72 % показов на первой странице</b> выдачи
+        (Яндекс.Вебмастер), 0 ошибок в Вебмастере.</li>
+    <li><b>kor-nil.ru</b> — этот сайт: Eleventy, Lighthouse 100/100/100/100, Schema.org, Core Web Vitals.</li>
+  </ul>
+</div>
+<div>
+  <h2>О себе</h2>
+  <ul style="padding-left:15px">
+    <li>С детства разбираюсь, как устроены вещи, — с техники перешёл на код.</li>
+    <li>Работаю с замерами, а не на ощупь: медиа, ранжирование, SEO — везде цифры до/после.</li>
+    <li>Готов показывать код на собеседовании: репозиторий сайта открыт.</li>
+  </ul>
+</div>
+</div>
+
+<h2>Стек</h2>
+<div class="stack">
+  <div><h4>Клиент</h4><p>Flutter, Dart, PWA, WebRTC, Service Worker, HTML5 / CSS3 / JavaScript, Quill</p></div>
+  <div><h4>Бэкенд</h4><p>Node.js, Express, Socket.IO, PostgreSQL, JWT, REST, ffmpeg, S3, Web-Push, FCM</p></div>
+  <div><h4>Инфраструктура</h4><p>Nginx, Docker, PM2, Linux, Let's Encrypt, rclone, Git / GitHub, rsync-деплой</p></div>
+</div>
+
+<footer>Обновлено: сентябрь 2026 · актуальная версия — kor-nil.ru/about/</footer>
+</body>
+</html>

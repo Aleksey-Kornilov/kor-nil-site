@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "npx @11ty/eleventy --serve --port=8080",
     "build": "npx @11ty/eleventy",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "resume": "bash scripts/build-resume.sh"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0",
