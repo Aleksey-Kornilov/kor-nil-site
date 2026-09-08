@@ -10,6 +10,7 @@ export default async function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy('src/assets/images');
   eleventyConfig.addPassthroughCopy('src/assets/icons');
   eleventyConfig.addPassthroughCopy('src/assets/video');
+  eleventyConfig.addPassthroughCopy('src/assets/files'); // PDF-резюме
   eleventyConfig.addPassthroughCopy('src/robots.txt');
   eleventyConfig.addPassthroughCopy({ 'src/favicon.ico': 'favicon.ico' });
 
