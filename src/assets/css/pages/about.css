@@ -135,3 +135,45 @@
 }
 .offer h3 { margin-bottom: var(--space-3); }
 .offer p { color: var(--color-text-muted); line-height: 1.6; }
+
+/* Путь — вертикальный таймлайн */
+.timeline {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0 0 0 28px;
+  max-width: 720px;
+  position: relative;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px; top: 8px; bottom: 8px;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--color-accent), var(--color-border));
+}
+.tl-item {
+  position: relative;
+  padding-bottom: var(--space-6);
+}
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item::before {
+  content: '';
+  position: absolute;
+  left: -26px; top: 6px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 2px solid var(--color-accent);
+}
+.tl-item--now::before {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-accent-subtle);
+}
+.tl-date {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: var(--space-1);
+}
+.tl-item h3 { margin-bottom: var(--space-2); }
+.tl-item p { color: var(--color-text-muted); line-height: 1.6; }
