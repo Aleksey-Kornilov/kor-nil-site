@@ -70,3 +70,26 @@
 @media (min-width: 720px) {
   .shots-hint { display: none; }
 }
+
+/* Отзыв из магазина (страница ЧатЯдра) */
+.review {
+  max-width: 720px;
+  margin-inline: auto;
+  padding: var(--space-6);
+}
+.review-stars {
+  color: #f5a524;
+  letter-spacing: 0.1em;
+  font-size: 1.25rem;
+  margin-bottom: var(--space-3);
+}
+.review blockquote {
+  margin: 0 0 var(--space-4);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+.review figcaption {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
