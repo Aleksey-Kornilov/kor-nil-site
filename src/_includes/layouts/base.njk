@@ -1,6 +1,6 @@
 {#- Базовый layout — оборачивает контент страницы шапкой и футером.
    Переменные страницы (см. front matter каждой .njk):
-     pageTitle, pageDescription, pageKeywords, pageImage, pageType, pageSchema
+     pageTitle, pageDescription, pageKeywords, pageImage, pageType, pageSchema, pageCrumb
 -#}
 <!DOCTYPE html>
 <html lang="{{ site.lang }}" dir="ltr">
@@ -11,6 +11,14 @@
 {% include "components/header.njk" %}
 
 <main id="main" class="main">
+{%- if pageCrumb and not pageNoindex %}
+<nav class="breadcrumbs container" aria-label="Хлебные крошки">
+  <ol>
+    <li><a href="/">Главная</a></li>
+    <li aria-current="page">{{ pageCrumb }}</li>
+  </ol>
+</nav>
+{%- endif %}
 {{ content | safe }}
 </main>
 
@@ -19,5 +27,6 @@
 {#- JS — загружается в конце для скорости. Загрузка не блокирует рендер. -#}
 <script src="/assets/js/theme-toggle.js"></script>
 <script src="/assets/js/nav.js"></script>
+<script src="/assets/js/reveal.js"></script>
 </body>
 </html>

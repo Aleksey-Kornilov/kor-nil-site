@@ -1,0 +1,17 @@
+/* reveal.css — мягкое появление секций при прокрутке.
+   Класс .reveal ставит только JS (reveal.js) и только секциям ниже первого экрана,
+   поэтому без JS и для LCP-контента ничего не скрыто. */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}

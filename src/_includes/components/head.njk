@@ -8,6 +8,7 @@
     pagePath        — путь текущей страницы для canonical
     pageType        — тип страницы для OG (website / article), по умолчанию website
     pageNoindex     — true для служебных страниц (404): noindex + без canonical
+    pageCrumb       — короткое имя для хлебных крошек (видимых и BreadcrumbList); нет = крошек нет
   Стили страниц (pages/*.css) входят в общий бандл — pageStyles больше не нужен.
 -#}
 {% set _title = pageTitle or site.title %}
@@ -131,6 +132,16 @@ if (location.hostname.endsWith('kor-nil.ru')) {
       "about": { "@id": "{{ site.url }}#person" },
       "inLanguage": "{{ site.lang }}"
     }
+    {%- if pageCrumb and not pageNoindex %},
+    {
+      "@type": "BreadcrumbList",
+      "@id": "{{ _canonical }}#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Главная", "item": "{{ site.url }}/" },
+        { "@type": "ListItem", "position": 2, "name": "{{ pageCrumb }}", "item": "{{ _canonical }}" }
+      ]
+    }
+    {%- endif %}
     {%- if pageSchema %},{{ pageSchema | safe }}{% endif %}
   ]
 }
