@@ -22,6 +22,8 @@ export default async function (eleventyConfig) {
   eleventyConfig.on('eleventy.before', () => resetCssCache());
   eleventyConfig.on('eleventy.after', ({ dir }) => writeBundle(dir.output));
   // Глобальные данные для head.njk: criticalCss (инлайн) и cssBundleUrl (<link>).
+  // Язык страницы: ru по умолчанию, en задаётся в src/en/en.11tydata.json. Тексты — _data/i18n.json.
+  eleventyConfig.addGlobalData('lang', 'ru');
   eleventyConfig.addGlobalData('criticalCss', () => buildCss().critical);
   eleventyConfig.addGlobalData('cssBundleUrl', () => buildCss().bundleUrl);
 

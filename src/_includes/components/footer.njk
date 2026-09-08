@@ -1,29 +1,28 @@
-{#- Нижний футер: контакты, соц-сети, копирайт. -#}
+{#- Нижний футер: контакты, соц-сети, копирайт. Тексты — из _data/i18n.json по lang. -#}
+{%- set t = i18n[lang] %}
 <footer class="site-footer" role="contentinfo">
   <div class="container footer-inner">
     <div class="footer-brand">
-      <div class="footer-name">{{ site.author.name }}</div>
-      <div class="footer-role">{{ site.author.role }}</div>
-      <div class="footer-city">{{ site.author.city }}, {{ site.author.country }}</div>
+      <div class="footer-name">{{ t.author.name }}</div>
+      <div class="footer-role">{{ t.author.role }}</div>
+      <div class="footer-city">{{ t.author.city }}, {{ t.author.country }}</div>
     </div>
 
-    <nav class="footer-nav" aria-label="Разделы сайта">
-      <h3 class="footer-heading">Разделы</h3>
+    <nav class="footer-nav" aria-label="{{ t.footerNavLabel }}">
+      <h3 class="footer-heading">{{ t.sections }}</h3>
       <ul>
-        <li><a href="/">Главная</a></li>
-        <li><a href="/projects/chatyadro/">ЧатЯдро</a></li>
-        <li><a href="/seo/">SEO</a></li>
-        <li><a href="/about/">Обо мне</a></li>
-        <li><a href="/contact/">Контакты</a></li>
+        {%- for item in t.nav %}
+        <li><a href="{{ item.href }}">{{ item.label }}</a></li>
+        {%- endfor %}
       </ul>
     </nav>
 
     <div class="footer-contacts">
-      <h3 class="footer-heading">Связаться</h3>
+      <h3 class="footer-heading">{{ t.contact }}</h3>
       <ul>
         <li><a href="mailto:{{ site.contacts.email }}" rel="me">{{ site.contacts.email }}</a></li>
         {%- if site.contacts.telegram %}<li><a href="https://t.me/{{ site.contacts.telegram }}" target="_blank" rel="me noopener">Telegram</a></li>{% endif %}
-        {%- if site.contacts.vk %}<li><a href="{{ site.contacts.vk }}" target="_blank" rel="me noopener">ВКонтакте</a></li>{% endif %}
+        {%- if site.contacts.vk %}<li><a href="{{ site.contacts.vk }}" target="_blank" rel="me noopener">{{ t.vk }}</a></li>{% endif %}
         {%- if site.contacts.github %}<li><a href="{{ site.contacts.github }}" target="_blank" rel="me noopener">GitHub</a></li>{% endif %}
       </ul>
     </div>
@@ -31,8 +30,8 @@
 
   <div class="footer-bottom">
     <div class="container footer-bottom-inner">
-      <small>© {{ '' | year }} {{ site.author.name }}. Все права защищены.</small>
-      <small><a href="/sitemap.xml">Карта сайта</a></small>
+      <small>© {{ '' | year }} {{ t.author.name }}. {{ t.rights }}</small>
+      <small><a href="/sitemap.xml">{{ t.sitemap }}</a></small>
     </div>
   </div>
 </footer>

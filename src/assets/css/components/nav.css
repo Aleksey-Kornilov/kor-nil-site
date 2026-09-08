@@ -86,3 +86,16 @@
   .site-nav[data-open="true"] .nav-toggle span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
   .nav-menu a { padding-block: var(--space-3); font-size: var(--fs-body); }
 }
+
+/* Переключатель языка RU/EN в шапке */
+.lang-switch {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+.lang-switch:hover { color: var(--color-text); border-color: var(--color-border-strong); }

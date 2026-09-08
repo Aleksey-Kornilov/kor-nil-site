@@ -7,6 +7,15 @@
   if (!form) return;
 
   const ENDPOINT = 'https://sntchat.ru/api/kor-nil-contact';
+  // Тексты — из data-атрибутов формы, чтобы английская страница могла их подменить
+  const d = form.dataset;
+  const MSG = {
+    fill: d.msgFill || 'Заполните все поля.',
+    sending: d.msgSending || 'Отправка…',
+    ok: d.msgOk || 'Спасибо! Сообщение отправлено, я отвечу вам на почту в течение дня.',
+    fail: d.msgFail || 'Не удалось отправить. Попробуйте написать в Telegram: @',
+    send: d.msgSend || 'Отправить',
+  };
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -16,13 +25,13 @@
     const data = Object.fromEntries(new FormData(form));
     if (!data.name || !data.email || !data.message) {
       status.classList.add('is-error');
-      status.textContent = 'Заполните все поля.';
+      status.textContent = MSG.fill;
       return;
     }
 
     const btn = form.querySelector('button[type="submit"]');
     btn.disabled = true;
-    btn.textContent = 'Отправка…';
+    btn.textContent = MSG.sending;
 
     try {
       const resp = await fetch(ENDPOINT, {
@@ -32,14 +41,14 @@
       });
       if (!resp.ok) throw new Error('server error ' + resp.status);
       status.classList.add('is-success');
-      status.textContent = 'Спасибо! Сообщение отправлено, я отвечу вам на почту в течение дня.';
+      status.textContent = MSG.ok;
       form.reset();
     } catch (err) {
       status.classList.add('is-error');
-      status.textContent = 'Не удалось отправить. Попробуйте написать в Telegram: @' + (form.dataset.telegram || 'kornil');
+      status.textContent = MSG.fail + (form.dataset.telegram || 'kornil');
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Отправить';
+      btn.textContent = MSG.send;
     }
   });
 })();

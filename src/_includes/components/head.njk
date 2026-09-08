@@ -11,8 +11,10 @@
     pageCrumb       — короткое имя для хлебных крошек (видимых и BreadcrumbList); нет = крошек нет
   Стили страниц (pages/*.css) входят в общий бандл — pageStyles больше не нужен.
 -#}
-{% set _title = pageTitle or site.title %}
-{% set _desc = pageDescription or site.description %}
+{% set t = i18n[lang] %}
+{% set _title = pageTitle or t.siteTitle %}
+{% set _desc = pageDescription or t.siteDescription %}
+{% set _other = 'en' if lang == 'ru' else 'ru' %}
 {% set _image = pageImage or '/assets/images/og-default.png' %}
 {% set _canonical = site.url + (pagePath or page.url) %}
 {% set _ogType = pageType or 'website' %}
@@ -27,7 +29,13 @@
 {%- if not pageNoindex %}
 <link rel="canonical" href="{{ _canonical }}">
 {%- endif %}
-<meta name="author" content="{{ site.author.name }}">
+{%- if altUrl and not pageNoindex %}
+{#- Языковые версии: та же страница на другом языке; x-default — русская -#}
+<link rel="alternate" hreflang="{{ lang }}" href="{{ _canonical }}">
+<link rel="alternate" hreflang="{{ _other }}" href="{{ site.url }}{{ altUrl }}">
+<link rel="alternate" hreflang="x-default" href="{{ site.url }}{{ altUrl if lang == 'en' else (pagePath or page.url) }}">
+{%- endif %}
+<meta name="author" content="{{ t.author.name }}">
 <meta name="robots" content="{% if pageNoindex %}noindex, follow{% else %}index, follow, max-image-preview:large{% endif %}">
 <meta name="format-detection" content="telephone=no">
 
@@ -40,7 +48,8 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="{{ site.shortTitle }}">
-<meta property="og:locale" content="{{ site.locale }}">
+<meta property="og:locale" content="{{ t.locale }}">
+{%- if altUrl %}<meta property="og:locale:alternate" content="{{ i18n[_other].locale }}">{% endif %}
 
 {#- Twitter Card -#}
 <meta name="twitter:card" content="summary_large_image">
@@ -78,7 +87,7 @@
 </script>
 
 {#- Яндекс.Метрика (номер в site.json). Только на боевом домене — localhost и превью не считаем.
-    Грузится отложенно: по первому действию посетителя (прокрутка, клик, касание) или через 4 с
+    Грузится отложенно: по первому действию посетителя (прокрутка, клик, касание) или через 10 с
     после полной загрузки. Иначе tag.js с Вебвизором даёт ~1,7 с блокировки на слабом телефоне
     и роняет первый экран — а сайт продаёт Core Web Vitals как услугу. -#}
 {%- if site.metrika %}
@@ -100,7 +109,7 @@
   }
   function arm() {
     events.forEach(function (e) { addEventListener(e, start, { passive: true }); });
-    setTimeout(start, 4000);
+    setTimeout(start, 10000);
   }
   function armAfterLoad() {
     if (document.readyState === 'complete') arm(); else addEventListener('load', arm);
@@ -121,15 +130,15 @@
     {
       "@type": "Person",
       "@id": "{{ site.url }}#person",
-      "name": "{{ site.author.name }}",
-      "alternateName": "{{ site.author.shortName }}",
-      "jobTitle": "{{ site.author.role }}",
+      "name": "{{ t.author.name }}",
+      "alternateName": "{{ site.author.shortName if lang == 'ru' else site.author.name }}",
+      "jobTitle": "{{ t.author.role }}",
       "url": "{{ site.url }}",
       "email": "mailto:{{ site.contacts.email }}",
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": "{{ site.author.city }}",
-        "addressCountry": "{{ site.author.country }}"
+        "addressLocality": "{{ t.author.city }}",
+        "addressCountry": "{{ t.author.country }}"
       },
       "sameAs": [
         {%- set sameAs = [] %}
@@ -145,8 +154,8 @@
       "@id": "{{ site.url }}#website",
       "url": "{{ site.url }}",
       "name": "{{ site.shortTitle }}",
-      "description": "{{ site.description }}",
-      "inLanguage": "{{ site.lang }}",
+      "description": "{{ t.siteDescription }}",
+      "inLanguage": "{{ lang }}",
       "publisher": { "@id": "{{ site.url }}#person" }
     },
     {
@@ -157,14 +166,14 @@
       "description": "{{ _desc }}",
       "isPartOf": { "@id": "{{ site.url }}#website" },
       "about": { "@id": "{{ site.url }}#person" },
-      "inLanguage": "{{ site.lang }}"
+      "inLanguage": "{{ lang }}"
     }
     {%- if pageCrumb and not pageNoindex %},
     {
       "@type": "BreadcrumbList",
       "@id": "{{ _canonical }}#breadcrumb",
       "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Главная", "item": "{{ site.url }}/" },
+        { "@type": "ListItem", "position": 1, "name": "{{ t.crumbHome }}", "item": "{{ site.url }}{{ t.home }}" },
         { "@type": "ListItem", "position": 2, "name": "{{ pageCrumb }}", "item": "{{ _canonical }}" }
       ]
     }

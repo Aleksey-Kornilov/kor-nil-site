@@ -1,9 +1,11 @@
 {#- Базовый layout — оборачивает контент страницы шапкой и футером.
    Переменные страницы (см. front matter каждой .njk):
-     pageTitle, pageDescription, pageKeywords, pageImage, pageType, pageSchema, pageCrumb
+     pageTitle, pageDescription, pageKeywords, pageImage, pageType, pageSchema, pageCrumb,
+     altUrl (парная страница на другом языке — для hreflang и переключателя)
 -#}
 <!DOCTYPE html>
-<html lang="{{ site.lang }}" dir="ltr">
+{%- set t = i18n[lang] %}
+<html lang="{{ lang }}" dir="ltr">
 <head>
 {% include "components/head.njk" %}
 </head>
@@ -12,9 +14,9 @@
 
 <main id="main" class="main">
 {%- if pageCrumb and not pageNoindex %}
-<nav class="breadcrumbs container" aria-label="Хлебные крошки">
+<nav class="breadcrumbs container" aria-label="{{ t.crumbs }}">
   <ol>
-    <li><a href="/">Главная</a></li>
+    <li><a href="{{ t.home }}">{{ t.crumbHome }}</a></li>
     <li aria-current="page">{{ pageCrumb }}</li>
   </ol>
 </nav>

@@ -1,0 +1,359 @@
+---
+layout: layouts/base.njk
+permalink: /en/projects/chatyadro/
+altUrl: /projects/chatyadro/
+pageCrumb: "ChatYadro"
+pageTitle: "ChatYadro — a social platform for local communities, on RuStore"
+pageDescription: "ChatYadro is a multi-tenant social platform for neighbourhoods, families, schools and other local communities: chats, feed, audio calls, classifieds, 22 community types with roles and modules. Android app on RuStore, PWA on the web."
+pageKeywords: "chatyadro, social platform for local communities, flutter app, node.js, socket.io, webrtc, pwa, rustore"
+pageType: article
+pageImage: /assets/images/og-chatyadro.png
+pageSchema: |
+  {
+    "@type": "SoftwareApplication",
+    "@id": "https://sntchat.ru#app",
+    "name": "ChatYadro",
+    "url": "https://sntchat.ru",
+    "applicationCategory": "SocialNetworkingApplication",
+    "operatingSystem": "Android, Web",
+    "datePublished": "2026-08-16",
+    "downloadUrl": "https://www.rustore.ru/catalog/app/ru.sntchat.app",
+    "installUrl": "https://www.rustore.ru/catalog/app/ru.sntchat.app",
+    "author": { "@id": "https://kor-nil.ru#person" },
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "RUB" },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5.0",
+      "bestRating": "5",
+      "ratingCount": "6",
+      "url": "https://www.rustore.ru/catalog/app/ru.sntchat.app"
+    }
+  }
+---
+
+<section class="section container project-hero">
+  <p class="hero-eyebrow">My main project</p>
+  <h1>ChatYadro</h1>
+  <p class="section-lead">
+    A social platform for local communities. Chats, feed, audio calls, classifieds and
+    22 community types with configurable roles and modules, all in one app.
+    Published on RuStore, the Russian Android app store, since August 2026.
+  </p>
+  <div class="hero-cta">
+    <a href="https://www.rustore.ru/catalog/app/ru.sntchat.app" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+      Get it on RuStore →
+    </a>
+    <a href="#screens" class="btn btn-secondary btn-lg">See the screens</a>
+  </div>
+</section>
+
+<section class="section container">
+  <div class="stats-grid">
+    <div class="stat">
+      <div class="stat-value">5.0</div>
+      <div class="stat-label">RuStore rating, 6 reviews</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">22</div>
+      <div class="stat-label">community types</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">88</div>
+      <div class="stat-label">screens in the app</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">100%</div>
+      <div class="stat-label">solo development</div>
+    </div>
+  </div>
+</section>
+
+<section id="screens" class="section container">
+  <h2 class="section-title">What it looks like</h2>
+  <p class="section-lead">
+    The store listing from RuStore: a short video and the screens on a phone. Interface is in Russian.
+  </p>
+
+  {%- set shots = [
+    { file: 'feed',       alt: 'ChatYadro feed: friends’ stories, community news, photos and videos',
+      title: 'Everything in one feed', text: 'Stories, news from the world and your communities, photos and video' },
+    { file: 'community',  alt: 'A community screen: chats, news, calendar, fees',
+      title: 'A community shaped around what you do', text: 'Sections, roles and news, different for each type' },
+    { file: 'threads',    alt: 'Creating a chat thread: official, private or open',
+      title: 'Conversations do not drown', text: 'Official, private and open threads inside a chat' },
+    { file: 'board',      alt: 'Classifieds board: a tractor, a quad bike, stretch ceilings',
+      title: 'Sell, buy, give away', text: 'Among your own people, not strangers' },
+    { file: 'games',      alt: 'Mini-games screen: tic-tac-toe, quiz, puzzles, battleship, checkers',
+      title: 'Seven games, all offline', text: 'Ratings, statistics and opponents from your community' },
+    { file: 'appearance', alt: 'Appearance settings: dark theme, accent colour, text size',
+      title: 'Make it yours', text: 'Dark theme, accent colour and text size' }
+  ] %}
+
+  <div class="shots">
+    <figure class="shot">
+      <video controls playsinline muted preload="none"
+             width="540" height="960"
+             poster="/assets/images/chatyadro/showcase-poster.webp"
+             aria-label="ChatYadro store video from RuStore, 25 seconds, no sound">
+        <source src="/assets/video/chatyadro-showcase.mp4" type="video/mp4">
+      </video>
+      <figcaption class="shot-caption">
+        <strong>Store video</strong>
+        25 seconds, no sound, the same one as in the store
+      </figcaption>
+    </figure>
+    {%- for s in shots %}
+    <figure class="shot">
+      <img src="/assets/images/chatyadro/{{ s.file }}-540.webp"
+           srcset="/assets/images/chatyadro/{{ s.file }}-540.webp 540w, /assets/images/chatyadro/{{ s.file }}-1080.webp 1080w"
+           sizes="(min-width: 720px) 260px, 72vw"
+           width="540" height="960" loading="lazy" decoding="async"
+           alt="{{ s.alt }}">
+      <figcaption class="shot-caption">
+        <strong>{{ s.title }}</strong>
+        {{ s.text }}
+      </figcaption>
+    </figure>
+    {%- endfor %}
+  </div>
+  <p class="shots-hint">Swipe sideways →</p>
+</section>
+
+<section id="release" class="section container">
+  <h2 class="section-title">The road to the store</h2>
+  <p class="section-lead">
+    Publishing on RuStore did not work on the first try. Here is how it went: handling a rejection
+    says more than a smooth story.
+  </p>
+
+  <ol class="release-path">
+    <li class="release-step">
+      <div class="release-date">7 August 2026</div>
+      <h3>Submission</h3>
+      <p>
+        Store listing, screenshots and video, age rating, 17 types of collected data declared in the
+        "Data safety" section, and a justification for every permission. The build was verified by
+        unpacking the APK: the permissions and version matched what was declared.
+      </p>
+    </li>
+
+    <li class="release-step release-step--reject">
+      <div class="release-date">11 August 2026</div>
+      <h3>Rejection</h3>
+      <p>
+        The store asked for proof of registration in the national register of personal-data
+        operators. I sent the register record and a screenshot of the status check. The issue
+        turned out to be legal, not technical.
+      </p>
+    </li>
+
+    <li class="release-step">
+      <div class="release-date">11 August 2026, evening</div>
+      <h3>Rebuild</h3>
+      <p>
+        The same file cannot be resubmitted: the store requires a higher version number. I rebuilt
+        from the production commit in a separate working copy, bumping only the version, so that
+        beta-only changes that had never been in a release APK did not slip into the store.
+      </p>
+    </li>
+
+    <li class="release-step release-step--done">
+      <div class="release-date">16 August 2026</div>
+      <h3>Published</h3>
+      <p>
+        Review passed, the app is in the catalogue. A noticeable share of new members came from the
+        store, which is visible by build version in the server logs. Every rating so far is five stars.
+      </p>
+    </li>
+  </ol>
+</section>
+
+<section id="reviews" class="section container">
+  <h2 class="section-title">What people say on RuStore</h2>
+  <p class="section-lead">
+    Every rating in the store is five stars. One review in full, translated from Russian.
+  </p>
+  <figure class="review glass">
+    <div class="review-stars" aria-label="5 out of 5">★★★★★</div>
+    <blockquote>
+      Downloaded the app and started using it. Much more convenient, it doesn't freeze, there are all
+      sorts of fun features. I'll ask all my relatives to install it too, and to friends who haven't
+      yet: I recommend it. The app is 🔥
+    </blockquote>
+    <figcaption>Evgeniy · RuStore, September 2026 ·
+      <a href="https://www.rustore.ru/catalog/app/ru.sntchat.app" target="_blank" rel="noopener">all reviews →</a>
+    </figcaption>
+  </figure>
+</section>
+
+<section id="features" class="section container">
+  <h2 class="section-title">What makes ChatYadro different</h2>
+  <p class="section-lead">
+    A niche that neither Telegram nor Nextdoor covers.
+  </p>
+
+  <div class="feature-list">
+    <article class="feature">
+      <div class="feature-icon">🏘</div>
+      <h3>Multi-tenancy</h3>
+      <p>A user creates their own community from 22 types: neighbourhood association, family, school, workplace, shop, car club, sports, clinic and more. Each type has its own roles and modules.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🎭</div>
+      <h3>Two-level roles</h3>
+      <p>Platform-wide roles (user, moderator, admin) plus per-community roles for each type. For a neighbourhood association: Chairman, Board member, Resident, Gardener.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">📱</div>
+      <h3>Where it runs</h3>
+      <p>Android from RuStore or as an APK from the site. In a desktop browser as a regular site. On iPhone as a PWA from the home screen: there is no App Store version, and I say so plainly. One Flutter codebase for everything.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">📞</div>
+      <h3>WebRTC audio calls</h3>
+      <p>1:1 voice calls over WebRTC with Socket.IO signalling. Works in the browser without installing anything, over any network. Plus voice messages with three playback speeds and a "listened" mark.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">💬</div>
+      <h3>A complete chat</h3>
+      <p>Photos and videos in batches, files up to 50 MB, contacts as cards, about 250 emoji in custom categories, reactions. Polls right in the conversation, with anonymity enforced on the server: "who voted for what" is not returned even to the author.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🎨</div>
+      <h3>Photo editor before sending</h3>
+      <p>Brush, caption, two blur modes, rotate and crop, right in the app before the photo goes out. With a short tutorial where the tools draw themselves.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🎓</div>
+      <h3>In-app learning</h3>
+      <p>22 courses arranged in "Beginner, Confident, Pro" tiers, with medals for completion. The audience is non-technical, so the courses cover every screen, not just the main flows.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🧩</div>
+      <h3>Community modules</h3>
+      <p>Each type ships its own set: classifieds, calendar, fees, notes, "Neighbours' help" (requests with responses and a clear lifecycle), "Shopping", construction calculators. Anything unneeded can be switched off in the community settings.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🛡</div>
+      <h3>Auto-moderation</h3>
+      <p>A custom moderation engine with editable term dictionaries. Three reports trigger a soft hide, then a hard remove. An audit log of admin actions and report reviews with an object card.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">📋</div>
+      <h3>Legal infrastructure</h3>
+      <p>Compliance with Russian personal-data law (152-FZ): versioned consents, a signature log with IP and a SHA-256 hash of the document, registration in the register of data operators. Public legal texts are generated from the same sources as the in-app screens, so they cannot diverge.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">🎮</div>
+      <h3>Games and tools</h3>
+      <p>Seven built-in games (checkers, chess, puzzle, quiz, battleship, tic-tac-toe, a word game). Plus community tools: weather, calendars, fees, SOS.</p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">📰</div>
+      <h3>Feed ranking</h3>
+      <p>Pure chronology worked badly: the feed opened with two-month-old posts. I added a freshness window, unseen-first ordering and a cap of two consecutive posts per author. The window size was chosen by measuring live data, not by eye.</p>
+    </article>
+  </div>
+</section>
+
+<section id="engineering" class="section container">
+  <h2 class="section-title">Two problems I am proud of</h2>
+  <p class="section-lead">Both were solved with measurements, not guesswork.</p>
+
+  <div class="feature-list">
+    <article class="feature">
+      <div class="feature-icon">🎬</div>
+      <h3>Media: before and after</h3>
+      <p>
+        Videos were uploaded exactly as the camera recorded them, and photos from the browser were not
+        compressed at all. I added on-device compression and server-side transcoding to 720p:
+        the video library went from <strong>630 to 204 MB</strong>, bitrate from <strong>5.7 to 1.9 Mbit/s</strong>,
+        the heaviest clip from <strong>48.2 to 4.6 MB</strong>, a photo from <strong>3.8 MB to 729 KB</strong>.
+        Plus first-frame thumbnails via ffmpeg, an on-device file cache and upload progress.
+        iPhone (HEVC) video is converted in the background: the message goes out immediately and the
+        final file arrives via a socket event.
+      </p>
+    </article>
+
+    <article class="feature">
+      <div class="feature-icon">✍️</div>
+      <h3>Spell-checking in the browser</h3>
+      <p>
+        A user request: a PWA has no system spell-checker. I built a service on hunspell ru_RU via
+        nspell with lazy dictionary loading and a cache. The built-in suggester was not enough: it fixes
+        one error per word, while common Russian typos need two, so I added a table of typical
+        misspellings. Text is parsed in two passes: emails, links and numbers are dropped whole,
+        otherwise the checker pulled fragments of email addresses out as separate words.
+      </p>
+    </article>
+  </div>
+</section>
+
+<section id="stack" class="section container">
+  <h2 class="section-title">Tech stack</h2>
+  <p class="section-lead">Modern full-stack at every layer.</p>
+
+  <div class="stack-grid">
+    <div class="stack-column glass">
+      <h3>Client</h3>
+      <ul>
+        <li>Flutter 3.38 · Dart 3.10</li>
+        <li>PWA (Service Worker, Wake Lock)</li>
+        <li>WebRTC (audio calls)</li>
+        <li>Custom design system (glassmorphism)</li>
+        <li>Rich-text post editor (Quill)</li>
+        <li>Optimistic UI with socket echo</li>
+      </ul>
+    </div>
+
+    <div class="stack-column glass">
+      <h3>Backend</h3>
+      <ul>
+        <li>Node.js 20 · Express 5</li>
+        <li>Socket.IO 4 (single channel)</li>
+        <li>PostgreSQL 15 (Docker)</li>
+        <li>S3-compatible object storage</li>
+        <li>ffmpeg async workers</li>
+        <li>JWT (15-min access + opaque refresh)</li>
+      </ul>
+    </div>
+
+    <div class="stack-column glass">
+      <h3>Infrastructure</h3>
+      <ul>
+        <li>Nginx (HTTP/2, gzip)</li>
+        <li>PM2 process manager</li>
+        <li>Let's Encrypt (auto-renewal)</li>
+        <li>rclone to cloud storage (AES-256 encrypted backups)</li>
+        <li>Firebase Cloud Messaging (FCM)</li>
+        <li>Web Push (VAPID)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section container project-cta">
+  <div class="glass project-cta-inner">
+    <h2>Want to try it?</h2>
+    <p>Android from the store. iPhone and desktop via the step-by-step guide with pictures (in Russian).</p>
+    <div class="cta-buttons">
+      <a href="https://www.rustore.ru/catalog/app/ru.sntchat.app" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+        Get it on RuStore →
+      </a>
+      <a href="https://sntchat.ru/install" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">
+        Open the guide
+      </a>
+    </div>
+  </div>
+</section>

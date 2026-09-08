@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Aleksey Kornilov — CV</title>
+<style>
+  /* Printed to PDF by headless Chrome (scripts/build-resume.sh). One A4 page. */
+  @page { size: A4; margin: 14mm 15mm 14mm 15mm; }
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.2pt; line-height: 1.4; color: #1a1d21;
+  }
+  a { color: #2f6db5; text-decoration: none; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
+           padding-bottom: 9px; border-bottom: 2px solid #4a90e2; margin-bottom: 11px; }
+  h1 { font-size: 21pt; letter-spacing: -0.02em; line-height: 1.1; }
+  .role { font-size: 11.5pt; color: #4a90e2; font-weight: 600; margin-top: 3px; }
+  .meta { color: #555b63; margin-top: 3px; font-size: 9.5pt; }
+  .contacts { text-align: right; font-size: 9.5pt; line-height: 1.55; white-space: nowrap; }
+  .contacts span { color: #8a9099; }
+  h2 { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.12em; color: #4a90e2;
+       margin: 11px 0 5px; padding-bottom: 2px; border-bottom: 1px solid #dfe3e8; }
+  p.summary { margin-top: 2px; }
+  .job { display: grid; grid-template-columns: 1fr auto; gap: 0 16px; margin-bottom: 5px; }
+  .job h3 { font-size: 10.8pt; }
+  .job .where { color: #555b63; font-size: 9.5pt; }
+  .job .when { color: #555b63; font-size: 9.5pt; white-space: nowrap; text-align: right; }
+  .job ul { grid-column: 1 / -1; padding-left: 15px; margin-top: 3px; }
+  li { margin-bottom: 1.5px; }
+  li b { font-weight: 600; }
+  .stack { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 18px; }
+  .stack h4 { font-size: 9.5pt; margin-bottom: 1px; }
+  .stack p { font-size: 9.5pt; color: #3a3f47; }
+  .two { display: grid; grid-template-columns: 1.15fr 1fr; gap: 0 22px; }
+  footer { margin-top: 9px; font-size: 8.5pt; color: #8a9099; text-align: right; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Aleksey Kornilov</h1>
+    <div class="role">Full-stack developer · Flutter / Node.js</div>
+    <div class="meta">Samara, Russia · remote or on-site · full-time</div>
+  </div>
+  <div class="contacts">
+    <a href="mailto:kornil-88@mail.ru">kornil-88@mail.ru</a><br>
+    <a href="https://t.me/kornil">t.me/kornil</a><br>
+    <a href="https://kor-nil.ru/en/">kor-nil.ru/en</a> <span>· website</span><br>
+    <a href="https://github.com/Aleksey-Kornilov">github.com/Aleksey-Kornilov</a>
+  </div>
+</header>
+
+<p class="summary">
+  I build web and mobile apps with Flutter and Node.js: one codebase for Android, web and PWA,
+  real-time on Socket.IO, WebRTC audio calls, PostgreSQL. Author and sole developer of
+  <a href="https://sntchat.ru">ChatYadro</a>, a social platform for local communities published on
+  RuStore. Before engineering I ran my own company for 17 years: I ship projects to the result,
+  talk to clients directly and own the product end to end. SEO is a separate competence.
+</p>
+
+<h2>Experience</h2>
+
+<div class="job">
+  <div>
+    <h3>ChatYadro — author, full-stack developer</h3>
+    <div class="where">sntchat.ru · social platform for local communities: neighbourhoods, families, schools, workplaces</div>
+  </div>
+  <div class="when">March 2026 — present</div>
+  <ul>
+    <li><b>From the first commit to the app store, solo.</b> 88 screens, 22 community types with roles and
+        modules (classifieds, calendar, fees, neighbours' help, calculators), a ranked feed, 7 games,
+        22 in-app courses. Published on RuStore on 16 Aug 2026; several communities use it daily.</li>
+    <li><b>Client:</b> Flutter 3.38 / Dart 3.10, one codebase for Android, web and PWA (Service Worker, Web Push,
+        Wake Lock); a custom design system; a photo editor before sending; optimistic UI with socket echo.</li>
+    <li><b>Backend:</b> Node.js 20, Express 5, Socket.IO 4, PostgreSQL 15, JWT with refresh tokens, S3 storage,
+        background ffmpeg workers, FCM and VAPID push. Nginx, PM2, Docker, encrypted backups.</li>
+    <li><b>1:1 WebRTC audio calls</b> with Socket.IO signalling, voice messages, chat with media, files, contact
+        cards and polls (anonymity enforced server-side).</li>
+    <li><b>Media pipeline driven by measurements:</b> on-device compression and server transcoding to 720p:
+        video library 630 → 204 MB, heaviest clip 48 → 4.6 MB, photo 3.8 MB → 729 KB.</li>
+    <li><b>Personal-data compliance (Russian 152-FZ):</b> versioned consents, a signature log with document
+        hashes, registration as a data operator; auto-moderation with an audit log. The RuStore submission
+        was rejected on a legal ground; I resolved it and passed review in 5 days.</li>
+  </ul>
+</div>
+
+<div class="job">
+  <div>
+    <h3>Own company — owner and manager</h3>
+    <div class="where">Samara · running the business, clients and projects</div>
+  </div>
+  <div class="when">17 years, until 2026</div>
+  <ul>
+    <li>Full cycle: clients, contractors, deadlines, budgets, responsibility for the outcome.</li>
+    <li>Websites and SEO on the side; the move into engineering was deliberate, not from scratch.</li>
+  </ul>
+</div>
+
+<div class="two">
+<div>
+  <h2>SEO projects</h2>
+  <ul style="padding-left:15px">
+    <li><b>cookai.ru</b> — a recipe site, 1,439 recipes. Content reworked for search intent, structure
+        and technical optimisation: <b>72% of impressions on the first page</b> of results
+        (Yandex Webmaster), zero errors reported.</li>
+    <li><b>kor-nil.ru</b> — this site: Eleventy, Lighthouse 100/100/100/100, Schema.org, Core Web Vitals.</li>
+  </ul>
+</div>
+<div>
+  <h2>About me</h2>
+  <ul style="padding-left:15px">
+    <li>Curious about how things work since childhood; moved from hardware to code.</li>
+    <li>I measure instead of guessing: media, ranking, SEO, always with before/after numbers.</li>
+    <li>Happy to walk through my code in an interview; the site's repository is public.</li>
+  </ul>
+</div>
+</div>
+
+<h2>Stack</h2>
+<div class="stack">
+  <div><h4>Client</h4><p>Flutter, Dart, PWA, WebRTC, Service Worker, HTML5 / CSS3 / JavaScript, Quill</p></div>
+  <div><h4>Backend</h4><p>Node.js, Express, Socket.IO, PostgreSQL, JWT, REST, ffmpeg, S3, Web Push, FCM</p></div>
+  <div><h4>Infrastructure</h4><p>Nginx, Docker, PM2, Linux, Let's Encrypt, rclone, Git / GitHub, rsync deploys</p></div>
+</div>
+
+<footer>Updated: September 2026 · latest version at kor-nil.ru/en/about/</footer>
+</body>
+</html>

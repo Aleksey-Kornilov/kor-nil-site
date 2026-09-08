@@ -1,26 +1,30 @@
-{#- Верхняя шапка сайта: логотип, меню, тумблер темы. Sticky. -#}
-<a class="skip-link" href="#main">Перейти к содержимому</a>
+{#- Верхняя шапка сайта: логотип, меню, переключатель языка, тумблер темы. Sticky.
+    Тексты — из _data/i18n.json по текущему lang (ru по умолчанию, en в src/en/). -#}
+{%- set t = i18n[lang] %}
+<a class="skip-link" href="#main">{{ t.skip }}</a>
 <header class="site-header" role="banner">
   <div class="container header-inner">
-    <a href="/" class="brand">
+    <a href="{{ t.home }}" class="brand">
       <span class="brand-mark" aria-hidden="true">k</span>
       <span class="brand-text">{{ site.shortTitle }}</span>
     </a>
 
-    <nav class="site-nav" aria-label="Основная навигация">
-      <button class="nav-toggle" aria-label="Открыть меню" aria-expanded="false" aria-controls="nav-menu">
+    <nav class="site-nav" aria-label="{{ t.navLabel }}">
+      <button class="nav-toggle" aria-label="{{ t.menuOpen }}" aria-expanded="false" aria-controls="nav-menu">
         <span></span><span></span><span></span>
       </button>
       <ul id="nav-menu" class="nav-menu">
-        <li><a href="/" {% if page.url == '/' %}aria-current="page"{% endif %}>Главная</a></li>
-        <li><a href="/projects/chatyadro/" {% if '/projects/chatyadro' in page.url %}aria-current="page"{% endif %}>ЧатЯдро</a></li>
-        <li><a href="/seo/" {% if page.url == '/seo/' %}aria-current="page"{% endif %}>SEO</a></li>
-        <li><a href="/about/" {% if page.url == '/about/' %}aria-current="page"{% endif %}>Обо мне</a></li>
-        <li><a href="/contact/" {% if page.url == '/contact/' %}aria-current="page"{% endif %}>Контакты</a></li>
+        {%- for item in t.nav %}
+        {%- set current = (page.url == item.href) or (item.href != t.home and item.href in page.url) %}
+        <li><a href="{{ item.href }}" {% if current %}aria-current="page"{% endif %}>{{ item.label }}</a></li>
+        {%- endfor %}
       </ul>
     </nav>
 
-    <button class="theme-toggle" aria-label="Переключить тему">
+    {#- Переключатель языка: на парную страницу (altUrl), иначе на главную другого языка -#}
+    <a class="lang-switch" href="{{ altUrl or t.switch.href }}" lang="{{ t.switch.lang }}" hreflang="{{ t.switch.lang }}" title="{{ t.switch.title }}">{{ t.switch.label }}</a>
+
+    <button class="theme-toggle" aria-label="{{ t.themeToggle }}">
       <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="4"></circle>
         <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>

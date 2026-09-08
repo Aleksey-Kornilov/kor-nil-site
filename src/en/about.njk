@@ -1,0 +1,161 @@
+---
+layout: layouts/base.njk
+permalink: /en/about/
+altUrl: /about/
+pageCrumb: "About"
+pageTitle: "About · Aleksey Kornilov, Full-stack developer"
+pageDescription: "17 years running my own company, then full-time engineering. Author of ChatYadro. Flutter, Node.js, PostgreSQL, WebRTC. Looking for a full-stack Flutter/Node.js role, remote-friendly."
+pageKeywords: "flutter developer Russia, full-stack developer remote, node.js developer, Samara"
+pageType: profile
+pageSchema: |
+  {
+    "@type": "AboutPage",
+    "@id": "https://kor-nil.ru/en/about/#aboutpage",
+    "url": "https://kor-nil.ru/en/about/",
+    "name": "About",
+    "description": "Professional profile of Aleksey Kornilov",
+    "mainEntity": { "@id": "https://kor-nil.ru#person" }
+  }
+---
+
+<section class="section container about-hero">
+  <div class="about-avatar" aria-hidden="true">
+    <div class="avatar-inner">AK</div>
+  </div>
+  <h1>Aleksey Kornilov</h1>
+  <p class="about-role">Full-stack Flutter / Node.js developer · Samara, Russia · remote-friendly</p>
+  <div class="about-links">
+    <a href="/assets/files/Aleksey-Kornilov-CV-en.pdf" class="btn btn-primary" download>Download CV (PDF)</a>
+    <a href="mailto:{{ site.contacts.email }}" class="btn btn-secondary">Email me</a>
+    <a href="/en/contact/" class="btn btn-secondary">All contacts</a>
+  </div>
+</section>
+
+<section class="section container about-content">
+  <div class="prose">
+    <p class="lead">
+      I have been taking things apart since childhood to see how they work. That curiosity turned
+      into business: for 17 years I ran my own company, where I learned to ship projects all the way
+      to the result without cutting corners.
+    </p>
+    <p>
+      In early 2026 I moved into software engineering full-time. My stack is full-stack: Flutter on
+      the client, Node.js on the server, PostgreSQL, WebRTC, PWA. I am the author of
+      <a href="/en/projects/chatyadro/">ChatYadro</a>, a multi-tenant social platform for local
+      communities. I took it from the first commit to production on my own: 22 community types
+      with a role model, real-time chat, WebRTC audio and voice messages, and the legal
+      infrastructure required by Russian personal-data law.
+    </p>
+    <p>
+      The production version runs on <a href="https://sntchat.ru" target="_blank" rel="noopener">sntchat.ru</a>,
+      and several communities use the platform daily. The Android app is published on RuStore.
+      Stable and beta channels ship with automatic client updates.
+    </p>
+    <p>
+      I am looking for a <strong>full-stack Flutter / Node.js</strong> position, remote or on-site
+      in Samara. In parallel I keep developing ChatYadro and take on SEO projects.
+    </p>
+  </div>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Timeline</h2>
+  <ol class="timeline">
+    <li class="tl-item tl-item--now">
+      <div class="tl-date">August 2026</div>
+      <h3>ChatYadro on RuStore</h3>
+      <p>Submitted on the 7th, rejected on the 11th on a legal ground, rebuilt and resubmitted,
+         published on the 16th. <a href="/en/projects/chatyadro/#release">How it went →</a></p>
+    </li>
+    <li class="tl-item">
+      <div class="tl-date">March 2026</div>
+      <h3>First commit of ChatYadro</h3>
+      <p>From zero to production solo: 88 screens, 22 community types, WebRTC audio calls,
+         personal-data compliance built in.</p>
+    </li>
+    <li class="tl-item">
+      <div class="tl-date">Early 2026</div>
+      <h3>Full-time engineering</h3>
+      <p>Flutter on the client, Node.js and PostgreSQL on the server. SEO projects on the side,
+         including a recipe site with 72% of impressions on the first page of results.</p>
+    </li>
+    <li class="tl-item">
+      <div class="tl-date">17 years before that</div>
+      <h3>My own company</h3>
+      <p>Owner and manager: clients, contractors, deadlines, money and responsibility for the
+         outcome. That is where the habit of finishing, not "almost finishing", comes from.</p>
+    </li>
+    <li class="tl-item">
+      <div class="tl-date">Since childhood</div>
+      <h3>Computers and hardware</h3>
+      <p>Always tinkering and figuring out how things work. Over time that interest became a profession.</p>
+    </li>
+  </ol>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Stack and skills</h2>
+  <div class="skills-grid">
+    <div class="skill-block glass">
+      <h3>Frontend</h3>
+      <ul class="skill-list">
+        <li>Flutter 3, Dart 3</li>
+        <li>PWA, Service Worker</li>
+        <li>WebRTC (1:1 audio)</li>
+        <li>HTML5, CSS3, JavaScript</li>
+        <li>Custom design systems</li>
+      </ul>
+    </div>
+    <div class="skill-block glass">
+      <h3>Backend</h3>
+      <ul class="skill-list">
+        <li>Node.js 20, Express 5</li>
+        <li>Socket.IO 4 (real-time)</li>
+        <li>PostgreSQL 15, migrations</li>
+        <li>JWT, refresh tokens</li>
+        <li>REST API, Web Push (VAPID)</li>
+      </ul>
+    </div>
+    <div class="skill-block glass">
+      <h3>Infrastructure</h3>
+      <ul class="skill-list">
+        <li>Nginx, HTTP/2, gzip</li>
+        <li>Docker, PM2</li>
+        <li>S3-compatible object storage</li>
+        <li>Let's Encrypt, auto-renewal</li>
+        <li>Git, GitHub, rsync deploys</li>
+      </ul>
+    </div>
+    <div class="skill-block glass">
+      <h3>Product and process</h3>
+      <ul class="skill-list">
+        <li>Product thinking</li>
+        <li>Personal-data compliance (consents, audit logs)</li>
+        <li>SEO and Core Web Vitals</li>
+        <li>Project management</li>
+        <li>Working directly with clients</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">What I am open to</h2>
+  <div class="offers-grid">
+    <article class="offer glass">
+      <div class="offer-icon">💼</div>
+      <h3>Full-time role</h3>
+      <p>Full-stack Flutter / Node.js developer, remote or on-site in Samara. Happy to walk through my code in an interview and discuss real tasks.</p>
+    </article>
+    <article class="offer glass">
+      <div class="offer-icon">🚀</div>
+      <h3>Contract work</h3>
+      <p>Mobile apps on Flutter, Node.js backends, PWAs, third-party API integrations. From concept to production, including deployment and support.</p>
+    </article>
+    <article class="offer glass">
+      <div class="offer-icon">🔍</div>
+      <h3>SEO</h3>
+      <p>Technical audits, search optimisation, Core Web Vitals, Schema.org and semantic markup.</p>
+    </article>
+  </div>
+</section>

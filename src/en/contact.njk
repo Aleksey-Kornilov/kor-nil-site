@@ -1,31 +1,32 @@
 ---
 layout: layouts/base.njk
-altUrl: /en/contact/
-pageCrumb: "Контакты"
-pageTitle: "Контакты · Связаться с Алексеем Корниловым"
-pageDescription: "Свяжитесь со мной по вопросам разработки приложений или SEO-продвижения. Email, Telegram, MAX, VK, GitHub — выбирайте удобный канал."
-pageKeywords: "разработчик Самара контакты, flutter разработчик связаться, SEO услуги Самара"
+permalink: /en/contact/
+altUrl: /contact/
+pageCrumb: "Contact"
+pageTitle: "Contact · Aleksey Kornilov"
+pageDescription: "Get in touch about app development or SEO: email, Telegram, VK, GitHub, or the form on this page. I reply within a day."
+pageKeywords: "contact flutter developer, hire full-stack developer remote"
 pageSchema: |
   {
     "@type": "ContactPage",
-    "@id": "https://kor-nil.ru/contact/#contactpage",
-    "url": "https://kor-nil.ru/contact/",
-    "name": "Контакты",
-    "description": "Каналы связи с Алексеем Корниловым"
+    "@id": "https://kor-nil.ru/en/contact/#contactpage",
+    "url": "https://kor-nil.ru/en/contact/",
+    "name": "Contact",
+    "description": "Ways to reach Aleksey Kornilov"
   }
 ---
 
 <section class="section container contact-hero">
-  <p class="hero-eyebrow">Свяжитесь со мной</p>
-  <h1>Готов обсудить проект</h1>
+  <p class="hero-eyebrow">Get in touch</p>
+  <h1>Let's talk about your project</h1>
   <p class="section-lead">
-    Разработка приложений, SEO-продвижение, консультация — напишите удобным способом.
-    Отвечаю в течение дня.
+    App development, SEO, a consultation, or a job opening: reach me any way you like.
+    I reply within a day.
   </p>
 </section>
 
 <section class="section container">
-  <h2 class="section-title">Мессенджеры и почта</h2>
+  <h2 class="section-title">Email and social</h2>
 
   <div class="grid grid-3 contacts-grid">
     <a href="mailto:{{ site.contacts.email }}" class="card contact-card">
@@ -58,7 +59,7 @@ pageSchema: |
           <path d="M12 8v8"></path>
         </svg>
       </div>
-      <h3 class="card-title">ВКонтакте</h3>
+      <h3 class="card-title">VK</h3>
       <p class="card-description contact-value">vk.com/kornil88</p>
     </a>
 
@@ -76,31 +77,35 @@ pageSchema: |
 
 <section class="section container">
   <div class="contact-form-wrap glass">
-    <h2>Написать сразу</h2>
-    <p class="text-muted">Заполните форму — я отвечу на почту в течение дня.</p>
+    <h2>Write to me now</h2>
+    <p class="text-muted">Fill in the form and I will reply by email within a day.</p>
 
-    <form class="contact-form" id="contact-form" data-telegram="{{ site.contacts.telegram }}" novalidate>
+    <form class="contact-form" id="contact-form" data-telegram="{{ site.contacts.telegram }}" novalidate
+          data-msg-fill="Please fill in all fields."
+          data-msg-sending="Sending…"
+          data-msg-ok="Thank you! Your message has been sent. I will reply by email within a day."
+          data-msg-fail="Could not send. Please message me on Telegram: @"
+          data-msg-send="Send">
       <div class="field">
-        <label for="cf-name">Ваше имя</label>
-        <input type="text" id="cf-name" name="name" required autocomplete="name" placeholder="Как к вам обращаться">
+        <label for="cf-name">Your name</label>
+        <input type="text" id="cf-name" name="name" required autocomplete="name" placeholder="How should I address you">
       </div>
       <div class="field">
-        <label for="cf-email">Email для ответа</label>
+        <label for="cf-email">Email for the reply</label>
         <input type="email" id="cf-email" name="email" required autocomplete="email" placeholder="you@example.com">
       </div>
       <div class="field">
-        <label for="cf-message">Сообщение</label>
-        <textarea id="cf-message" name="message" required rows="5" placeholder="Расскажите вкратце о проекте или задаче"></textarea>
+        <label for="cf-message">Message</label>
+        <textarea id="cf-message" name="message" required rows="5" placeholder="A few words about the project or the role"></textarea>
       </div>
-      {#- Honeypot: скрытое поле-приманка для спам-ботов. Люди его не видят и не
-         заполняют; если поле пришло непустым — сервер тихо отсеивает запрос. -#}
+      {#- Honeypot: hidden decoy field for spam bots; the server drops non-empty submissions. -#}
       <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">
-        <label for="cf-company">Не заполняйте это поле</label>
+        <label for="cf-company">Leave this field empty</label>
         <input type="text" id="cf-company" name="company" tabindex="-1" autocomplete="off">
       </div>
       <div class="form-footer">
-        <button type="submit" class="btn btn-primary btn-lg">Отправить</button>
-        <p class="form-hint text-small text-muted">Никакого спама. Данные используются только для ответа вам.</p>
+        <button type="submit" class="btn btn-primary btn-lg">Send</button>
+        <p class="form-hint text-small text-muted">No spam. Your details are used only to reply to you.</p>
       </div>
       <div class="form-status" id="cf-status" role="status" aria-live="polite"></div>
     </form>
