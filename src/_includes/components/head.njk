@@ -71,17 +71,30 @@
 })();
 </script>
 
-{#- Яндекс.Метрика (номер в site.json). Только на боевом домене — localhost и превью не считаем. -#}
+{#- Яндекс.Метрика (номер в site.json). Только на боевом домене — localhost и превью не считаем.
+    Грузится отложенно: по первому действию посетителя (прокрутка, клик, касание) или через 4 с
+    после полной загрузки. Иначе tag.js с Вебвизором даёт ~1,7 с блокировки на слабом телефоне
+    и роняет первый экран — а сайт продаёт Core Web Vitals как услугу. -#}
 {%- if site.metrika %}
 <script>
-if (location.hostname.endsWith('kor-nil.ru')) {
-  (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-  m[i].l=1*new Date();
-  for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-  k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-  (window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id={{ site.metrika }}', 'ym');
-  ym({{ site.metrika }}, 'init', {ssr:true, webvisor:true, clickmap:true, accurateTrackBounce:true, trackLinks:true});
-}
+(function () {
+  if (!location.hostname.endsWith('kor-nil.ru')) return;
+  var events = ['scroll', 'click', 'keydown', 'touchstart', 'mousemove'];
+  var started = false;
+  function start() {
+    if (started) return;
+    started = true;
+    events.forEach(function (e) { removeEventListener(e, start); });
+    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+    m[i].l=1*new Date();
+    for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+    (window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id={{ site.metrika }}', 'ym');
+    ym({{ site.metrika }}, 'init', {ssr:true, webvisor:true, clickmap:true, accurateTrackBounce:true, trackLinks:true});
+  }
+  events.forEach(function (e) { addEventListener(e, start, { passive: true }); });
+  addEventListener('load', function () { setTimeout(start, 4000); });
+})();
 </script>
 <noscript><div><img src="https://mc.yandex.ru/watch/{{ site.metrika }}" style="position:absolute; left:-9999px;" alt=""></div></noscript>
 {%- endif %}
