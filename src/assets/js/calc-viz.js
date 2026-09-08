@@ -47,53 +47,63 @@
   function iso(container, boxes, dims, opts) {
     opts = opts || {};
     const yaw = opts.yaw == null ? -0.6 : opts.yaw;
-    const faces = [];
-    boxes.forEach((b) => boxFaces(b).forEach((fc) => faces.push(fc)));
-    // Проекция всех точек + размерных линий
     const pr = (p) => project(p, yaw);
-    const allPts = [];
-    faces.forEach((fc) => { fc.p = fc.pts.map(pr); fc.depth = fc.p.reduce((s, q) => s + q.depth, 0) / 4; fc.p.forEach((q) => allPts.push(q)); });
-    (dims || []).forEach((d) => { d.a = pr(d.from); d.b = pr(d.to); allPts.push(d.a, d.b); });
-    // Плоскость земли (для фундамента): чуть больше следа
-    let ground = null;
-    if (opts.ground) {
-      const xs = boxes.flatMap((b) => [b.x, b.x + b.dx]), ys = boxes.flatMap((b) => [b.y, b.y + b.dy]);
-      const m = Math.max(0.6, (Math.max(...xs) - Math.min(...xs)) * 0.18);
-      const g = [[Math.min(...xs) - m, Math.min(...ys) - m, 0], [Math.max(...xs) + m, Math.min(...ys) - m, 0], [Math.max(...xs) + m, Math.max(...ys) + m, 0], [Math.min(...xs) - m, Math.max(...ys) + m, 0]];
-      ground = g.map(pr); ground.forEach((q) => allPts.push(q));
-    }
-    const minX = Math.min(...allPts.map((q) => q.sx)), maxX = Math.max(...allPts.map((q) => q.sx));
-    const minY = Math.min(...allPts.map((q) => q.sy)), maxY = Math.max(...allPts.map((q) => q.sy));
-    const W = 640, H = 400, pad = 56;
-    const scale = Math.min((W - pad * 2) / Math.max(maxX - minX, 0.01), (H - pad * 2) / Math.max(maxY - minY, 0.01));
-    const X = (q) => pad + (q.sx - minX) * scale + ((W - pad * 2) - (maxX - minX) * scale) / 2;
-    const Y = (q) => pad + (q.sy - minY) * scale + ((H - pad * 2) - (maxY - minY) * scale) / 2;
+
+    // Масштаб НЕ зависит от угла: берём радиус модели вокруг её центра, иначе при
+    // вращении картинка «дышит» и кажется, что искажается.
+    const xs = boxes.flatMap((b) => [b.x, b.x + b.dx]), ys = boxes.flatMap((b) => [b.y, b.y + b.dy]), zs = boxes.flatMap((b) => [b.z, b.z + b.dz]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+    const gm = opts.ground ? Math.max(0.6, (Math.max(...xs) - Math.min(...xs)) * 0.18) : 0;
+    const rx = (Math.max(...xs) - Math.min(...xs)) / 2 + gm, ry = (Math.max(...ys) - Math.min(...ys)) / 2 + gm, rz = (Math.max(...zs) - Math.min(...zs)) / 2;
+    const radiusXY = Math.hypot(rx, ry);
+    const W = 640, H = 400, pad = 64;
+    const scale = Math.min((W - pad * 2) / (2 * radiusXY), (H - pad * 2) / (2 * (radiusXY * Math.sin(ELEV) + rz * Math.cos(ELEV))));
+    const c0 = pr([cx, cy, cz]);
+    const X = (q) => W / 2 + (q.sx - c0.sx) * scale;
+    const Y = (q) => H / 2 + (q.sy - c0.sy) * scale;
     const poly = (pts) => pts.map((q) => X(q).toFixed(1) + ',' + Y(q).toFixed(1)).join(' ');
 
     const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'viz-svg', role: 'img', 'aria-label': opts.title || 'Схема' });
-    if (ground) svg.appendChild(el('polygon', { points: poly(ground), fill: '#7cb083', 'fill-opacity': '0.28', stroke: '#5f9466', 'stroke-opacity': '0.5' }));
-    faces.sort((a, b) => a.depth - b.depth);
-    faces.forEach((fc) => {
-      const under = fc.z <= 0.0001;
-      const fill = FILL[(under ? 'u' : '') + fc.shade];
-      svg.appendChild(el('polygon', { points: poly(fc.p), fill, 'fill-opacity': under ? '0.85' : '1', stroke: '#2b3440', 'stroke-width': '0.8', 'stroke-opacity': '0.6' }));
+    const defs = el('defs');
+    const mk = el('marker', { id: 'viz-arr', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
+    mk.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead' }));
+    defs.appendChild(mk); svg.appendChild(defs);
+
+    if (opts.ground) {
+      const g = [[Math.min(...xs) - gm, Math.min(...ys) - gm, 0], [Math.max(...xs) + gm, Math.min(...ys) - gm, 0], [Math.max(...xs) + gm, Math.max(...ys) + gm, 0], [Math.min(...xs) - gm, Math.max(...ys) + gm, 0]];
+      svg.appendChild(el('polygon', { points: poly(g.map(pr)), fill: '#7cb083', 'fill-opacity': '0.28', stroke: '#5f9466', 'stroke-opacity': '0.5' }));
+    }
+
+    // Порядок рисования: бруски от дальних к ближним по центру, внутри бруска — только
+    // видимые грани (отсечение задних по знаку площади на экране). Так соседние бруски
+    // кольца не «протыкают» друг друга при повороте.
+    const items = boxes.map((b) => {
+      const c = pr([b.x + b.dx / 2, b.y + b.dy / 2, b.z + b.dz / 2]);
+      return { b, depth: c.depth };
+    }).sort((a, b) => a.depth - b.depth);
+    items.forEach(({ b }) => {
+      boxFaces(b).forEach((fc) => {
+        const p = fc.pts.map(pr);
+        // площадь со знаком: грань видна, если её обход на экране против часовой (с учётом порядка вершин)
+        let area = 0;
+        for (let i = 0; i < 4; i++) { const a = p[i], q = p[(i + 1) % 4]; area += a.sx * q.sy - q.sx * a.sy; }
+        if (area <= 0) return;
+        const under = fc.z <= 0.0001;
+        const fill = FILL[(under ? 'u' : '') + fc.shade];
+        svg.appendChild(el('polygon', { points: poly(p), fill, 'fill-opacity': under ? '0.9' : '1', stroke: '#2b3440', 'stroke-width': '0.8', 'stroke-opacity': '0.6' }));
+      });
     });
-    // Размерные линии: выносим наружу перпендикулярно, подписи с фоном
+
     (dims || []).forEach((d) => {
-      const ax = X(d.a), ay = Y(d.a), bx = X(d.b), by = Y(d.b);
+      const a = pr(d.from), b = pr(d.to);
+      const ax = X(a), ay = Y(a), bx = X(b), by = Y(b);
       const off = d.offset || 0;
       let nx = -(by - ay), ny = bx - ax; const len = Math.hypot(nx, ny) || 1; nx = nx / len * off; ny = ny / len * off;
       const x1 = ax + nx, y1 = ay + ny, x2 = bx + nx, y2 = by + ny;
       if (off) { svg.appendChild(el('line', { x1: ax, y1: ay, x2: x1, y2: y1, class: 'viz-ext' })); svg.appendChild(el('line', { x1: bx, y1: by, x2: x2, y2: y2, class: 'viz-ext' })); }
       svg.appendChild(el('line', { x1, y1, x2, y2, class: 'viz-dim', 'marker-start': 'url(#viz-arr)', 'marker-end': 'url(#viz-arr)' }));
-      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-      const t = el('text', { x: mx, y: my - 6, class: 'viz-label', 'text-anchor': 'middle' }, d.label);
-      svg.appendChild(t);
+      svg.appendChild(el('text', { x: (x1 + x2) / 2, y: (y1 + y2) / 2 - 6, class: 'viz-label', 'text-anchor': 'middle' }, d.label));
     });
-    const defs = el('defs');
-    const mk = el('marker', { id: 'viz-arr', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
-    mk.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead' }));
-    defs.appendChild(mk); svg.insertBefore(defs, svg.firstChild);
     if (opts.caption) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
     container.innerHTML = '';
     container.appendChild(svg);
