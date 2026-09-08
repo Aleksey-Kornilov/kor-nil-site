@@ -13,6 +13,9 @@ export default async function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy('src/assets/files'); // PDF-резюме
   eleventyConfig.addPassthroughCopy('src/robots.txt');
   eleventyConfig.addPassthroughCopy({ 'src/favicon.ico': 'favicon.ico' });
+  // Файлы подтверждения прав (Яндекс.Вебмастер и т.п.) — как есть, в корень сайта, без шаблонизации.
+  eleventyConfig.addPassthroughCopy({ 'src/verify': '.' });
+  eleventyConfig.ignores.add('src/verify/**');
 
   // CSS: пересборка при правке любого css-файла в режиме --serve.
   eleventyConfig.addWatchTarget('src/assets/css/');
