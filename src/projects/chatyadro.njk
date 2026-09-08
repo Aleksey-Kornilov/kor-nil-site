@@ -3,7 +3,6 @@ layout: layouts/base.njk
 pageTitle: "ЧатЯдро — платформа для локальных сообществ, приложение в RuStore"
 pageDescription: "ЧатЯдро — платформа для СНТ, семьи, школы и других локальных сообществ: чаты, лента, аудиозвонки, доска объявлений, 22 категории с ролями и модулями. Приложение опубликовано в RuStore."
 pageKeywords: "чатядро, платформа для локальных сообществ, приложение для СНТ, чат для сообщества, приложение в RuStore, PWA, flutter, real-time"
-pageStyles: [chatyadro]
 pageType: article
 pageSchema: |
   {
@@ -37,7 +36,7 @@ pageSchema: |
     <a href="https://www.rustore.ru/catalog/app/ru.sntchat.app" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
       Установить из RuStore →
     </a>
-    <a href="#features" class="btn btn-secondary btn-lg">Смотреть возможности</a>
+    <a href="#screens" class="btn btn-secondary btn-lg">Смотреть экраны</a>
   </div>
 </section>
 
@@ -60,6 +59,57 @@ pageSchema: |
       <div class="stat-label">solo-разработка</div>
     </div>
   </div>
+</section>
+
+<section id="screens" class="section container">
+  <h2 class="section-title">Как это выглядит</h2>
+  <p class="section-lead">
+    Витрина из карточки приложения в RuStore: видео и экраны на телефоне.
+  </p>
+
+  {%- set shots = [
+    { file: 'feed',       alt: 'Лента ЧатЯдра: истории друзей, новости сообществ, фото и видео',
+      title: 'В ленте сразу всё', text: 'Истории друзей, новости мира и сообществ, фото и видео' },
+    { file: 'community',  alt: 'Экран сообщества ТСН СНТ Авиатор: чаты, новости, календарь, взносы',
+      title: 'Сообщество под то, чем вы заняты', text: 'Разделы, роли и новости — у каждого свои' },
+    { file: 'threads',    alt: 'Создание ветки в чате сообщества: официальная, закрытая, открытая',
+      title: 'Разговор не тонет в общем потоке', text: 'Ветки официальные, закрытые и открытые' },
+    { file: 'board',      alt: 'Доска объявлений сообщества: трактор, квадроцикл, натяжные потолки',
+      title: 'Продать, купить, отдать даром', text: 'Среди своих, а не среди незнакомцев' },
+    { file: 'games',      alt: 'Экран мини-игр: крестики-нолики, викторина, пазлы, морской бой, шашки',
+      title: 'Семь игр — и все без интернета', text: 'Рейтинг, статистика и соперники из своего сообщества' },
+    { file: 'appearance', alt: 'Настройки внешнего вида: тёмная тема, цвет интерфейса, размер текста',
+      title: 'Подстройте под себя', text: 'Тёмная тема, цвет интерфейса и размер текста' }
+  ] %}
+
+  <div class="shots">
+    <figure class="shot">
+      <video controls playsinline muted preload="none"
+             width="540" height="960"
+             poster="/assets/images/chatyadro/showcase-poster.webp"
+             aria-label="Видео-витрина ЧатЯдра из RuStore, 25 секунд, без звука">
+        <source src="/assets/video/chatyadro-showcase.mp4" type="video/mp4">
+      </video>
+      <figcaption class="shot-caption">
+        <strong>Видео-витрина</strong>
+        25 секунд, без звука — та же, что в магазине
+      </figcaption>
+    </figure>
+    {%- for s in shots %}
+    <figure class="shot">
+      <img src="/assets/images/chatyadro/{{ s.file }}-540.webp"
+           srcset="/assets/images/chatyadro/{{ s.file }}-540.webp 540w, /assets/images/chatyadro/{{ s.file }}-1080.webp 1080w"
+           sizes="(min-width: 720px) 260px, 72vw"
+           width="540" height="960" loading="lazy" decoding="async"
+           alt="{{ s.alt }}">
+      <figcaption class="shot-caption">
+        <strong>{{ s.title }}</strong>
+        {{ s.text }}
+      </figcaption>
+    </figure>
+    {%- endfor %}
+  </div>
+  <p class="shots-hint">Листайте вбок →</p>
 </section>
 
 <section id="release" class="section container">
