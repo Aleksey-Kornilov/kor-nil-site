@@ -62,6 +62,12 @@
 <style>{{ criticalCss | safe }}</style>
 <link rel="stylesheet" href="{{ cssBundleUrl }}">
 
+{#- Speculation Rules: браузер заранее отрисовывает внутреннюю страницу при наведении на ссылку
+    (Chrome/Edge; остальные игнорируют). Переход по сайту становится мгновенным. -#}
+<script type="speculationrules">
+{ "prerender": [ { "where": { "and": [ { "href_matches": "/*" }, { "not": { "href_matches": "/assets/*" } } ] }, "eagerness": "moderate" } ] }
+</script>
+
 {#- Инициализация темы ДО отрисовки (иначе флэш белого/чёрного) -#}
 <script>
 (function() {
@@ -92,8 +98,16 @@
     (window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id={{ site.metrika }}', 'ym');
     ym({{ site.metrika }}, 'init', {ssr:true, webvisor:true, clickmap:true, accurateTrackBounce:true, trackLinks:true});
   }
-  events.forEach(function (e) { addEventListener(e, start, { passive: true }); });
-  addEventListener('load', function () { setTimeout(start, 4000); });
+  function arm() {
+    events.forEach(function (e) { addEventListener(e, start, { passive: true }); });
+    setTimeout(start, 4000);
+  }
+  function armAfterLoad() {
+    if (document.readyState === 'complete') arm(); else addEventListener('load', arm);
+  }
+  // Страница, отрисованная заранее (prerender), не считается визитом, пока её не открыли
+  if (document.prerendering) addEventListener('prerenderingchange', armAfterLoad, { once: true });
+  else armAfterLoad();
 })();
 </script>
 <noscript><div><img src="https://mc.yandex.ru/watch/{{ site.metrika }}" style="position:absolute; left:-9999px;" alt=""></div></noscript>

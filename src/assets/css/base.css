@@ -27,6 +27,7 @@ p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }
 /* Глобальные CSS-переменные — светлая тема по умолчанию.
    Значения тёмной темы — в components/theme.css, переопределяют через [data-theme="dark"]. */
 :root {
+  color-scheme: light; /* тёмная — в theme.css; управляет нативными контролами и скроллбарами */
   /* Цвета — светлая тема */
   --color-bg: #f7f8fa;
   --color-bg-elevated: #ffffff;
@@ -116,7 +117,8 @@ body::before {
 }
 
 /* Типографика */
-h1, h2, h3 { line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+h1, h2, h3 { line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+p, li { text-wrap: pretty; } /* без висячих слов в последней строке */
 h1 { font-size: var(--fs-h1); }
 h2 { font-size: var(--fs-h2); }
 h3 { font-size: var(--fs-h3); }

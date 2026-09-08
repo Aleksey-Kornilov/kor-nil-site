@@ -2,6 +2,7 @@
    Тумблер темы ставит data-theme="dark" на <html>. */
 
 [data-theme="dark"] {
+  color-scheme: dark;
   --color-bg: #0e1621;
   --color-bg-elevated: #1a2332;
   --color-bg-subtle: rgba(255, 255, 255, 0.04);

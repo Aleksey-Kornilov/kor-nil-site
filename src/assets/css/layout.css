@@ -5,11 +5,12 @@
   width: 100%;
   max-width: 1180px;
   margin-inline: auto;
-  padding-inline: var(--space-5);
+  /* На iPhone в альбомной ориентации контент не уходит под «чёлку» (viewport-fit=cover) */
+  padding-inline: max(var(--space-5), env(safe-area-inset-left)) max(var(--space-5), env(safe-area-inset-right));
 }
 
 @media (min-width: 720px) {
-  .container { padding-inline: var(--space-6); }
+  .container { padding-inline: max(var(--space-6), env(safe-area-inset-left)) max(var(--space-6), env(safe-area-inset-right)); }
 }
 
 /* Основная область страницы — с отступом сверху под sticky-шапку */
@@ -54,6 +55,13 @@
 }
 @media (min-width: 1024px) {
   .grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Печать: только содержимое, без шапки, меню и футера */
+@media print {
+  .site-header, .site-footer, .breadcrumbs, .theme-toggle, .nav-toggle { display: none !important; }
+  .main { padding-top: 0; }
+  body::before { display: none; }
 }
 
 /* Плавные переходы между страницами (View Transitions API — Chrome/Safari 2026) */

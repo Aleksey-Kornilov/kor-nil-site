@@ -54,3 +54,4 @@
   color: var(--color-accent);
   font-weight: 600;
 }
+.card-footer a { display: inline-block; padding-block: var(--space-1); } /* цель ≥ 24px */
