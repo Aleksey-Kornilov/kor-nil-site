@@ -107,7 +107,8 @@
         { id: 'strip', label: 'Ленточный фундамент', fields: [
           { id: 'sLen', label: 'Длина ленты (по всему периметру)', unit: 'м' },
           { id: 'sWid', label: 'Ширина ленты', unit: 'см' },
-          { id: 'sHei', label: 'Высота / глубина', unit: 'см' },
+          { id: 'sDepth', label: 'Глубина заложения (в земле)', unit: 'см' },
+          { id: 'sAbove', label: 'Высота над землёй (цоколь)', unit: 'см, необязательно' },
         ] },
         { id: 'columns', label: 'Столбы / колонны', fields: [
           { id: 'cSide', label: 'Сечение (сторона квадрата)', unit: 'см' },
@@ -128,8 +129,9 @@
           const l = v.len, w = v.wid, t = v.thick;
           if (pos(l) && pos(w) && pos(t)) volume = l * w * (t / 100);
         } else if (mode === 'strip') {
-          const l = v.sLen, w = v.sWid, h = v.sHei;
-          if (pos(l) && pos(w) && pos(h)) volume = l * (w / 100) * (h / 100);
+          // Полная высота ленты = часть в земле + часть над землёй (цоколь).
+          const l = v.sLen, w = v.sWid, h = (v.sDepth || 0) + (v.sAbove || 0);
+          if (pos(l) && pos(w) && pos(v.sDepth)) volume = l * (w / 100) * (h / 100);
         } else {
           const s = v.cSide, h = v.cHei, n = v.cCount;
           if (pos(s) && pos(h) && pos(n)) volume = (s / 100) * (s / 100) * h * n;
