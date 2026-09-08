@@ -119,3 +119,20 @@
 .calc-opening-f input { width: 88px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-bg-elevated); font-size: 1rem; }
 .calc-opening-del { width: 32px; height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 1.1rem; }
 .calc-opening-del:hover { color: var(--color-danger); border-color: var(--color-danger); }
+
+/* Редактор плана (calc-plan.js) */
+.calc-planbox:empty { display: none; }
+.plan { display: grid; gap: var(--space-3); }
+.plan-svg { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-elevated); touch-action: none; }
+.plan-grid { stroke: var(--color-border); stroke-width: 0.6; }
+.plan-tape { fill: #9aa8b8; fill-opacity: 0.55; stroke: #2b3440; stroke-width: 1; }
+.plan-tape--bad { fill: var(--color-danger); fill-opacity: 0.3; stroke: var(--color-danger); }
+.plan-inner { stroke: #9aa8b8; stroke-opacity: 0.75; stroke-linecap: butt; }
+.plan-edge { stroke: transparent; stroke-width: 16; cursor: pointer; }
+.plan-edge.is-selected { stroke: var(--color-accent); stroke-opacity: 0.35; }
+.plan-handle { fill: var(--color-bg-elevated); stroke: var(--color-accent); stroke-width: 2; cursor: grab; }
+.plan-handle.is-selected { fill: var(--color-accent); }
+.plan-handle--inner { r: 6; stroke: #b45309; }
+.plan-panel { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); }
+.plan-panel-title { font-size: var(--fs-small); font-weight: 600; margin: 0; }
+.plan-panel .calc-opening-f input { width: 140px; }

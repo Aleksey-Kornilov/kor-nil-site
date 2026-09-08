@@ -112,6 +112,11 @@
           { id: 'sAbove', label: 'Высота над землёй (цоколь)', unit: 'см, необязательно' },
           { id: 'sInner', label: 'Внутренние стены на ленте', unit: 'м, необязательно' },
         ] },
+        { id: 'plan', label: 'Лента: свой план', plan: true, fields: [
+          { id: 'pW', label: 'Ширина ленты (по умолчанию)', unit: 'см', value: '40' },
+          { id: 'pDepth', label: 'Глубина в земле (по умолчанию)', unit: 'см', value: '60' },
+          { id: 'pAbove', label: 'Высота над землёй (цоколь)', unit: 'см, необязательно' },
+        ] },
         { id: 'columns', label: 'Столбы / колонны', fields: [
           { id: 'cSide', label: 'Сечение (сторона квадрата)', unit: 'см' },
           { id: 'cHei', label: 'Высота столба', unit: 'м' },
@@ -125,7 +130,7 @@
         { id: 'sand', label: 'Песок', unit: '₽ за тонну' },
         { id: 'gravel', label: 'Щебень', unit: '₽ за тонну' },
       ],
-      draw(v, mode, box, yaw) {
+      draw(v, mode, box, yaw, extras) {
         const V = window.CalcViz; if (!V) return false;
         const cm = (x) => (x || 0) / 100;
         if (mode === 'slab') {
@@ -165,6 +170,25 @@
           V.iso(box, boxes, dims, { yaw, ground: true, caption: 'Зелёное — уровень земли. Потяните, чтобы повернуть.' });
           return true;
         }
+        if (mode === 'plan') {
+          const P = window.CalcPlan; if (!P || !extras.plan) return false;
+          const g = P.geometry(extras.plan, { w: v.pW, depth: v.pDepth, above: v.pAbove || 0 });
+          if (!g.valid || !pos(v.pW) || !pos(v.pDepth)) return false;
+          let dims;
+          if (g.edges.length > 8) {
+            // Круг и «почти круг»: подписи каждой грани — мусор, подписываем диаметр
+            const xs = g.verts.map((q) => q[0]), ys = g.verts.map((q) => q[1]);
+            const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+            dims = [{ from: [Math.min(...xs), cy, g.above], to: [Math.max(...xs), cy, g.above], label: 'диаметр ' + fmt(Math.max(...xs) - Math.min(...xs)) + ' м', offset: 0 }];
+          } else {
+            dims = g.edges.map((e) => ({ from: [e.a[0], e.a[1], g.above], to: [e.b[0], e.b[1], g.above], label: fmt(e.len) + ' м', offset: -22 }));
+          }
+          const e0 = g.edges[0];
+          dims.push({ from: [e0.a[0], e0.a[1], -e0.depth], to: [e0.a[0], e0.a[1], 0], label: 'в земле ' + fmt(e0.depth * 100) + ' см', offset: 40 });
+          if (g.above > 0) dims.push({ from: [e0.b[0], e0.b[1], 0], to: [e0.b[0], e0.b[1], g.above], label: 'цоколь ' + fmt(g.above * 100) + ' см', offset: -30 });
+          V.iso(box, P.prisms(g), dims, { yaw, ground: true, caption: 'Зелёное — уровень земли. Потяните, чтобы повернуть.' });
+          return true;
+        }
         if (mode === 'columns') {
           if (!(pos(v.cSide) && pos(v.cHei) && pos(v.cCount))) return false;
           const s = cm(v.cSide), hgt = v.cHei, n = Math.min(Math.round(v.cCount), 36);
@@ -179,9 +203,15 @@
         }
         return false;
       },
-      compute(v, mode, sel) {
+      compute(v, mode, sel, extras) {
         let volume = null;
-        if (mode === 'slab') {
+        if (mode === 'plan') {
+          const P = window.CalcPlan;
+          if (P && extras.plan && pos(v.pW) && pos(v.pDepth)) {
+            const g = P.geometry(extras.plan, { w: v.pW, depth: v.pDepth, above: v.pAbove || 0 });
+            if (g.valid) volume = g.volume;
+          }
+        } else if (mode === 'slab') {
           const l = v.len, w = v.wid, t = v.thick;
           if (pos(l) && pos(w) && pos(t)) volume = l * w * (t / 100);
         } else if (mode === 'strip') {
@@ -476,6 +506,8 @@
     form.addEventListener('submit', (e) => e.preventDefault());
     const fieldsBox = h('div', { class: 'calc-fields' });
     const openingsBox = h('div', { class: 'calc-openings' });
+    const planBox = h('div', { class: 'calc-planbox' });
+    let planEditor = null;
     const vizBox = h('div', { class: 'calc-viz', hidden: '' });
     const presetsBox = h('div', { class: 'calc-presets' });
     const selectsBox = h('div');
@@ -528,11 +560,21 @@
       openingsBox.appendChild(adders);
     }
 
+    function renderPlan() {
+      const mode = def.modes.find((m) => m.id === state.mode);
+      if (!mode.plan || !window.CalcPlan) { planBox.innerHTML = ''; planEditor = null; return; }
+      if (!state.extras.plan) state.extras.plan = { verts: window.CalcPlan.PRESETS.rect.make(), edges: [], inner: [], preset: 'rect' };
+      planEditor = window.CalcPlan.editor(planBox, state.extras.plan, () => ({
+        w: parseNum(state.values.pW) || 40, depth: parseNum(state.values.pDepth) || 60, above: parseNum(state.values.pAbove) || 0,
+      }), () => render());
+    }
+
     function renderFields() {
       fieldsBox.innerHTML = '';
       const mode = def.modes.find((m) => m.id === state.mode);
       mode.fields.forEach((f) => fieldsBox.appendChild(field(f)));
       renderOpenings();
+      renderPlan();
       (def.common || []).forEach((f) => fieldsBox.appendChild(field(f)));
       presetsBox.innerHTML = '';
       const pr = mode.presets || def.presets;
@@ -555,7 +597,8 @@
       const v = {};
       const mode = def.modes.find((m) => m.id === state.mode);
       mode.fields.concat(def.common || []).forEach((f) => { v[f.id] = parseNum(state.values[f.id]); });
-      const extras = { openings: state.extras.openings.map((o) => ({ kind: o.kind, w: parseNum(o.w), h: parseNum(o.h), count: Math.max(1, Math.round(parseNum(o.count) || 1)) })) };
+      const extras = { openings: state.extras.openings.map((o) => ({ kind: o.kind, w: parseNum(o.w), h: parseNum(o.h), count: Math.max(1, Math.round(parseNum(o.count) || 1)) })), plan: state.extras.plan };
+      if (planEditor && !render.fromPlan) planEditor.redraw();
       lastViz = { v, extras };
       drawViz();
       const r = def.compute(v, state.mode, state.sel, extras);
@@ -638,6 +681,7 @@
     form.appendChild(selectsBox);
     form.appendChild(fieldsBox);
     form.appendChild(openingsBox);
+    form.appendChild(planBox);
     form.appendChild(presetsBox);
     form.appendChild(vizBox);
     form.appendChild(result);

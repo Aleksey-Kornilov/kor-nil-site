@@ -25,18 +25,25 @@
     const y = p[0] * s + p[1] * c;
     return { sx: x, sy: y * Math.sin(ELEV) - p[2] * Math.cos(ELEV), depth: y * Math.cos(ELEV) + p[2] * Math.sin(ELEV) };
   }
-  function boxFaces(b) {
-    const { x, y, z, dx, dy, dz } = b;
-    const P = [[x, y, z], [x + dx, y, z], [x + dx, y + dy, z], [x, y + dy, z],
-               [x, y, z + dz], [x + dx, y, z + dz], [x + dx, y + dy, z + dz], [x, y + dy, z + dz]];
-    return [
-      { pts: [P[4], P[5], P[6], P[7]], shade: 'top', kind: b.kind, z: z + dz },
-      { pts: [P[0], P[1], P[5], P[4]], shade: 'side', kind: b.kind, z: z + dz },
-      { pts: [P[1], P[2], P[6], P[5]], shade: 'side2', kind: b.kind, z: z + dz },
-      { pts: [P[2], P[3], P[7], P[6]], shade: 'side', kind: b.kind, z: z + dz },
-      { pts: [P[3], P[0], P[4], P[7]], shade: 'side2', kind: b.kind, z: z + dz },
-      { pts: [P[0], P[3], P[2], P[1]], shade: 'bottom', kind: b.kind, z: z },
-    ];
+  // Призма: poly [[x,y],…] (против часовой), z — низ, dz — высота. Брусок — частный случай.
+  function toPrism(b) {
+    if (b.poly) return b;
+    return { poly: [[b.x, b.y], [b.x + b.dx, b.y], [b.x + b.dx, b.y + b.dy], [b.x, b.y + b.dy]], z: b.z, dz: b.dz };
+  }
+  function prismFaces(pr) {
+    let poly = pr.poly;
+    let a = 0; for (let i = 0; i < poly.length; i++) { const q = poly[i], r = poly[(i + 1) % poly.length]; a += q[0] * r[1] - r[0] * q[1]; }
+    if (a < 0) poly = poly.slice().reverse();
+    const z0 = pr.z, z1 = pr.z + pr.dz, top = z1;
+    const faces = [{ pts: poly.map((q) => [q[0], q[1], z1]), shade: 'top', z: top },
+                   { pts: poly.slice().reverse().map((q) => [q[0], q[1], z0]), shade: 'bottom', z: z0 }];
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i], q = poly[(i + 1) % poly.length];
+      // оттенок стороны по её ориентации — свет условно слева-спереди
+      const nx = q[1] - p[1], ny = -(q[0] - p[0]);
+      faces.push({ pts: [[p[0], p[1], z0], [q[0], q[1], z0], [q[0], q[1], z1], [p[0], p[1], z1]], shade: (nx * 0.6 - ny * 0.8) > 0 ? 'side' : 'side2', z: top });
+    }
+    return faces;
   }
   const FILL = {
     top: '#c9d3df', side: '#9aa8b8', side2: '#7f8ea0', bottom: '#6e7c8c',
@@ -51,7 +58,8 @@
 
     // Масштаб НЕ зависит от угла: берём радиус модели вокруг её центра, иначе при
     // вращении картинка «дышит» и кажется, что искажается.
-    const xs = boxes.flatMap((b) => [b.x, b.x + b.dx]), ys = boxes.flatMap((b) => [b.y, b.y + b.dy]), zs = boxes.flatMap((b) => [b.z, b.z + b.dz]);
+    const prs = boxes.map(toPrism);
+    const xs = prs.flatMap((b) => b.poly.map((q) => q[0])), ys = prs.flatMap((b) => b.poly.map((q) => q[1])), zs = prs.flatMap((b) => [b.z, b.z + b.dz]);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
     const gm = opts.ground ? Math.max(0.6, (Math.max(...xs) - Math.min(...xs)) * 0.18) : 0;
     const rx = (Math.max(...xs) - Math.min(...xs)) / 2 + gm, ry = (Math.max(...ys) - Math.min(...ys)) / 2 + gm, rz = (Math.max(...zs) - Math.min(...zs)) / 2;
@@ -77,16 +85,17 @@
     // Порядок рисования: бруски от дальних к ближним по центру, внутри бруска — только
     // видимые грани (отсечение задних по знаку площади на экране). Так соседние бруски
     // кольца не «протыкают» друг друга при повороте.
-    const items = boxes.map((b) => {
-      const c = pr([b.x + b.dx / 2, b.y + b.dy / 2, b.z + b.dz / 2]);
+    const items = prs.map((b) => {
+      const cx2 = b.poly.reduce((s, q) => s + q[0], 0) / b.poly.length, cy2 = b.poly.reduce((s, q) => s + q[1], 0) / b.poly.length;
+      const c = pr([cx2, cy2, b.z + b.dz / 2]);
       return { b, depth: c.depth };
     }).sort((a, b) => a.depth - b.depth);
     items.forEach(({ b }) => {
-      boxFaces(b).forEach((fc) => {
+      prismFaces(b).forEach((fc) => {
         const p = fc.pts.map(pr);
         // площадь со знаком: грань видна, если её обход на экране против часовой (с учётом порядка вершин)
         let area = 0;
-        for (let i = 0; i < 4; i++) { const a = p[i], q = p[(i + 1) % 4]; area += a.sx * q.sy - q.sx * a.sy; }
+        for (let i = 0; i < p.length; i++) { const a = p[i], q = p[(i + 1) % p.length]; area += a.sx * q.sy - q.sx * a.sy; }
         if (area <= 0) return;
         const under = fc.z <= 0.0001;
         const fill = FILL[(under ? 'u' : '') + fc.shade];
