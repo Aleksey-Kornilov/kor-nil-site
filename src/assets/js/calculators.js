@@ -105,10 +105,12 @@
           { id: 'thick', label: 'Толщина', unit: 'см' },
         ] },
         { id: 'strip', label: 'Ленточный фундамент', fields: [
-          { id: 'sLen', label: 'Длина ленты (по всему периметру)', unit: 'м' },
+          { id: 'hLen', label: 'Длина дома (по наружке)', unit: 'м' },
+          { id: 'hWid', label: 'Ширина дома (по наружке)', unit: 'м' },
           { id: 'sWid', label: 'Ширина ленты', unit: 'см' },
-          { id: 'sDepth', label: 'Глубина заложения (в земле)', unit: 'см' },
+          { id: 'sDepth', label: 'Глубина в земле', unit: 'см' },
           { id: 'sAbove', label: 'Высота над землёй (цоколь)', unit: 'см, необязательно' },
+          { id: 'sInner', label: 'Внутренние стены на ленте', unit: 'м, необязательно' },
         ] },
         { id: 'columns', label: 'Столбы / колонны', fields: [
           { id: 'cSide', label: 'Сечение (сторона квадрата)', unit: 'см' },
@@ -123,15 +125,73 @@
         { id: 'sand', label: 'Песок', unit: '₽ за тонну' },
         { id: 'gravel', label: 'Щебень', unit: '₽ за тонну' },
       ],
+      draw(v, mode, box, yaw) {
+        const V = window.CalcViz; if (!V) return false;
+        const cm = (x) => (x || 0) / 100;
+        if (mode === 'slab') {
+          if (!(pos(v.len) && pos(v.wid) && pos(v.thick))) return false;
+          const L = v.len, W = v.wid, t = cm(v.thick);
+          V.iso(box, [{ x: 0, y: 0, z: 0, dx: L, dy: W, dz: t }], [
+            { from: [0, W, 0], to: [L, W, 0], label: 'длина ' + fmt(L) + ' м', offset: 22 },
+            { from: [L, 0, 0], to: [L, W, 0], label: 'ширина ' + fmt(W) + ' м', offset: -22 },
+            { from: [0, 0, 0], to: [0, 0, t], label: 'толщина ' + fmt(v.thick) + ' см', offset: -22 },
+          ], { yaw, caption: 'Плита. Потяните, чтобы повернуть.' });
+          return true;
+        }
+        if (mode === 'strip') {
+          const L = v.hLen, W = v.hWid, w = cm(v.sWid), d = cm(v.sDepth), a = cm(v.sAbove);
+          if (!(pos(L) && pos(W) && pos(w) && pos(d) && 2 * w < L && 2 * w < W)) return false;
+          const z0 = -d;
+          // Кольцо ленты из четырёх брусков; подземная часть и цоколь — отдельными брусками,
+          // чтобы подземная рисовалась другим цветом.
+          const ring = (z, dz) => [
+            { x: 0, y: 0, z, dx: L, dy: w, dz }, { x: 0, y: W - w, z, dx: L, dy: w, dz },
+            { x: 0, y: w, z, dx: w, dy: W - 2 * w, dz }, { x: L - w, y: w, z, dx: w, dy: W - 2 * w, dz },
+          ];
+          const boxes = ring(z0, d);
+          if (a > 0) boxes.push(...ring(0, a));
+          if (pos(v.sInner)) {
+            const il = Math.min(v.sInner, W - 2 * w);
+            boxes.push({ x: L / 2 - w / 2, y: w, z: z0, dx: w, dy: il, dz: d });
+            if (a > 0) boxes.push({ x: L / 2 - w / 2, y: w, z: 0, dx: w, dy: il, dz: a });
+          }
+          const dims = [
+            { from: [0, W, a], to: [L, W, a], label: 'длина ' + fmt(L) + ' м', offset: 24 },
+            { from: [L, 0, a], to: [L, W, a], label: 'ширина ' + fmt(W) + ' м', offset: -24 },
+            { from: [L, W - w, a], to: [L, W, a], label: 'лента ' + fmt(v.sWid) + ' см', offset: -36 },
+            { from: [L, 0, z0], to: [L, 0, 0], label: 'в земле ' + fmt(v.sDepth) + ' см', offset: 40 },
+          ];
+          if (a > 0) dims.push({ from: [0, 0, 0], to: [0, 0, a], label: 'цоколь ' + fmt(v.sAbove) + ' см', offset: -30 });
+          V.iso(box, boxes, dims, { yaw, ground: true, caption: 'Зелёное — уровень земли. Потяните, чтобы повернуть.' });
+          return true;
+        }
+        if (mode === 'columns') {
+          if (!(pos(v.cSide) && pos(v.cHei) && pos(v.cCount))) return false;
+          const s = cm(v.cSide), hgt = v.cHei, n = Math.min(Math.round(v.cCount), 36);
+          const cols = Math.ceil(Math.sqrt(n)), step = Math.max(s * 3, 1.2);
+          const boxes = [];
+          for (let i = 0; i < n; i++) boxes.push({ x: (i % cols) * step, y: Math.floor(i / cols) * step, z: 0, dx: s, dy: s, dz: hgt });
+          V.iso(box, boxes, [
+            { from: [0, 0, 0], to: [0, 0, hgt], label: 'высота ' + fmt(hgt) + ' м', offset: -26 },
+            { from: [0, s, hgt], to: [s, s, hgt], label: 'сечение ' + fmt(v.cSide) + ' см', offset: 18 },
+          ], { yaw, ground: true, caption: n + ' ' + plural(n, 'столб', 'столба', 'столбов') + '. Потяните, чтобы повернуть.' });
+          return true;
+        }
+        return false;
+      },
       compute(v, mode, sel) {
         let volume = null;
         if (mode === 'slab') {
           const l = v.len, w = v.wid, t = v.thick;
           if (pos(l) && pos(w) && pos(t)) volume = l * w * (t / 100);
         } else if (mode === 'strip') {
-          // Полная высота ленты = часть в земле + часть над землёй (цоколь).
-          const l = v.sLen, w = v.sWid, h = (v.sDepth || 0) + (v.sAbove || 0);
-          if (pos(l) && pos(w) && pos(v.sDepth)) volume = l * (w / 100) * (h / 100);
+          // Лента по наружным размерам дома: площадь кольца = L·W − (L−2w)(W−2w),
+          // углы не считаются дважды. Полная высота = в земле + цоколь.
+          const L = v.hLen, Wd = v.hWid, w = (v.sWid || 0) / 100, h = ((v.sDepth || 0) + (v.sAbove || 0)) / 100;
+          if (pos(L) && pos(Wd) && pos(w) && pos(v.sDepth) && 2 * w < L && 2 * w < Wd) {
+            const ring = L * Wd - (L - 2 * w) * (Wd - 2 * w);
+            volume = (ring + (v.sInner || 0) * w) * h;
+          }
         } else {
           const s = v.cSide, h = v.cHei, n = v.cCount;
           if (pos(s) && pos(h) && pos(n)) volume = (s / 100) * (s / 100) * h * n;
@@ -171,8 +231,7 @@
           { id: 'len', label: 'Длина комнаты', unit: 'м' },
           { id: 'wid', label: 'Ширина комнаты', unit: 'м' },
           { id: 'hei', label: 'Высота потолка', unit: 'м' },
-          { id: 'open', label: 'Окна и двери (вычесть)', unit: 'м², необязательно' },
-        ] },
+        ], openings: true },
         { id: 'ceiling', label: 'Потолок', fields: [
           { id: 'len', label: 'Длина комнаты', unit: 'м' },
           { id: 'wid', label: 'Ширина комнаты', unit: 'м' },
@@ -190,11 +249,30 @@
         ['Водоэмульсионка', '10'], ['Эмаль', '12'], ['Побелка/известь', '7'], ['По дереву', '8'],
       ] },
       prices: [{ id: 'can', label: 'Цена краски', unit: '₽ за банку' }],
-      compute(v, mode) {
+      draw(v, mode, box, yaw, extras) {
+        const V = window.CalcViz; if (!V) return false;
+        if (mode === 'walls' && pos(v.len) && pos(v.wid) && pos(v.hei)) {
+          const ops = (extras.openings || []).filter((o) => pos(o.w) && pos(o.h));
+          const opArea = ops.reduce((s, o) => s + o.w * o.h * (o.count || 1), 0);
+          V.walls(box, [{ label: 'Стена', len: v.len }, { label: 'Стена', len: v.wid }, { label: 'Стена', len: v.len }, { label: 'Стена', len: v.wid }], v.hei, ops,
+            { caption: 'Развёртка стен. Проёмы: ' + fmt(opArea) + ' м², под покраску ' + fmt(2 * (v.len + v.wid) * v.hei - opArea) + ' м²' });
+          return true;
+        }
+        if (mode === 'ceiling' && pos(v.len) && pos(v.wid)) {
+          V.shape(box, [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]], [
+            { from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 },
+          ], { center: fmt(v.len * v.wid) + ' м²', title: 'Потолок' });
+          return true;
+        }
+        return false;
+      },
+      compute(v, mode, sel, extras) {
         let area = null;
         if (mode === 'walls') {
           if (pos(v.len) && pos(v.wid) && pos(v.hei)) {
-            const a = 2 * (v.len + v.wid) * v.hei - (v.open || 0);
+            const ops = (extras.openings || []).filter((o) => pos(o.w) && pos(o.h));
+            const opArea = ops.reduce((s, o) => s + o.w * o.h * (o.count || 1), 0);
+            const a = 2 * (v.len + v.wid) * v.hei - opArea;
             area = a > 0 ? a : null;
           }
         } else if (mode === 'ceiling') {
@@ -237,6 +315,16 @@
         { id: 'perTon', label: 'Цена материала', unit: '₽ за тонну' },
         { id: 'delivery', label: 'Доставка', unit: '₽ за рейс, необязательно' },
       ],
+      draw(v, mode, box, yaw) {
+        const V = window.CalcViz; if (!V || mode !== 'area' || !(pos(v.len) && pos(v.wid) && pos(v.thick))) return false;
+        const t = v.thick / 100;
+        V.iso(box, [{ x: 0, y: 0, z: 0, dx: v.len, dy: v.wid, dz: t }], [
+          { from: [0, v.wid, 0], to: [v.len, v.wid, 0], label: 'длина ' + fmt(v.len) + ' м', offset: 22 },
+          { from: [v.len, 0, 0], to: [v.len, v.wid, 0], label: 'ширина ' + fmt(v.wid) + ' м', offset: -22 },
+          { from: [0, 0, 0], to: [0, 0, t], label: 'слой ' + fmt(v.thick) + ' см', offset: -22 },
+        ], { yaw, caption: 'Слой засыпки. Потяните, чтобы повернуть.' });
+        return true;
+      },
       compute(v, mode, sel) {
         const m = MATERIALS[sel.material];
         let cubes = null;
@@ -272,6 +360,28 @@
         { id: 'trapezoid', label: 'Трапеция', fields: [{ id: 'a', label: 'Верхнее основание', unit: 'м' }, { id: 'b', label: 'Нижнее основание', unit: 'м' }, { id: 'c', label: 'Высота', unit: 'м' }] },
       ],
       prices: [{ id: 'm2', label: 'Цена (земля, газон, плитка)', unit: '₽ за м²' }],
+      draw(v, mode, box) {
+        const V = window.CalcViz; if (!V) return false;
+        const m = (x) => fmt(x) + ' м';
+        if (mode === 'rect' && pos(v.a) && pos(v.b)) {
+          V.shape(box, [[0, 0], [v.a, 0], [v.a, v.b], [0, v.b]], [{ from: [0, 0], to: [v.a, 0], label: m(v.a), offset: 22 }, { from: [v.a, 0], to: [v.a, v.b], label: m(v.b), offset: 22 }], { center: fmt(v.a * v.b / 100) + ' сот.', title: 'Участок' });
+          return true;
+        }
+        if (mode === 'triangle' && pos(v.a) && pos(v.b)) {
+          V.shape(box, [[0, 0], [v.a, 0], [v.a * 0.35, v.b]], [{ from: [0, 0], to: [v.a, 0], label: 'основание ' + m(v.a), offset: 22 }, { from: [v.a * 0.35, 0], to: [v.a * 0.35, v.b], label: 'высота ' + m(v.b), offset: 0 }], { center: fmt(v.a * v.b / 2 / 100) + ' сот.', title: 'Участок' });
+          return true;
+        }
+        if (mode === 'circle' && pos(v.a)) {
+          V.shape(box, [[-v.a, -v.a], [v.a, v.a]], [{ from: [0, 0], to: [v.a, 0], label: 'радиус ' + m(v.a), offset: 0 }], { circle: { cx: 0, cy: 0, r: v.a }, center: '', title: 'Участок' });
+          return true;
+        }
+        if (mode === 'trapezoid' && pos(v.a) && pos(v.b) && pos(v.c)) {
+          const off = (v.b - v.a) / 2;
+          V.shape(box, [[0, 0], [v.b, 0], [v.b - off, v.c], [off, v.c]], [{ from: [0, 0], to: [v.b, 0], label: 'нижнее ' + m(v.b), offset: 22 }, { from: [v.b - off, v.c], to: [off, v.c], label: 'верхнее ' + m(v.a), offset: 22 }, { from: [v.b, 0], to: [v.b, v.c], label: 'высота ' + m(v.c), offset: 22 }], { center: fmt((v.a + v.b) / 2 * v.c / 100) + ' сот.', title: 'Участок' });
+          return true;
+        }
+        return false;
+      },
       compute(v, mode) {
         let area = null, perimeter = null;
         if (mode === 'rect') { if (pos(v.a) && pos(v.b)) { area = v.a * v.b; perimeter = 2 * (v.a + v.b); } }
@@ -357,7 +467,7 @@
     const key = root.dataset.calc;
     const def = CALCS[key];
     if (!def) return;
-    const state = { mode: def.modes[0].id, sel: {}, values: {}, prices: {} };
+    const state = { mode: def.modes[0].id, sel: {}, values: {}, prices: {}, extras: { openings: [] }, yaw: -0.6 };
     (def.selects || []).forEach((s) => { state.sel[s.id] = s.default; });
     const storageKey = (id) => 'kn_calc_price_' + key + '_' + id;
     (def.prices || []).forEach((p) => { try { state.prices[p.id] = localStorage.getItem(storageKey(p.id)) || ''; } catch (e) { state.prices[p.id] = ''; } });
@@ -365,6 +475,8 @@
     const form = h('form', { class: 'calc-form', novalidate: '' });
     form.addEventListener('submit', (e) => e.preventDefault());
     const fieldsBox = h('div', { class: 'calc-fields' });
+    const openingsBox = h('div', { class: 'calc-openings' });
+    const vizBox = h('div', { class: 'calc-viz', hidden: '' });
     const presetsBox = h('div', { class: 'calc-presets' });
     const selectsBox = h('div');
     const result = h('div', { class: 'calc-result', 'aria-live': 'polite' });
@@ -383,10 +495,44 @@
       ]);
     }
 
+    const OPENING_PRESETS = [
+      { kind: 'window', label: '+ окно', w: '1.4', h: '1.4' },
+      { kind: 'door', label: '+ дверь', w: '0.9', h: '2.1' },
+      { kind: 'window', label: '+ балконная дверь', w: '0.8', h: '2.1' },
+    ];
+    function renderOpenings() {
+      openingsBox.innerHTML = '';
+      const mode = def.modes.find((m) => m.id === state.mode);
+      if (!mode.openings) return;
+      openingsBox.appendChild(h('p', { class: 'calc-openings-title', text: 'Окна и двери (вычитаются из площади)' }));
+      state.extras.openings.forEach((o, idx) => {
+        const row = h('div', { class: 'calc-opening' });
+        const mk = (key, label) => {
+          const inp = h('input', { type: 'text', inputmode: 'decimal', value: o[key], 'aria-label': label });
+          inp.addEventListener('input', () => { o[key] = inp.value; render(); });
+          return h('label', { class: 'calc-opening-f' }, [h('span', { text: label }), inp]);
+        };
+        row.appendChild(h('span', { class: 'calc-opening-kind', text: o.kind === 'door' ? 'Дверь' : 'Окно' }));
+        row.appendChild(mk('w', 'ширина, м')); row.appendChild(mk('h', 'высота, м')); row.appendChild(mk('count', 'шт'));
+        const del = h('button', { type: 'button', class: 'calc-opening-del', 'aria-label': 'Убрать', text: '×' });
+        del.addEventListener('click', () => { state.extras.openings.splice(idx, 1); renderOpenings(); render(); });
+        row.appendChild(del);
+        openingsBox.appendChild(row);
+      });
+      const adders = h('div', { class: 'calc-presets' });
+      OPENING_PRESETS.forEach((p) => {
+        const b = h('button', { type: 'button', class: 'calc-preset', text: p.label + ' ' + p.w + '×' + p.h });
+        b.addEventListener('click', () => { state.extras.openings.push({ kind: p.kind, w: p.w, h: p.h, count: '1' }); renderOpenings(); render(); });
+        adders.appendChild(b);
+      });
+      openingsBox.appendChild(adders);
+    }
+
     function renderFields() {
       fieldsBox.innerHTML = '';
       const mode = def.modes.find((m) => m.id === state.mode);
       mode.fields.forEach((f) => fieldsBox.appendChild(field(f)));
+      renderOpenings();
       (def.common || []).forEach((f) => fieldsBox.appendChild(field(f)));
       presetsBox.innerHTML = '';
       const pr = mode.presets || def.presets;
@@ -409,7 +555,10 @@
       const v = {};
       const mode = def.modes.find((m) => m.id === state.mode);
       mode.fields.concat(def.common || []).forEach((f) => { v[f.id] = parseNum(state.values[f.id]); });
-      const r = def.compute(v, state.mode, state.sel);
+      const extras = { openings: state.extras.openings.map((o) => ({ kind: o.kind, w: parseNum(o.w), h: parseNum(o.h), count: Math.max(1, Math.round(parseNum(o.count) || 1)) })) };
+      lastViz = { v, extras };
+      drawViz();
+      const r = def.compute(v, state.mode, state.sel, extras);
       result.innerHTML = '';
       costBox.hidden = !r;
       if (!r) {
@@ -432,6 +581,14 @@
       result.appendChild(copy);
       renderCost(r);
     }
+
+    let lastViz = null;
+    function drawViz() {
+      if (!def.draw || !lastViz) { vizBox.hidden = true; return; }
+      const ok = def.draw(lastViz.v, state.mode, vizBox, state.yaw, lastViz.extras);
+      vizBox.hidden = !ok;
+    }
+    if (window.CalcViz) window.CalcViz.rotatable(vizBox, () => state.yaw, (yaw) => { state.yaw = yaw; drawViz(); });
 
     function costRows(r) {
       return r.cost.map((c) => {
@@ -480,7 +637,9 @@
     });
     form.appendChild(selectsBox);
     form.appendChild(fieldsBox);
+    form.appendChild(openingsBox);
     form.appendChild(presetsBox);
+    form.appendChild(vizBox);
     form.appendChild(result);
     form.appendChild(costBox);
     root.innerHTML = '';

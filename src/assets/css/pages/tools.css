@@ -93,3 +93,29 @@
 .tools-grid { display: grid; gap: var(--space-5); grid-template-columns: 1fr; }
 @media (min-width: 720px) { .tools-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .tools-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* Рисунок (calc-viz.js) */
+.calc-viz { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-elevated); padding: var(--space-2); cursor: grab; user-select: none; }
+.calc-viz:active { cursor: grabbing; }
+.viz-svg { width: 100%; height: auto; display: block; }
+.viz-dim { stroke: var(--color-accent); stroke-width: 1.2; }
+.viz-ext { stroke: var(--color-accent); stroke-width: 0.8; stroke-dasharray: 3 3; opacity: 0.7; }
+.viz-arrhead { fill: var(--color-accent); }
+.viz-label { font-size: 13px; font-weight: 600; fill: var(--color-text); paint-order: stroke; stroke: var(--color-bg-elevated); stroke-width: 4px; stroke-linejoin: round; }
+.viz-small { font-size: 11px; fill: var(--color-text); paint-order: stroke; stroke: var(--color-bg-elevated); stroke-width: 3px; }
+.viz-big { font-size: 22px; font-weight: 800; fill: var(--color-accent); }
+.viz-caption { font-size: 12px; fill: var(--color-text-muted); }
+.viz-wall { fill: #e8e2d6; stroke: #8a8073; stroke-width: 1; }
+.viz-window { fill: #9ecbf0; stroke: #3b7bb5; stroke-width: 1; }
+.viz-door { fill: #c79a66; stroke: #8a5f33; stroke-width: 1; }
+.viz-area { fill: var(--color-accent-subtle); stroke: var(--color-accent); stroke-width: 1.5; }
+
+/* Проёмы (краска) */
+.calc-openings:empty { display: none; }
+.calc-openings-title { font-size: var(--fs-small); font-weight: 600; margin-bottom: var(--space-2); }
+.calc-opening { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: end; margin-bottom: var(--space-2); }
+.calc-opening-kind { min-width: 52px; font-size: var(--fs-small); padding-bottom: var(--space-3); }
+.calc-opening-f { display: grid; gap: 2px; font-size: var(--fs-tiny); color: var(--color-text-muted); }
+.calc-opening-f input { width: 88px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-bg-elevated); font-size: 1rem; }
+.calc-opening-del { width: 32px; height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 1.1rem; }
+.calc-opening-del:hover { color: var(--color-danger); border-color: var(--color-danger); }
