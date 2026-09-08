@@ -8,6 +8,7 @@
     pagePath        — путь текущей страницы для canonical
     pageType        — тип страницы для OG (website / article), по умолчанию website
     pageNoindex     — true для служебных страниц (404): noindex + без canonical
+  Стили страниц (pages/*.css) входят в общий бандл — pageStyles больше не нужен.
 -#}
 {% set _title = pageTitle or site.title %}
 {% set _desc = pageDescription or site.description %}
@@ -55,24 +56,10 @@
 <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
 
-{#- Предзагрузка критичного CSS для LCP -#}
-<link rel="preload" href="/assets/css/base.css" as="style">
-<link rel="preload" href="/assets/css/layout.css" as="style">
-
-{#- Основные стили -#}
-<link rel="stylesheet" href="/assets/css/base.css">
-<link rel="stylesheet" href="/assets/css/layout.css">
-<link rel="stylesheet" href="/assets/css/components/theme.css">
-<link rel="stylesheet" href="/assets/css/components/nav.css">
-<link rel="stylesheet" href="/assets/css/components/button.css">
-<link rel="stylesheet" href="/assets/css/components/card.css">
-<link rel="stylesheet" href="/assets/css/components/glass.css">
-<link rel="stylesheet" href="/assets/css/components/footer.css">
-{%- if pageStyles %}
-{%- for style in pageStyles %}
-<link rel="stylesheet" href="/assets/css/pages/{{ style }}.css">
-{%- endfor %}
-{%- endif %}
+{#- CSS: критичная часть инлайном (первая отрисовка без запроса в сеть),
+    остальное — один минифицированный бандл с хешем. Сборка: lib/css-bundle.mjs -#}
+<style>{{ criticalCss | safe }}</style>
+<link rel="stylesheet" href="{{ cssBundleUrl }}">
 
 {#- Инициализация темы ДО отрисовки (иначе флэш белого/чёрного) -#}
 <script>

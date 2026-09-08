@@ -185,6 +185,7 @@
   font-weight: 800;
   margin-bottom: var(--space-4);
 }
+[data-theme="dark"] .seo-step-number { color: #0e1621; } /* контраст, см. button.css */
 .seo-step h3 { margin-bottom: var(--space-3); }
 .seo-step p { color: var(--color-text-muted); line-height: 1.6; }
 

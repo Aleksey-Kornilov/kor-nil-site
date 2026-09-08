@@ -1,0 +1,72 @@
+/* gallery.css — лента скриншотов телефона (страница ЧатЯдра).
+   Горизонтальная прокрутка со scroll-snap, на десктопе видно 3–4 карточки. */
+
+.shots {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-block: var(--space-2) var(--space-4);
+  /* Карточки могут «выезжать» за контейнер на мобилке — так видно, что лента листается */
+  margin-inline: calc(-1 * var(--space-5));
+  padding-inline: var(--space-5);
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 720px) {
+  .shots {
+    margin-inline: 0;
+    padding-inline: 0;
+    justify-content: flex-start;
+  }
+}
+
+.shot {
+  flex: 0 0 auto;
+  width: min(260px, 72vw);
+  scroll-snap-align: center;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  background: var(--color-bg-subtle);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 720px) {
+  .shot { scroll-snap-align: start; }
+}
+
+/* Картинка и видео — строго 9:16, чтобы место было зарезервировано до загрузки */
+.shot img,
+.shot video {
+  width: 100%;
+  height: auto; /* атрибут height=960 иначе перебьёт aspect-ratio */
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  background: #1a2332;
+}
+.shot video { cursor: pointer; }
+
+.shot-caption {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+.shot-caption strong {
+  display: block;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* Подсказка про прокрутку — только на мобилке */
+.shots-hint {
+  text-align: center;
+  font-size: var(--fs-tiny);
+  color: var(--color-text-subtle);
+  margin-top: var(--space-2);
+}
+@media (min-width: 720px) {
+  .shots-hint { display: none; }
+}

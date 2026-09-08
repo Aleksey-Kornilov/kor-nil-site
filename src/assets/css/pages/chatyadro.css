@@ -186,5 +186,6 @@
   font-weight: 800;
   margin-bottom: var(--space-4);
 }
+[data-theme="dark"] .how-step-number { color: #0e1621; } /* контраст, см. button.css */
 .how-step h3 { margin-bottom: var(--space-3); }
 .how-step p { color: var(--color-text-muted); line-height: 1.6; }

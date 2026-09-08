@@ -23,6 +23,9 @@
   color: white;
 }
 .btn-primary:hover { background: var(--color-accent-hover); color: white; }
+/* В тёмной теме акцент светлее (#6ba5ea), белый на нём не читается (2.6:1) — текст тёмный (7.5:1) */
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .btn-primary:hover { color: #0e1621; }
 
 /* Вторичная — прозрачное стекло */
 .btn-secondary {

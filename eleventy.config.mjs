@@ -1,11 +1,25 @@
 // Конфигурация Eleventy v3 (ES modules).
 // Собирает src/ → dist/, копирует assets как есть, использует Nunjucks для шаблонов.
 
+import { buildCss, writeBundle, resetCssCache } from './lib/css-bundle.mjs';
+
 export default async function (eleventyConfig) {
-  // Копируем ассеты «как есть» — CSS, JS, картинки, иконки без обработки.
-  eleventyConfig.addPassthroughCopy('src/assets');
+  // Копируем ассеты «как есть» — JS, картинки, иконки, видео без обработки.
+  // CSS НЕ копируется: он собирается в lib/css-bundle.mjs (инлайн + один бандл).
+  eleventyConfig.addPassthroughCopy('src/assets/js');
+  eleventyConfig.addPassthroughCopy('src/assets/images');
+  eleventyConfig.addPassthroughCopy('src/assets/icons');
+  eleventyConfig.addPassthroughCopy('src/assets/video');
   eleventyConfig.addPassthroughCopy('src/robots.txt');
   eleventyConfig.addPassthroughCopy({ 'src/favicon.ico': 'favicon.ico' });
+
+  // CSS: пересборка при правке любого css-файла в режиме --serve.
+  eleventyConfig.addWatchTarget('src/assets/css/');
+  eleventyConfig.on('eleventy.before', () => resetCssCache());
+  eleventyConfig.on('eleventy.after', ({ dir }) => writeBundle(dir.output));
+  // Глобальные данные для head.njk: criticalCss (инлайн) и cssBundleUrl (<link>).
+  eleventyConfig.addGlobalData('criticalCss', () => buildCss().critical);
+  eleventyConfig.addGlobalData('cssBundleUrl', () => buildCss().bundleUrl);
 
   // Глобальный фильтр: год для футера («© 2026 Aleksey Kornilov»).
   eleventyConfig.addFilter('year', () => new Date().getFullYear());
