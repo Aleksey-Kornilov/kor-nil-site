@@ -793,6 +793,12 @@
         { id: 'boardW', label: 'Ширина доски', unit: 'см', value: '19', group: 'board' },
         { id: 'packM2', label: 'В упаковке', unit: 'м²', value: '2.1', group: 'board' },
         { id: 'underlay', label: 'Подложка в рулоне', unit: 'м²', value: '10', group: 'board' },
+        { id: 'lvtPack', label: 'В упаковке', unit: 'м²', value: '2.23', group: 'lvt' },
+        { id: 'lvtL', label: 'Длина планки', unit: 'см', value: '122', group: 'lvt' },
+        { id: 'lvtW', label: 'Ширина планки', unit: 'см', value: '18', group: 'lvt' },
+        { id: 'lvtGlueRate', label: 'Расход клея для кварцвинила', unit: 'кг/м²', value: '0.35', group: 'lvtGlue' },
+        { id: 'lvtGlueBucket', label: 'Ведро клея', unit: 'кг', value: '13', group: 'lvtGlue' },
+        { id: 'lvtUnderlay', label: 'Подложка в рулоне', unit: 'м², 0 = без подложки', value: '10', group: 'lvtClick' },
         { id: 'rollW2', label: 'Ширина рулона', unit: 'м', value: '3', group: 'roll' },
         { id: 'skirting', label: 'Плинтус: длина планки', unit: 'м', value: '2.5' },
         { id: 'doorways', label: 'Дверные проёмы (вычесть из плинтуса)', unit: 'шт', value: '1' },
@@ -806,6 +812,8 @@
         { id: 'material', label: 'Покрытие', default: 'tile', choices: [
           { id: 'tile', label: 'Плитка / керамогранит', hint: 'клей, затирка, крестики' },
           { id: 'board', label: 'Ламинат / паркетная доска', hint: 'упаковки, подложка, зазор у стен' },
+          { id: 'lvtClick', label: 'Кварцвинил замковый', hint: 'плавающий пол: подложка, зазор у стен, без клея' },
+          { id: 'lvtGlue', label: 'Кварцвинил клеевой', hint: 'на клей по ровному основанию: подложки нет, зазор не нужен' },
           { id: 'roll', label: 'Линолеум / ковролин', hint: 'рулон одним куском, без швов' },
         ] },
         { id: 'layout', label: 'Раскладка', default: 'straight', choices: [
@@ -819,11 +827,15 @@
         { id: 'glue', label: 'Клей', unit: '₽ за мешок', group: 'tile' },
         { id: 'grout', label: 'Затирка', unit: '₽ за кг', group: 'tile' },
         { id: 'underlay', label: 'Подложка', unit: '₽ за рулон', group: 'board' },
+        { id: 'lvtGlue', label: 'Клей для кварцвинила', unit: '₽ за ведро', group: 'lvtGlue' },
+        { id: 'lvtUnderlay', label: 'Подложка', unit: '₽ за рулон', group: 'lvtClick' },
         { id: 'skirt', label: 'Плинтус', unit: '₽ за планку' },
       ],
       groups(v, mode, extras, sel) {
-        const m = mode === 'bath' ? 'tile' : sel.material;
-        return { tile: m === 'tile', board: m === 'board', roll: m === 'roll' };
+        const m = sel.material;
+        const lvt = m === 'lvtClick' || m === 'lvtGlue';
+        return { tile: m === 'tile', board: m === 'board', roll: m === 'roll',
+          lvt, lvtGlue: m === 'lvtGlue', lvtClick: m === 'lvtClick' };
       },
       lens(v, mode) { return (mode === 'bath' && pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null; },
       // Площадь стен под плиткой минус двери и окна
@@ -858,7 +870,7 @@
         const waste = { straight: 1.05, offset: 1.10, diagonal: 1.15 }[sel.layout] || 1.05;
         const wastePct = Math.round((waste - 1) * 100);
         const rows = [], cost = []; let main, unitCost;
-        const m = mode === 'bath' ? 'tile' : sel.material;
+        const m = sel.material;
         const wa = this.wallsArea(v, mode, extras);
         if (mode === 'bath' && wa && wa.n === 0 && !(sh.area > 0)) return { error: 'Плитка нигде не выбрана: включите её хотя бы на одной стене.' };
         const totalArea = sh.area + (wa ? wa.area : 0);
@@ -884,6 +896,30 @@
           unitCost = { label: 'Плитка', amount: tiles, unit: 'шт' };
           if (bags != null) cost.push({ label: 'Клей', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'glue' });
           if (grout > 0) cost.push({ label: 'Затирка', amount: Math.ceil(grout), unit: 'кг', priceId: 'grout' });
+        } else if (m === 'lvtClick' || m === 'lvtGlue') {
+          if (!pos(v.lvtPack)) return null;
+          const packs = Math.ceil(totalArea * waste / v.lvtPack);
+          const planks = (pos(v.lvtL) && pos(v.lvtW)) ? Math.ceil(totalArea * waste / (v.lvtL / 100 * v.lvtW / 100)) : null;
+          main = packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
+          rows.push(['Кварцвинил', packs + ' упак. по ' + fmt(v.lvtPack) + ' м² (площадь ' + fmt(totalArea) + ' м², запас ' + wastePct + '%)' + (planks ? ', это ≈ ' + planks + ' планок' : '')]);
+          if (m === 'lvtGlue') {
+            const glueKg = totalArea * (v.lvtGlueRate || 0);
+            const buckets = pos(v.lvtGlueBucket) ? Math.ceil(glueKg / v.lvtGlueBucket) : null;
+            if (glueKg > 0) {
+              rows.push(['Клей', fmt(glueKg) + ' кг' + (buckets != null ? ' ≈ ' + buckets + ' ' + plural(buckets, 'ведро', 'ведра', 'вёдер') + ' по ' + fmt(v.lvtGlueBucket) + ' кг' : '')]);
+              if (buckets != null) cost.push({ label: 'Клей', amount: buckets, unit: plural(buckets, 'ведро', 'ведра', 'вёдер'), priceId: 'lvtGlue' });
+            }
+            rows.push(['Основание', 'клеевой кварцвинил кладут на ровное основание: перепад не больше 2 мм на 2 м, иначе нужна наливная смесь']);
+            rows.push(['Зазор у стен', 'не нужен: покрытие приклеено и не «гуляет»']);
+          } else {
+            const rolls = pos(v.lvtUnderlay) ? Math.ceil(totalArea / v.lvtUnderlay) : null;
+            if (rolls != null) {
+              rows.push(['Подложка', rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.lvtUnderlay) + ' м², только тонкая 1–1,5 мм под кварцвинил']);
+              cost.push({ label: 'Подложка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'lvtUnderlay' });
+            }
+            rows.push(['Зазор у стен', '5–8 мм по периметру: замковый кварцвинил плавающий']);
+          }
+          unitCost = { label: 'Кварцвинил', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок') };
         } else if (m === 'board') {
           if (!pos(v.packM2)) return null;
           const packs = Math.ceil(sh.area * waste / v.packM2);
@@ -905,11 +941,12 @@
           unitCost = { label: 'Покрытие', amount: Math.ceil(len * 10) / 10, unit: 'м' };
         }
         if (mode === 'bath') {
-          rows.push(['Затирочный уголок и профили', 'по внутренним углам ' + fmt(4 * v.hei) + ' м и по низу стен ' + fmt(sh.per) + ' м']);
+          if (m === 'tile') rows.push(['Затирочный уголок и профили', 'по внутренним углам ' + fmt(4 * v.hei) + ' м и по низу стен ' + fmt(sh.per) + ' м']);
+          else if (m === 'lvtGlue') rows.push(['На стены', 'клеевой кварцвинил держится на стене и потолке, замковый — нет: он рассчитан на пол']);
           rows.push(['Площадь пола', fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м']);
           cost.unshift(Object.assign({ priceId: 'unit' }, unitCost));
           return { main: { label: 'Нужно на ванную', value: main + ' · ' + fmt(totalArea) + ' м²' }, rows, cost,
-            note: 'Пол и стены считаются вместе: плитка обычно берётся одной партией, иначе оттенок разойдётся. Двери и окна вычитаются из площади стен. Запас на подрезку: прямая раскладка 5%, вразбежку 10%, по диагонали 15%.' };
+            note: 'Пол и стены считаются вместе: материал берут одной партией, иначе оттенок разойдётся. Двери и окна вычитаются из площади стен. Запас на подрезку: прямая раскладка 5%, вразбежку 10%, по диагонали 15%.' };
         }
         // Плинтус общий для всех
         if (pos(v.skirting)) {
