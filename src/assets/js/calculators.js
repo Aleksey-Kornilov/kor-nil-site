@@ -310,7 +310,7 @@
       groups(v, mode, extras) {
         const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
         if (!R || !extras.room || !lens) return { paint: true, paper: false };
-        const m = R.measure(extras.room, lens, v.hei || 0);
+        const m = R.measure(extras.room, lens, v.hei || 0, R.FINISH, extras.room.defaultFinish);
         return { paint: m.paint.n > 0, paper: m.paper.n > 0 };
       },
       draw(v, mode, box) {
@@ -344,7 +344,7 @@
         const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
         if (mode === 'roomplan' && !lens && extras.plan) return { error: 'Контур комнаты пересекает сам себя — поправьте углы на плане.' };
         if (!R || !extras.room || !lens || !pos(v.hei)) return null;
-        const m = R.measure(extras.room, lens, v.hei);
+        const m = R.measure(extras.room, lens, v.hei, R.FINISH, extras.room.defaultFinish);
         if (m.paint.n === 0 && m.paper.n === 0) return { error: 'У всех стен выбрано «без отделки» — отметьте на развёртке, какие стены красим или оклеиваем.' };
         const rows = [], cost = [], mains = [];
         let note = '';
@@ -431,7 +431,7 @@
         const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
         const out = { gable: true, siding: false, plaster: false, paint: false };
         if (!R || !extras.room || !lens) return out;
-        const m = R.measure(extras.room, lens, v.hei || 0, this.finishes, 'siding');
+        const m = R.measure(extras.room, lens, v.hei || 0, this.finishes, extras.room.defaultFinish || 'siding');
         ['siding', 'plaster', 'paint'].forEach((f) => { out[f] = m.by[f].n > 0 || (sel.gableFinish === f && pos(v.gables)); });
         return out;
       },
@@ -450,7 +450,7 @@
         const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
         if (mode === 'plan' && !lens && extras.plan) return { error: 'Контур дома пересекает сам себя — поправьте углы на плане.' };
         if (!R || !extras.room || !lens || !pos(v.hei)) return null;
-        const m = R.measure(extras.room, lens, v.hei, this.finishes, 'siding');
+        const m = R.measure(extras.room, lens, v.hei, this.finishes, extras.room.defaultFinish || 'siding');
         const gableArea = (pos(v.gables) && pos(v.gableW) && pos(v.gableH)) ? v.gables * v.gableW * v.gableH / 2 : 0;
         const area = { siding: m.by.siding.area, plaster: m.by.plaster.area, paint: m.by.paint.area };
         if (gableArea > 0 && area[sel.gableFinish] != null) area[sel.gableFinish] += gableArea;
@@ -857,7 +857,8 @@
       if (!mode.room || !window.CalcRoom) { roomBox.innerHTML = ''; roomEditor = null; return; }
       const finishes = def.finishes || window.CalcRoom.FINISH;
       const defaultFinish = finishes[root.dataset.finish] ? root.dataset.finish : Object.keys(finishes)[0];
-      if (!state.extras.room) state.extras.room = { walls: [], openings: [] };
+      if (!state.extras.room) state.extras.room = { walls: [], openings: [], defaultFinish };
+      state.extras.room.defaultFinish = defaultFinish;
       roomEditor = window.CalcRoom.editor(roomBox, state.extras.room, () => {
         const v = {}; Object.keys(state.values).forEach((k) => { v[k] = parseNum(state.values[k]); });
         return { lens: def.lens ? def.lens(v, state.mode, { plan: state.extras.plan, room: state.extras.room }) : null, H: parseNum(state.values.hei) || 0 };
