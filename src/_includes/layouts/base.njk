@@ -23,6 +23,20 @@
 </nav>
 {%- endif %}
 {{ content | safe }}
+{%- if '/tools/' in page.url and page.url != '/tools/' %}
+<section class="section container tools-more">
+  <h2 class="section-title">Другие калькуляторы</h2>
+  <div class="tools-grid">
+    {%- for cat in tools.categories %}{% for t in cat.items %}{% if t.href != page.url %}
+    <a href="{{ t.href }}" class="card card-link tool-card tool-card--mini">
+      <div class="card-icon tool-card-icon" aria-hidden="true">{{ t.icon }}</div>
+      <h3 class="card-title">{{ t.title }}</h3>
+      <p class="card-description">{{ t.text }}</p>
+    </a>
+    {%- endif %}{% endfor %}{% endfor %}
+  </div>
+</section>
+{%- endif %}
 </main>
 
 {% include "components/footer.njk" %}

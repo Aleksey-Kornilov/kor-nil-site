@@ -80,23 +80,20 @@ eleventyNavigation:
 </section>
 
 <section class="section container">
-  <h2 class="section-title">Калькуляторы для стройки и дачи</h2>
-  <p class="section-lead">Те же, что в приложении ЧатЯдро: бесплатно, без регистрации, считают сразу.</p>
+  <h2 class="section-title">Калькуляторы-конструкторы</h2>
+  <p class="section-lead">Нарисуйте фундамент, комнату, дом или участок — и получите материалы, стоимость и схему. Те же расчёты есть в приложении ЧатЯдро.</p>
   <div class="grid grid-3">
-    <a href="/tools/kalkulyator-betona/" class="card card-link">
-      <div class="card-icon">🧱</div>
-      <h3 class="card-title">Бетон</h3>
-      <p class="card-description">Объём на плиту, ленту или столбы; цемент в мешках, песок, щебень по маркам М100–М300.</p>
+    {%- for t in tools.categories[0].items %}
+    <a href="{{ t.href }}" class="card card-link tool-card">
+      <div class="card-icon tool-card-icon" aria-hidden="true">{{ t.icon }}</div>
+      <h3 class="card-title">{{ t.title }}</h3>
+      <p class="card-description">{{ t.text }}</p>
     </a>
-    <a href="/tools/kalkulyator-kraski/" class="card card-link">
-      <div class="card-icon">🎨</div>
-      <h3 class="card-title">Краска и обои</h3>
-      <p class="card-description">Комната с окнами и дверями на нужных стенах: литры краски, рулоны обоев и клей.</p>
-    </a>
-    <a href="/tools/kalkulyator-peska-shchebnya/" class="card card-link">
-      <div class="card-icon">🚚</div>
-      <h3 class="card-title">Песок и щебень</h3>
-      <p class="card-description">Кубы в тонны и обратно, рейсы Газели и самосвала.</p>
+    {%- endfor %}
+    <a href="/tools/kalkulyator-zabora/" class="card card-link tool-card">
+      <div class="card-icon tool-card-icon" aria-hidden="true">🪵</div>
+      <h3 class="card-title">Забор</h3>
+      <p class="card-description">Участок с воротами и калитками, профнастил, штакетник, доска, сетка или блоки: листы, столбы, лаги, бетон.</p>
     </a>
   </div>
   <p class="section-more"><a href="/tools/" class="btn btn-secondary">Все калькуляторы</a></p>

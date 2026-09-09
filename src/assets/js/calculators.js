@@ -1233,6 +1233,8 @@
       const pdf = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Скачать PDF' });
       pdf.addEventListener('click', () => { result.dataset.printDate = new Date().toLocaleDateString('ru-RU'); window.print(); });
       actions.appendChild(share); actions.appendChild(copy); actions.appendChild(link); actions.appendChild(pdf);
+      // Первый готовый расчёт — мягко подсвечиваем, что делать дальше
+      if (!render.hadResult) { render.hadResult = true; share.classList.add('is-fresh'); setTimeout(() => share.classList.remove('is-fresh'), 7000); }
       if (!vizBox.hidden && vizBox.querySelector('svg')) {
         const png = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Схема PNG' });
         png.addEventListener('click', () => svgToPng(vizBox.querySelector('svg'), (key || 'scheme') + '-schema.png').catch(() => flash(png, 'Не удалось')));
