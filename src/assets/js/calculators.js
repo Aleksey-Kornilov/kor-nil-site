@@ -262,6 +262,9 @@
           { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
           { id: 'hei', label: 'Высота потолка', unit: 'м', value: '2.7' },
         ] },
+        { id: 'roomplan', label: 'Комната: свой план (ниши, выступы)', room: true, plan: { simple: true, presetsKey: 'ROOM_PRESETS' }, fields: [
+          { id: 'hei', label: 'Высота потолка', unit: 'м', value: '2.7' },
+        ] },
         { id: 'ceiling', label: 'Потолок (краска)', fields: [
           { id: 'len', label: 'Длина комнаты', unit: 'м' },
           { id: 'wid', label: 'Ширина комнаты', unit: 'м' },
@@ -291,11 +294,21 @@
         { id: 'glue', label: 'Цена клея', unit: '₽ за пачку' },
         { id: 'can', label: 'Цена краски', unit: '₽ за банку' },
       ],
+      // Длины стен по порядку: прямоугольник или контур своего плана
+      lens(v, mode, extras) {
+        if (mode === 'room') return (pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null;
+        if (mode === 'roomplan') {
+          const P = window.CalcPlan; if (!P || !extras.plan) return null;
+          const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+          return g.valid ? g.edges.map((e) => e.len) : null;
+        }
+        return null;
+      },
       // Какие группы полей показывать: по отделке стен
       groups(v, mode, extras) {
-        if (mode !== 'room') return { paint: true, paper: false };
-        const R = window.CalcRoom; if (!R || !extras.room) return { paint: true, paper: false };
-        const m = R.measure(extras.room, v.len || 0, v.wid || 0, v.hei || 0);
+        const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+        if (!R || !extras.room || !lens) return { paint: true, paper: false };
+        const m = R.measure(extras.room, lens, v.hei || 0);
         return { paint: m.paint.n > 0, paper: m.paper.n > 0 };
       },
       draw(v, mode, box) {
@@ -316,7 +329,7 @@
           const cans = pos(v.can) ? Math.ceil(reserve / v.can) : null;
           return { area, liters, reserve, cans };
         };
-        if (mode !== 'room') {
+        if (mode === 'ceiling' || mode === 'custom') {
           const area = mode === 'ceiling' ? (pos(v.len) && pos(v.wid) ? v.len * v.wid : null) : (pos(v.area) ? v.area : null);
           const p = paintCalc(area);
           if (!p) return null;
@@ -326,9 +339,9 @@
             note: 'Расход указан на банке (обычно 8–12 м²/л). Для тёмного по светлому может понадобиться больше слоёв.',
             cost: p.cans != null ? [{ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }] : [] };
         }
-        const R = window.CalcRoom;
-        if (!R || !extras.room || !(pos(v.len) && pos(v.wid) && pos(v.hei))) return null;
-        const m = R.measure(extras.room, v.len, v.wid, v.hei);
+        const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+        if (!R || !extras.room || !lens || !pos(v.hei)) return null;
+        const m = R.measure(extras.room, lens, v.hei);
         const rows = [], cost = [], mains = [];
         let note = '';
         // Обои
@@ -367,6 +380,197 @@
         if (!mains.length) return null;
         m.walls.forEach((w) => rows.push(['Стена ' + (w.i + 1) + ' · ' + R.FINISH[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
         return { main: { label: 'Нужно (с запасом)', value: mains.join(' · ') }, rows, note: note + 'Проёмы: ' + fmt(m.openings) + ' м² вычтены из площади.', cost };
+      },
+    },
+
+    /* --- Фасад: дом по размерам или по плану, отделка каждой стены, фронтоны --- */
+    facade: {
+      modeLabel: 'Форма дома',
+      finishes: { siding: 'Сайдинг', plaster: 'Штукатурка', paint: 'Краска', none: 'Без отделки' },
+      modes: [
+        { id: 'rect', label: 'Прямоугольный дом', room: true, fields: [
+          { id: 'len', label: 'Длина дома', unit: 'м', value: '8' },
+          { id: 'wid', label: 'Ширина дома', unit: 'м', value: '6' },
+          { id: 'hei', label: 'Высота стен (до кровли)', unit: 'м', value: '3' },
+        ] },
+        { id: 'plan', label: 'Дом по своему плану', room: true, plan: { simple: true }, fields: [
+          { id: 'hei', label: 'Высота стен (до кровли)', unit: 'м', value: '3' },
+        ] },
+      ],
+      common: [
+        { id: 'gables', label: 'Фронтонов (треугольники под крышей)', unit: 'шт', value: '2', group: 'gable' },
+        { id: 'gableW', label: 'Ширина фронтона', unit: 'м', value: '6', group: 'gable' },
+        { id: 'gableH', label: 'Высота фронтона', unit: 'м', value: '2', group: 'gable' },
+        { id: 'panelL', label: 'Длина панели сайдинга', unit: 'м', value: '3.66', group: 'siding' },
+        { id: 'panelW', label: 'Рабочая ширина панели', unit: 'м', value: '0.23', group: 'siding' },
+        { id: 'sidingWaste', label: 'Запас на подрезку', unit: '%', value: '10', group: 'siding' },
+        { id: 'plasterRate', label: 'Расход штукатурки', unit: 'кг/м² при вашей толщине', value: '15', group: 'plaster' },
+        { id: 'plasterBag', label: 'Мешок штукатурки', unit: 'кг', value: '25', group: 'plaster' },
+        { id: 'coats', label: 'Слоёв краски', unit: '', value: '2', group: 'paint' },
+        { id: 'rate', label: 'Расход краски (м² на 1 литр)', unit: 'на банке', value: '8', group: 'paint' },
+        { id: 'can', label: 'Объём банки', unit: 'л', value: '9', group: 'paint' },
+      ],
+      selects: [{ id: 'gableFinish', label: 'Отделка фронтонов', default: 'siding',
+        choices: [{ id: 'siding', label: 'Сайдинг', hint: 'как у стен из сайдинга' }, { id: 'plaster', label: 'Штукатурка', hint: '' }, { id: 'paint', label: 'Краска', hint: '' }, { id: 'none', label: 'Без отделки', hint: 'фронтоны не считаем' }] }],
+      prices: [
+        { id: 'panel', label: 'Панель сайдинга', unit: '₽ за штуку' },
+        { id: 'plaster', label: 'Штукатурка', unit: '₽ за мешок' },
+        { id: 'can', label: 'Краска', unit: '₽ за банку' },
+      ],
+      lens(v, mode, extras) {
+        if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null;
+        const P = window.CalcPlan; if (!P || !extras.plan) return null;
+        const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+        return g.valid ? g.edges.map((e) => e.len) : null;
+      },
+      groups(v, mode, extras, sel) {
+        const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+        const out = { gable: true, siding: false, plaster: false, paint: false };
+        if (!R || !extras.room || !lens) return out;
+        const m = R.measure(extras.room, lens, v.hei || 0, this.finishes, 'siding');
+        ['siding', 'plaster', 'paint'].forEach((f) => { out[f] = m.by[f].n > 0 || (sel.gableFinish === f && pos(v.gables)); });
+        return out;
+      },
+      draw(v, mode, box, yaw, extras) {
+        const V = window.CalcViz; if (!V || !pos(v.hei)) return false;
+        let verts = null;
+        if (mode === 'rect') { if (pos(v.len) && pos(v.wid)) verts = [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]]; }
+        else { const P = window.CalcPlan; if (P && extras.plan) { const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 }); if (g.valid) verts = g.verts; } }
+        if (!verts) return false;
+        const dims = verts.length <= 8 ? verts.map((a, i) => { const b = verts[(i + 1) % verts.length]; return { from: [a[0], a[1], 0], to: [b[0], b[1], 0], label: (i + 1) + ': ' + fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 22 }; }) : [];
+        dims.push({ from: [verts[0][0], verts[0][1], 0], to: [verts[0][0], verts[0][1], v.hei], label: 'высота ' + fmt(v.hei) + ' м', offset: -28 });
+        V.iso(box, [{ poly: verts, z: 0, dz: v.hei }], dims, { yaw, ground: true, caption: 'Коробка дома без кровли. Номера — стены на развёртке. Потяните, чтобы повернуть.' });
+        return true;
+      },
+      compute(v, mode, sel, extras) {
+        const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+        if (!R || !extras.room || !lens || !pos(v.hei)) return null;
+        const m = R.measure(extras.room, lens, v.hei, this.finishes, 'siding');
+        const gableArea = (pos(v.gables) && pos(v.gableW) && pos(v.gableH)) ? v.gables * v.gableW * v.gableH / 2 : 0;
+        const area = { siding: m.by.siding.area, plaster: m.by.plaster.area, paint: m.by.paint.area };
+        if (gableArea > 0 && area[sel.gableFinish] != null) area[sel.gableFinish] += gableArea;
+        const rows = [], cost = [], mains = [];
+        if (area.siding > 0 && pos(v.panelL) && pos(v.panelW)) {
+          const need = area.siding * (1 + (v.sidingWaste || 0) / 100);
+          const panels = Math.ceil(need / (v.panelL * v.panelW));
+          const start = m.by.siding.len;
+          const jLen = extras.room.openings.filter((o) => m.walls[o.wall] && m.walls[o.wall].finish === 'siding').reduce((s2, o) => s2 + 2 * (o.w + o.h), 0);
+          mains.push('сайдинг ' + panels + ' ' + plural(panels, 'панель', 'панели', 'панелей'));
+          rows.push(['Сайдинг: площадь', fmt(area.siding) + ' м² (+' + fmt(v.sidingWaste || 0) + '% подрезка = ' + fmt(need) + ')']);
+          rows.push(['Стартовая планка', fmt(start) + ' м']);
+          rows.push(['Угловой профиль', m.by.siding.n + ' ' + plural(m.by.siding.n, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(m.by.siding.n * v.hei) + ' м']);
+          if (jLen > 0) rows.push(['J-профиль вокруг проёмов', fmt(jLen) + ' м']);
+          cost.push({ label: 'Сайдинг', amount: panels, unit: plural(panels, 'панель', 'панели', 'панелей'), priceId: 'panel' });
+        }
+        if (area.plaster > 0 && pos(v.plasterRate) && pos(v.plasterBag)) {
+          const kg = area.plaster * v.plasterRate, bags = Math.ceil(kg / v.plasterBag);
+          mains.push('штукатурка ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков'));
+          rows.push(['Штукатурка', fmt(area.plaster) + ' м² × ' + fmt(v.plasterRate) + ' кг = ' + fmtInt(kg) + ' кг']);
+          cost.push({ label: 'Штукатурка', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'plaster' });
+        }
+        if (area.paint > 0 && pos(v.rate)) {
+          const coats = v.coats == null ? 1 : v.coats, liters = area.paint * coats / v.rate * 1.1;
+          const cans = pos(v.can) ? Math.ceil(liters / v.can) : null;
+          mains.push('краска ' + fmt(liters) + ' л');
+          rows.push(['Краска', fmt(area.paint) + ' м² × ' + fmt(coats) + ' сл., с запасом 10%' + (cans != null ? ', ' + cans + ' ' + plural(cans, 'банка', 'банки', 'банок') : '')]);
+          if (cans != null) cost.push({ label: 'Краска', amount: cans, unit: plural(cans, 'банка', 'банки', 'банок'), priceId: 'can' });
+        }
+        if (!mains.length) return null;
+        if (gableArea > 0) rows.push(['Фронтоны', v.gables + ' × ' + fmt(v.gableW) + '×' + fmt(v.gableH) + ' / 2 = ' + fmt(gableArea) + ' м² → ' + this.finishes[sel.gableFinish]]);
+        m.walls.forEach((w) => rows.push(['Стена ' + (w.i + 1) + ' · ' + this.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
+        return { main: { label: 'Нужно на фасад', value: mains.join(' · ') }, rows,
+          note: 'Проёмы вычтены (' + fmt(m.openings) + ' м²). Сайдинг: панели по площади с запасом, стартовая планка по длине стен, угловой профиль по числу стен, J-профиль по периметру проёмов. Расход штукатурки указан на мешке для вашей толщины слоя.', cost };
+      },
+    },
+
+    /* --- Забор --- */
+    fence: {
+      modeLabel: 'Тип забора',
+      modes: [
+        { id: 'proflist', label: 'Профнастил', fields: [
+          { id: 'len', label: 'Длина забора', unit: 'м', value: '40' },
+          { id: 'hei', label: 'Высота', unit: 'м', value: '2' },
+          { id: 'step', label: 'Шаг столбов', unit: 'м', value: '2.5' },
+          { id: 'gate', label: 'Ворота', unit: 'м, необязательно', value: '3' },
+          { id: 'wicket', label: 'Калитка', unit: 'м, необязательно', value: '1' },
+          { id: 'sheetW', label: 'Рабочая ширина листа', unit: 'м', value: '1.15' },
+        ] },
+        { id: 'picket', label: 'Штакетник', fields: [
+          { id: 'len', label: 'Длина забора', unit: 'м', value: '40' },
+          { id: 'hei', label: 'Высота', unit: 'м', value: '1.8' },
+          { id: 'step', label: 'Шаг столбов', unit: 'м', value: '2.5' },
+          { id: 'gate', label: 'Ворота', unit: 'м, необязательно', value: '3' },
+          { id: 'wicket', label: 'Калитка', unit: 'м, необязательно', value: '1' },
+          { id: 'plankW', label: 'Ширина штакетины', unit: 'м', value: '0.1' },
+          { id: 'gap', label: 'Зазор между штакетинами', unit: 'м', value: '0.05' },
+        ] },
+        { id: 'chainlink', label: 'Сетка-рабица', fields: [
+          { id: 'len', label: 'Длина забора', unit: 'м', value: '40' },
+          { id: 'hei', label: 'Высота', unit: 'м', value: '1.5' },
+          { id: 'step', label: 'Шаг столбов', unit: 'м', value: '2.5' },
+          { id: 'gate', label: 'Ворота', unit: 'м, необязательно', value: '' },
+          { id: 'wicket', label: 'Калитка', unit: 'м, необязательно', value: '1' },
+          { id: 'rollL', label: 'Длина рулона сетки', unit: 'м', value: '10' },
+        ] },
+      ],
+      common: [
+        { id: 'postDepth', label: 'Столб в земле', unit: 'м', value: '1' },
+        { id: 'lagRows', label: 'Рядов лаг (поперечин)', unit: 'шт', value: '2' },
+      ],
+      prices: [
+        { id: 'unit', label: 'Лист / штакетина / рулон', unit: '₽ за штуку' },
+        { id: 'post', label: 'Столб', unit: '₽ за штуку' },
+        { id: 'lag', label: 'Лага 6 м', unit: '₽ за штуку' },
+      ],
+      draw(v, mode, box) {
+        const V = window.CalcViz; if (!V || !(pos(v.len) && pos(v.hei) && pos(v.step))) return false;
+        V.fence(box, v.len, v.hei, v.step, v.gate || 0, v.wicket || 0, mode);
+        return true;
+      },
+      compute(v, mode) {
+        if (!(pos(v.len) && pos(v.hei) && pos(v.step))) return null;
+        const openings = (v.gate || 0) + (v.wicket || 0);
+        const net = v.len - openings;
+        if (net <= 0) return null;
+        const sections = Math.ceil(net / v.step - 1e-9);
+        const posts = sections + 1 + (pos(v.gate) ? 2 : 0) + (pos(v.wicket) ? 1 : 0);
+        const postLen = v.hei + (v.postDepth || 1);
+        const rows = v.lagRows == null ? 2 : v.lagRows;
+        const lagPieces = Math.ceil(rows * net / 6 - 1e-9);
+        const holes = posts * Math.PI * 0.1 * 0.1 * (v.postDepth || 1);
+        const cementBags = Math.ceil(holes * 1.1 * 286 / 50);
+        const out = [];
+        let main, unitLabel;
+        if (mode === 'proflist') {
+          if (!pos(v.sheetW)) return null;
+          const sheets = Math.ceil(net / v.sheetW - 1e-9);
+          main = { label: 'Нужно', value: sheets + ' ' + plural(sheets, 'лист', 'листа', 'листов') + ' · ' + posts + ' ' + plural(posts, 'столб', 'столба', 'столбов') };
+          out.push(['Листы профнастила', sheets + ' шт высотой ' + fmt(v.hei) + ' м (по ' + fmt(v.sheetW) + ' м рабочей ширины)']);
+          out.push(['Саморезы', '≈ ' + sheets * 8 + ' шт (по 8 на лист)']);
+          unitLabel = { amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов') };
+        } else if (mode === 'picket') {
+          if (!pos(v.plankW)) return null;
+          const planks = Math.ceil(net / (v.plankW + (v.gap || 0)) - 1e-9);
+          main = { label: 'Нужно', value: planks + ' ' + plural(planks, 'штакетина', 'штакетины', 'штакетин') + ' · ' + posts + ' ' + plural(posts, 'столб', 'столба', 'столбов') };
+          out.push(['Штакетины', planks + ' шт × ' + fmt(v.hei) + ' м, шаг ' + fmt(v.plankW + (v.gap || 0)) + ' м']);
+          out.push(['Саморезы', '≈ ' + planks * rows * 2 + ' шт (по 2 на ряд лаг)']);
+          unitLabel = { amount: planks, unit: plural(planks, 'штакетина', 'штакетины', 'штакетин') };
+        } else {
+          if (!pos(v.rollL)) return null;
+          const rolls = Math.ceil(net / v.rollL - 1e-9);
+          main = { label: 'Нужно', value: rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' сетки · ' + posts + ' ' + plural(posts, 'столб', 'столба', 'столбов') };
+          out.push(['Сетка-рабица', rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.rollL) + ' м, высота ' + fmt(v.hei) + ' м']);
+          unitLabel = { amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов') };
+        }
+        out.push(['Пролётов', sections + ' по ' + fmt(v.step) + ' м (полезная длина ' + fmt(net) + ' м)']);
+        out.push(['Столбы', posts + ' шт длиной ' + fmt(postLen) + ' м (' + fmt(v.postDepth || 1) + ' м в земле)' + (openings ? ', включая под ворота и калитку' : '')]);
+        out.push(['Лаги', rows + ' ' + plural(rows, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м = ' + fmt(rows * net) + ' м → ' + lagPieces + ' шт по 6 м']);
+        out.push(['Бетон под столбы', fmt(holes) + ' м³ (лунки ⌀20 см) ≈ ' + cementBags + ' ' + plural(cementBags, 'мешок', 'мешка', 'мешков') + ' цемента']);
+        return { main, rows: out,
+          note: 'Полезная длина = длина забора минус ворота и калитка. Столбы: пролёты + 1, плюс два под ворота и один под калитку. Лаги считаются по полезной длине, профтруба по 6 м. Бетон — лунки диаметром 20 см на глубину столба в земле, бетон М200 с запасом 10%.',
+          cost: [Object.assign({ label: mode === 'proflist' ? 'Профнастил' : mode === 'picket' ? 'Штакетник' : 'Сетка', priceId: 'unit' }, unitLabel),
+            { label: 'Столбы', amount: posts, unit: plural(posts, 'столб', 'столба', 'столбов'), priceId: 'post' },
+            { label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' }] };
       },
     },
 
@@ -607,10 +811,12 @@
     function renderPlan() {
       const mode = def.modes.find((m) => m.id === state.mode);
       if (!mode.plan || !window.CalcPlan) { planBox.innerHTML = ''; planEditor = null; return; }
-      if (!state.extras.plan) state.extras.plan = { verts: window.CalcPlan.PRESETS.rect.make(), edges: [], inner: [], preset: 'rect' };
+      const opts = typeof mode.plan === 'object' ? mode.plan : {};
+      const presets = opts.presetsKey ? window.CalcPlan[opts.presetsKey] : window.CalcPlan.PRESETS;
+      if (!state.extras.plan) state.extras.plan = { verts: presets.rect.make(), edges: [], inner: [], preset: 'rect' };
       planEditor = window.CalcPlan.editor(planBox, state.extras.plan, () => ({
         w: parseNum(state.values.pW) || 40, depth: parseNum(state.values.pDepth) || 60, above: parseNum(state.values.pAbove) || 0,
-      }), () => render());
+      }), () => render(), { simple: !!opts.simple, presets });
     }
 
     function renderFields() {
@@ -643,13 +849,13 @@
     function renderRoom() {
       const mode = def.modes.find((m) => m.id === state.mode);
       if (!mode.room || !window.CalcRoom) { roomBox.innerHTML = ''; roomEditor = null; return; }
-      if (!state.extras.room) {
-        const finish = root.dataset.finish === 'paper' ? 'paper' : 'paint';
-        state.extras.room = { walls: [0, 1, 2, 3].map(() => ({ finish })), openings: [] };
-      }
-      roomEditor = window.CalcRoom.editor(roomBox, state.extras.room, () => ({
-        L: parseNum(state.values.len) || 0, W: parseNum(state.values.wid) || 0, H: parseNum(state.values.hei) || 0,
-      }), () => render());
+      const finishes = def.finishes || window.CalcRoom.FINISH;
+      const defaultFinish = finishes[root.dataset.finish] ? root.dataset.finish : Object.keys(finishes)[0];
+      if (!state.extras.room) state.extras.room = { walls: [], openings: [] };
+      roomEditor = window.CalcRoom.editor(roomBox, state.extras.room, () => {
+        const v = {}; Object.keys(state.values).forEach((k) => { v[k] = parseNum(state.values[k]); });
+        return { lens: def.lens ? def.lens(v, state.mode, { plan: state.extras.plan, room: state.extras.room }) : null, H: parseNum(state.values.hei) || 0 };
+      }, () => render(), { finishes, defaultFinish });
     }
 
     function render() {
@@ -661,7 +867,7 @@
       if (roomEditor) roomEditor.redraw();
       // Группы полей (краска/обои) — по тому, какая отделка выбрана у стен
       if (def.groups) {
-        const gs = def.groups(v, state.mode, extras);
+        const gs = def.groups(v, state.mode, extras, state.sel);
         form.querySelectorAll('[data-group]').forEach((elm) => { const g = elm.dataset.group; if (g) elm.hidden = !gs[g]; });
       }
       lastViz = { v, extras };

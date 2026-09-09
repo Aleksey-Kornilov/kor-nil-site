@@ -194,5 +194,32 @@
     container.innerHTML = ''; container.appendChild(svg);
   }
 
-  window.CalcViz = { iso, rotatable, walls, shape };
+  /* ---------- Забор: вид сбоку со столбами, воротами и калиткой ---------- */
+  function fence(container, len, H, step, gate, wicket, kind) {
+    const W = 680, PAD = 36, TOP = 30;
+    const scale = Math.min((W - PAD * 2) / len, 160 / H);
+    const hpx = H * scale, HH = TOP + hpx + 60;
+    const svg = el('svg', { viewBox: `0 0 ${W} ${HH}`, class: 'viz-svg', role: 'img', 'aria-label': 'Схема забора' });
+    const x0 = PAD + ((W - PAD * 2) - len * scale) / 2, ground = TOP + hpx;
+    svg.appendChild(el('line', { x1: PAD - 10, y1: ground, x2: W - PAD + 10, y2: ground, stroke: '#5f9466', 'stroke-width': 2 }));
+    // проёмы: ворота у начала, калитка сразу за ними
+    let x = x0;
+    const seg = (w, cls, label) => { svg.appendChild(el('rect', { x, y: TOP, width: w * scale, height: hpx, class: cls })); svg.appendChild(el('text', { x: x + w * scale / 2, y: TOP + hpx / 2 + 4, class: 'viz-small', 'text-anchor': 'middle' }, label)); x += w * scale; };
+    if (gate > 0) seg(gate, 'viz-door', 'ворота ' + f1(gate));
+    if (wicket > 0) seg(wicket, 'viz-door', 'калитка');
+    const net = len - gate - wicket;
+    const n = Math.ceil(net / step - 1e-9);
+    const fill = kind === 'chainlink' ? 'viz-window' : 'viz-wall';
+    for (let i = 0; i < n; i++) { const w = Math.min(step, net - i * step); svg.appendChild(el('rect', { x, y: TOP, width: w * scale, height: hpx, class: fill })); if (i < 2) svg.appendChild(el('text', { x: x + w * scale / 2, y: TOP + hpx + 16, class: 'viz-small', 'text-anchor': 'middle' }, f1(w) + ' м')); x += w * scale; }
+    // столбы
+    const posts = []; let px = x0; if (gate > 0) { posts.push(px); px += gate * scale; posts.push(px); } if (wicket > 0) { if (!gate) posts.push(px); px += wicket * scale; posts.push(px); }
+    if (!gate && !wicket) posts.push(px);
+    for (let i = 1; i <= n; i++) posts.push(x0 + (gate + wicket + Math.min(i * step, net)) * scale);
+    posts.forEach((p) => svg.appendChild(el('rect', { x: p - 3, y: TOP - 6, width: 6, height: hpx + 6 + 14, fill: '#4b5563' })));
+    svg.appendChild(el('text', { x: x0 - 10, y: TOP + hpx / 2, class: 'viz-label', 'text-anchor': 'end', transform: `rotate(-90 ${x0 - 10} ${TOP + hpx / 2})` }, f1(H) + ' м'));
+    svg.appendChild(el('text', { x: W / 2, y: HH - 8, class: 'viz-caption', 'text-anchor': 'middle' }, `Длина ${f1(len)} м · пролётов ${n} · столбов ${posts.length}`));
+    container.innerHTML = ''; container.appendChild(svg);
+  }
+
+  window.CalcViz = { iso, rotatable, walls, shape, fence };
 })();

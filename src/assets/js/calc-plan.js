@@ -104,26 +104,39 @@
     hex: { label: 'Шестиугольник', make: () => regular(6, 3) },
     circle: { label: 'Круг (беседка)', make: (d) => regular(24, (d || 4) / 2), circle: true },
   };
+  // Заготовки для комнаты: ниша и выступ
+  const ROOM_PRESETS = {
+    rect: { label: 'Прямоугольник', make: () => [[0, 0], [5, 0], [5, 4], [0, 4]] },
+    niche: { label: 'С нишей', make: () => [[0, 0], [5, 0], [5, 4], [3.5, 4], [3.5, 3], [1.5, 3], [1.5, 4], [0, 4]] },
+    bay: { label: 'С выступом', make: () => [[0, 0], [5, 0], [5, 4], [3.5, 4], [3.5, 5], [1.5, 5], [1.5, 4], [0, 4]] },
+    L: { label: 'Г-образная', make: () => [[0, 0], [6, 0], [6, 2.5], [3, 2.5], [3, 5], [0, 5]] },
+    corridor: { label: 'Коридор', make: () => [[0, 0], [8, 0], [8, 1.5], [0, 1.5]] },
+  };
   function regular(n, r) { const p = []; for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / n; p.push([snap(r + r * Math.cos(a)), snap(r + r * Math.sin(a))]); } return p; }
 
   /* ---------- Редактор ---------- */
   // container — куда рисовать; plan — состояние {verts, edges, inner, preset, diameter}; onChange() — пересчёт.
-  function editor(container, plan, getDefaults, onChange) {
-    const VW = 640, VH = 420, PAD = 36;
+  function editor(container, plan, getDefaults, onChange, opts) {
+    opts = opts || {};
+    const simple = !!opts.simple; // только контур: без ширины/глубины и внутренних лент (комната, фасад)
+    const presets = opts.presets || PRESETS;
+    const VW = 640, VH = simple ? 380 : 420, PAD = 36;
     let sel = null; // { type: 'edge', i } | { type: 'vertex', i }
     let drag = null; let tf = null;
 
     const wrap = document.createElement('div'); wrap.className = 'plan';
     const bar = document.createElement('div'); bar.className = 'calc-presets';
     const lbl = document.createElement('span'); lbl.className = 'calc-presets-label'; lbl.textContent = 'Заготовка:'; bar.appendChild(lbl);
-    Object.keys(PRESETS).forEach((k) => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'calc-preset'; b.textContent = PRESETS[k].label;
-      b.addEventListener('click', () => { plan.verts = PRESETS[k].make(plan.diameter); plan.edges = []; plan.inner = []; plan.preset = k; sel = null; redraw(); onChange(); });
+    Object.keys(presets).forEach((k) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'calc-preset'; b.textContent = presets[k].label;
+      b.addEventListener('click', () => { plan.verts = presets[k].make(plan.diameter); plan.edges = []; plan.inner = []; plan.preset = k; sel = null; redraw(); onChange(); });
       bar.appendChild(b);
     });
     const svg = el('svg', { viewBox: `0 0 ${VW} ${VH}`, class: 'viz-svg plan-svg', role: 'img', 'aria-label': 'План фундамента' });
     const panel = document.createElement('div'); panel.className = 'plan-panel';
-    const hint = document.createElement('p'); hint.className = 'calc-note'; hint.textContent = 'Тяните углы, чтобы менять форму. Нажмите на сторону, чтобы задать её длину, ширину и глубину. «+ угол» добавляет угол на выбранной стороне.';
+    const hint = document.createElement('p'); hint.className = 'calc-note'; hint.textContent = simple
+      ? 'Тяните углы, чтобы менять форму. Нажмите на сторону, чтобы задать её длину. «+ угол» добавляет угол на выбранной стороне. Номера сторон — это номера стен ниже.'
+      : 'Тяните углы, чтобы менять форму. Нажмите на сторону, чтобы задать её длину, ширину и глубину. «+ угол» добавляет угол на выбранной стороне.';
     wrap.appendChild(bar); wrap.appendChild(svg); wrap.appendChild(panel); wrap.appendChild(hint);
     container.innerHTML = ''; container.appendChild(wrap);
 
@@ -144,16 +157,20 @@
     function redraw() {
       if (!drag) fit();
       svg.innerHTML = '';
-      const g = geometry(plan, getDefaults());
+      const g = geometry(plan, simple ? { w: 1, depth: 1, above: 0 } : getDefaults());
       // сетка 1 м
       const gx0 = Math.floor((0 - tf.ox) / tf.s), gx1 = Math.ceil((VW - tf.ox) / tf.s), gy0 = Math.floor((tf.oy - VH) / tf.s), gy1 = Math.ceil(tf.oy / tf.s);
       for (let x = gx0; x <= gx1; x++) svg.appendChild(el('line', { x1: X([x, 0]), y1: 0, x2: X([x, 0]), y2: VH, class: 'plan-grid' }));
       for (let y = gy0; y <= gy1; y++) svg.appendChild(el('line', { x1: 0, y1: Y([0, y]), x2: VW, y2: Y([0, y]), class: 'plan-grid' }));
       // лента: наружный − внутренний
-      const path = 'M ' + g.verts.map((p) => X(p) + ' ' + Y(p)).join(' L ') + ' Z M ' + g.inner.map((p) => X(p) + ' ' + Y(p)).join(' L ') + ' Z';
-      svg.appendChild(el('path', { d: path, class: g.valid ? 'plan-tape' : 'plan-tape plan-tape--bad', 'fill-rule': 'evenodd' }));
+      if (simple) {
+        svg.appendChild(el('polygon', { points: g.verts.map((p) => X(p) + ',' + Y(p)).join(' '), class: g.valid ? 'viz-area' : 'plan-tape plan-tape--bad' }));
+      } else {
+        const path = 'M ' + g.verts.map((p) => X(p) + ' ' + Y(p)).join(' L ') + ' Z M ' + g.inner.map((p) => X(p) + ' ' + Y(p)).join(' L ') + ' Z';
+        svg.appendChild(el('path', { d: path, class: g.valid ? 'plan-tape' : 'plan-tape plan-tape--bad', 'fill-rule': 'evenodd' }));
+      }
       // внутренние ленты
-      (plan.inner || []).forEach((t, i) => {
+      if (!simple) (plan.inner || []).forEach((t, i) => {
         const line = el('line', { x1: X(t.a), y1: Y(t.a), x2: X(t.b), y2: Y(t.b), class: 'plan-inner', 'stroke-width': Math.max(4, g.inners[i].w * tf.s) });
         svg.appendChild(line);
         [['a', t.a], ['b', t.b]].forEach(([k, p]) => {
@@ -170,7 +187,7 @@
         if (g.edges.length <= 8) {
           const mx = (X(e.a) + X(e.b)) / 2, my = (Y(e.a) + Y(e.b)) / 2;
           const nx = -(Y(e.b) - Y(e.a)), ny = X(e.b) - X(e.a); const l = Math.hypot(nx, ny) || 1;
-          svg.appendChild(el('text', { x: mx - nx / l * 14, y: my - ny / l * 14 + 4, class: 'viz-label', 'text-anchor': 'middle' }, fmt(e.len) + ' м'));
+          svg.appendChild(el('text', { x: mx - nx / l * 14, y: my - ny / l * 14 + 4, class: 'viz-label', 'text-anchor': 'middle' }, (simple ? (i + 1) + ': ' : '') + fmt(e.len) + ' м'));
         }
       });
       // углы
@@ -180,7 +197,9 @@
         svg.appendChild(c);
       });
       svg.appendChild(el('text', { x: VW / 2, y: VH - 8, class: 'viz-caption', 'text-anchor': 'middle' },
-        g.valid ? `Лента: ${fmt(g.footprint)} м² в плане · периметр ${fmt(g.perimeter)} м` : 'Контур пересекает сам себя — поправьте углы'));
+        !g.valid ? 'Контур пересекает сам себя — поправьте углы'
+          : simple ? `Площадь ${fmt(g.outerArea)} м² · периметр ${fmt(g.perimeter)} м · стен ${g.edges.length}`
+          : `Лента: ${fmt(g.footprint)} м² в плане · периметр ${fmt(g.perimeter)} м`));
       renderPanel(g);
     }
 
@@ -221,8 +240,8 @@
           redraw(); onChange();
         }));
         const ov = plan.edges[i] || {};
-        panel.appendChild(num('Ширина ленты', ov.w || '', 'см (пусто = ' + d.w + ')', (v) => { plan.edges[i] = Object.assign({}, plan.edges[i], { w: Number(v) > 0 ? Number(v) : null }); redraw(); onChange(); }));
-        panel.appendChild(num('Глубина в земле', ov.depth || '', 'см (пусто = ' + d.depth + ')', (v) => { plan.edges[i] = Object.assign({}, plan.edges[i], { depth: Number(v) > 0 ? Number(v) : null }); redraw(); onChange(); }));
+        if (!simple) panel.appendChild(num('Ширина ленты', ov.w || '', 'см (пусто = ' + d.w + ')', (v) => { plan.edges[i] = Object.assign({}, plan.edges[i], { w: Number(v) > 0 ? Number(v) : null }); redraw(); onChange(); }));
+        if (!simple) panel.appendChild(num('Глубина в земле', ov.depth || '', 'см (пусто = ' + d.depth + ')', (v) => { plan.edges[i] = Object.assign({}, plan.edges[i], { depth: Number(v) > 0 ? Number(v) : null }); redraw(); onChange(); }));
         panel.appendChild(btn('+ угол на этой стороне', 'btn btn-secondary btn-sm', () => {
           const n = plan.verts.length; const a = plan.verts[i], b = plan.verts[(i + 1) % n];
           plan.verts.splice(i + 1, 0, [snap((a[0] + b[0]) / 2), snap((a[1] + b[1]) / 2)]);
@@ -237,13 +256,13 @@
         panel.appendChild(t);
       }
       const inner = document.createElement('div'); inner.className = 'calc-presets';
-      inner.appendChild(btn('+ внутренняя лента', 'calc-preset', () => {
+      if (!simple) inner.appendChild(btn('+ внутренняя лента', 'calc-preset', () => {
         const xs = plan.verts.map((p) => p[0]), ys = plan.verts.map((p) => p[1]);
         const cy = snap((Math.min(...ys) + Math.max(...ys)) / 2);
         plan.inner = plan.inner || []; plan.inner.push({ a: [snap(Math.min(...xs) + 0.4), cy], b: [snap(Math.max(...xs) - 0.4), cy] });
         redraw(); onChange();
       }));
-      if ((plan.inner || []).length) inner.appendChild(btn('− убрать последнюю внутреннюю', 'calc-preset', () => { plan.inner.pop(); redraw(); onChange(); }));
+      if (!simple && (plan.inner || []).length) inner.appendChild(btn('− убрать последнюю внутреннюю', 'calc-preset', () => { plan.inner.pop(); redraw(); onChange(); }));
       panel.appendChild(inner);
     }
 
@@ -251,5 +270,5 @@
     return { redraw };
   }
 
-  window.CalcPlan = { geometry, prisms, editor, PRESETS };
+  window.CalcPlan = { geometry, prisms, editor, PRESETS, ROOM_PRESETS };
 })();
