@@ -209,7 +209,8 @@
           const P = window.CalcPlan;
           if (P && extras.plan && pos(v.pW) && pos(v.pDepth)) {
             const g = P.geometry(extras.plan, { w: v.pW, depth: v.pDepth, above: v.pAbove || 0 });
-            if (g.valid) volume = g.volume;
+            if (!g.valid) return { error: 'Контур пересекает сам себя — поправьте углы на плане.' };
+            volume = g.volume;
           }
         } else if (mode === 'slab') {
           const l = v.len, w = v.wid, t = v.thick;
@@ -218,7 +219,8 @@
           // Лента по наружным размерам дома: площадь кольца = L·W − (L−2w)(W−2w),
           // углы не считаются дважды. Полная высота = в земле + цоколь.
           const L = v.hLen, Wd = v.hWid, w = (v.sWid || 0) / 100, h = ((v.sDepth || 0) + (v.sAbove || 0)) / 100;
-          if (pos(L) && pos(Wd) && pos(w) && pos(v.sDepth) && 2 * w < L && 2 * w < Wd) {
+          if (pos(L) && pos(Wd) && pos(w) && pos(v.sDepth)) {
+            if (!(2 * w < L && 2 * w < Wd)) return { error: 'Ширина ленты больше половины размера дома — проверьте единицы: размеры дома в метрах, лента в сантиметрах.' };
             const ring = L * Wd - (L - 2 * w) * (Wd - 2 * w);
             volume = (ring + (v.sInner || 0) * w) * h;
           }
@@ -290,9 +292,9 @@
         { label: 'Длина рулона', fieldId: 'rollL', unit: 'м', group: 'paper', items: [['Обычный', '10.05'], ['Длинный', '25']] },
       ],
       prices: [
-        { id: 'roll', label: 'Цена рулона обоев', unit: '₽ за рулон' },
-        { id: 'glue', label: 'Цена клея', unit: '₽ за пачку' },
-        { id: 'can', label: 'Цена краски', unit: '₽ за банку' },
+        { id: 'roll', label: 'Цена рулона обоев', unit: '₽ за рулон', group: 'paper' },
+        { id: 'glue', label: 'Цена клея', unit: '₽ за пачку', group: 'paper' },
+        { id: 'can', label: 'Цена краски', unit: '₽ за банку', group: 'paint' },
       ],
       // Длины стен по порядку: прямоугольник или контур своего плана
       lens(v, mode, extras) {
@@ -340,8 +342,10 @@
             cost: p.cans != null ? [{ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }] : [] };
         }
         const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+        if (mode === 'roomplan' && !lens && extras.plan) return { error: 'Контур комнаты пересекает сам себя — поправьте углы на плане.' };
         if (!R || !extras.room || !lens || !pos(v.hei)) return null;
         const m = R.measure(extras.room, lens, v.hei);
+        if (m.paint.n === 0 && m.paper.n === 0) return { error: 'У всех стен выбрано «без отделки» — отметьте на развёртке, какие стены красим или оклеиваем.' };
         const rows = [], cost = [], mains = [];
         let note = '';
         // Обои
@@ -352,8 +356,8 @@
           if (pos(effW) && pos(v.rollL)) {
             const strips = m.paper.walls.reduce((s2, w) => s2 + Math.ceil(w.len / effW - 1e-9), 0);
             const perRoll = Math.floor(v.rollL / stripLen + 1e-9);
-            if (perRoll < 1) { note = 'Полоса длиннее рулона: проверьте длину рулона и раппорт. '; }
-            else {
+            if (perRoll < 1) return { error: 'Полоса (' + fmt(stripLen) + ' м) длиннее рулона (' + fmt(v.rollL) + ' м): проверьте длину рулона, высоту потолка и раппорт.' };
+            {
               const rolls = Math.ceil(strips / perRoll);
               const glue = pos(v.glue) ? Math.ceil(m.paper.area / v.glue) : null;
               mains.push('обои ' + rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов'));
@@ -413,9 +417,9 @@
       selects: [{ id: 'gableFinish', label: 'Отделка фронтонов', default: 'siding',
         choices: [{ id: 'siding', label: 'Сайдинг', hint: 'как у стен из сайдинга' }, { id: 'plaster', label: 'Штукатурка', hint: '' }, { id: 'paint', label: 'Краска', hint: '' }, { id: 'none', label: 'Без отделки', hint: 'фронтоны не считаем' }] }],
       prices: [
-        { id: 'panel', label: 'Панель сайдинга', unit: '₽ за штуку' },
-        { id: 'plaster', label: 'Штукатурка', unit: '₽ за мешок' },
-        { id: 'can', label: 'Краска', unit: '₽ за банку' },
+        { id: 'panel', label: 'Панель сайдинга', unit: '₽ за штуку', group: 'siding' },
+        { id: 'plaster', label: 'Штукатурка', unit: '₽ за мешок', group: 'plaster' },
+        { id: 'can', label: 'Краска', unit: '₽ за банку', group: 'paint' },
       ],
       lens(v, mode, extras) {
         if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null;
@@ -444,6 +448,7 @@
       },
       compute(v, mode, sel, extras) {
         const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+        if (mode === 'plan' && !lens && extras.plan) return { error: 'Контур дома пересекает сам себя — поправьте углы на плане.' };
         if (!R || !extras.room || !lens || !pos(v.hei)) return null;
         const m = R.measure(extras.room, lens, v.hei, this.finishes, 'siding');
         const gableArea = (pos(v.gables) && pos(v.gableW) && pos(v.gableH)) ? v.gables * v.gableW * v.gableH / 2 : 0;
@@ -475,7 +480,7 @@
           rows.push(['Краска', fmt(area.paint) + ' м² × ' + fmt(coats) + ' сл., с запасом 10%' + (cans != null ? ', ' + cans + ' ' + plural(cans, 'банка', 'банки', 'банок') : '')]);
           if (cans != null) cost.push({ label: 'Краска', amount: cans, unit: plural(cans, 'банка', 'банки', 'банок'), priceId: 'can' });
         }
-        if (!mains.length) return null;
+        if (!mains.length) return { error: 'У всех стен выбрано «без отделки» — отметьте на развёртке, чем отделываем.' };
         if (gableArea > 0) rows.push(['Фронтоны', v.gables + ' × ' + fmt(v.gableW) + '×' + fmt(v.gableH) + ' / 2 = ' + fmt(gableArea) + ' м² → ' + this.finishes[sel.gableFinish]]);
         m.walls.forEach((w) => rows.push(['Стена ' + (w.i + 1) + ' · ' + this.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
         return { main: { label: 'Нужно на фасад', value: mains.join(' · ') }, rows,
@@ -531,7 +536,7 @@
         if (!(pos(v.len) && pos(v.hei) && pos(v.step))) return null;
         const openings = (v.gate || 0) + (v.wicket || 0);
         const net = v.len - openings;
-        if (net <= 0) return null;
+        if (net <= 0) return { error: 'Ворота и калитка длиннее самого забора — проверьте длины.' };
         const sections = Math.ceil(net / v.step - 1e-9);
         // Ворота и калитка стоят подряд в начале: каждый проём добавляет один столб (общий столб делится)
         const posts = sections + 1 + (pos(v.gate) ? 1 : 0) + (pos(v.wicket) ? 1 : 0);
@@ -866,18 +871,22 @@
       const extras = { openings: state.extras.openings.map((o) => ({ kind: o.kind, w: parseNum(o.w), h: parseNum(o.h), count: Math.max(1, Math.round(parseNum(o.count) || 1)) })), plan: state.extras.plan, room: state.extras.room };
       if (planEditor) planEditor.redraw();
       if (roomEditor) roomEditor.redraw();
-      // Группы полей (краска/обои) — по тому, какая отделка выбрана у стен
-      if (def.groups) {
+      // Группы полей (краска/обои/сайдинг…) — по тому, какая отделка выбрана у стен.
+      // Применяется и до расчёта, и после (цены создаются позже, при первом результате).
+      const applyGroups = () => {
+        if (!def.groups) return;
         const gs = def.groups(v, state.mode, extras, state.sel);
         form.querySelectorAll('[data-group]').forEach((elm) => { const g = elm.dataset.group; if (g) elm.hidden = !gs[g]; });
-      }
+      };
+      applyGroups();
+      render.after = applyGroups;
       lastViz = { v, extras };
       drawViz();
       const r = def.compute(v, state.mode, state.sel, extras);
       result.innerHTML = '';
-      costBox.hidden = !r;
-      if (!r) {
-        result.appendChild(h('p', { class: 'calc-empty', text: 'Заполните поля — результат появится сразу.' }));
+      costBox.hidden = !r || !!r.error;
+      if (!r || r.error) {
+        result.appendChild(h('p', { class: 'calc-empty' + (r && r.error ? ' calc-empty--error' : ''), text: r && r.error ? r.error : 'Заполните поля — результат появится сразу.' }));
         return;
       }
       result.appendChild(h('div', { class: 'calc-main' }, [h('div', { class: 'calc-main-label', text: r.main.label }), h('div', { class: 'calc-main-value', text: r.main.value })]));
@@ -895,6 +904,7 @@
       });
       result.appendChild(copy);
       renderCost(r);
+      if (render.after) render.after();
     }
 
     let lastViz = null;
@@ -924,7 +934,7 @@
             try { localStorage.setItem(storageKey(p.id), input.value); } catch (e) { /* приватный режим */ }
             render();
           });
-          body.appendChild(h('div', { class: 'calc-field' }, [h('label', { for: id, text: p.label }), h('div', { class: 'calc-input' }, [input, h('span', { class: 'calc-unit', text: p.unit })])]));
+          body.appendChild(h('div', { class: 'calc-field', 'data-group': p.group || '' }, [h('label', { for: id, text: p.label }), h('div', { class: 'calc-input' }, [input, h('span', { class: 'calc-unit', text: p.unit })])]));
         });
         body.appendChild(h('p', { class: 'calc-note', text: 'Цены сохраняются в этом браузере и подставятся в следующий раз.' }));
         body.appendChild(h('div', { class: 'calc-cost-table' }));

@@ -173,9 +173,11 @@
       if (!simple) (plan.inner || []).forEach((t, i) => {
         const line = el('line', { x1: X(t.a), y1: Y(t.a), x2: X(t.b), y2: Y(t.b), class: 'plan-inner', 'stroke-width': Math.max(4, g.inners[i].w * tf.s) });
         svg.appendChild(line);
+        line.addEventListener('pointerdown', (e) => { sel = { type: 'inner', i }; redraw(); e.preventDefault(); });
+        if (sel && sel.type === 'inner' && sel.i === i) line.classList.add('is-selected');
         [['a', t.a], ['b', t.b]].forEach(([k, p]) => {
           const c = el('circle', { cx: X(p), cy: Y(p), r: 9, class: 'plan-handle plan-handle--inner' });
-          c.addEventListener('pointerdown', (e) => { drag = { type: 'inner', i, k }; c.setPointerCapture(e.pointerId); e.preventDefault(); });
+          c.addEventListener('pointerdown', (e) => { sel = { type: 'inner', i }; drag = { type: 'inner', i, k }; c.setPointerCapture(e.pointerId); e.preventDefault(); });
           svg.appendChild(c);
         });
       });
@@ -247,6 +249,10 @@
           plan.verts.splice(i + 1, 0, [snap((a[0] + b[0]) / 2), snap((a[1] + b[1]) / 2)]);
           plan.edges.splice(i + 1, 0, null); plan.preset = null; sel = { type: 'vertex', i: i + 1 }; redraw(); onChange();
         }));
+      } else if (sel && sel.type === 'inner' && plan.inner && plan.inner[sel.i]) {
+        const t = document.createElement('p'); t.className = 'plan-panel-title'; t.textContent = 'Внутренняя лента ' + (sel.i + 1) + ': тяните её концы на плане';
+        panel.appendChild(t);
+        panel.appendChild(btn('− убрать эту ленту', 'btn btn-secondary btn-sm', () => { plan.inner.splice(sel.i, 1); sel = null; redraw(); onChange(); }));
       } else if (sel && sel.type === 'vertex') {
         const t = document.createElement('p'); t.className = 'plan-panel-title'; t.textContent = 'Угол ' + (sel.i + 1) + ': тяните его на плане';
         panel.appendChild(t);
@@ -260,9 +266,10 @@
         const xs = plan.verts.map((p) => p[0]), ys = plan.verts.map((p) => p[1]);
         const cy = snap((Math.min(...ys) + Math.max(...ys)) / 2);
         plan.inner = plan.inner || []; plan.inner.push({ a: [snap(Math.min(...xs) + 0.4), cy], b: [snap(Math.max(...xs) - 0.4), cy] });
+        sel = { type: 'inner', i: plan.inner.length - 1 };
         redraw(); onChange();
       }));
-      if (!simple && (plan.inner || []).length) inner.appendChild(btn('− убрать последнюю внутреннюю', 'calc-preset', () => { plan.inner.pop(); redraw(); onChange(); }));
+      if (!simple && (plan.inner || []).length) inner.appendChild(btn('− убрать последнюю внутреннюю', 'calc-preset', () => { plan.inner.pop(); sel = null; redraw(); onChange(); }));
       panel.appendChild(inner);
     }
 

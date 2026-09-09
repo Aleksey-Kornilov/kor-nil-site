@@ -150,3 +150,8 @@
 .room-wall.is-selected { stroke: var(--color-accent); stroke-width: 3; }
 .room-opening { cursor: grab; }
 .room-opening:active { cursor: grabbing; }
+.calc-empty--error { color: var(--color-danger); }
+.room-opening.is-selected rect { stroke: var(--color-accent); stroke-width: 3; }
+.calc-opening.is-selected { outline: 2px solid var(--color-accent); outline-offset: 4px; border-radius: var(--radius-sm); }
+.calc-opening-del--text { width: auto; padding-inline: var(--space-3); font-size: var(--fs-small); }
+.plan-inner.is-selected { stroke: var(--color-accent); }

@@ -36,7 +36,7 @@
     const finishes = opts.finishes || FINISH;
     const defaultFinish = opts.defaultFinish || Object.keys(finishes)[0];
     const VW = 680, PAD = 34, GAP = 8, TOP = 44; let VH = 320;
-    let sel = 0; let drag = null; let geom = null;
+    let sel = 0; let selOpening = null; let drag = null; let geom = null;
 
     const wrap = document.createElement('div'); wrap.className = 'room';
     const svg = el('svg', { viewBox: `0 0 ${VW} ${VH}`, class: 'viz-svg room-svg', role: 'img', 'aria-label': 'Развёртка стен комнаты' });
@@ -74,7 +74,7 @@
       geom.walls.forEach((w, i) => {
         const finish = m.walls[i].finish;
         const rect = el('rect', { x: w.x, y: geom.top, width: w.wpx, height: geom.hpx, class: 'room-wall room-wall--' + finish + (sel === i ? ' is-selected' : '') });
-        rect.addEventListener('pointerdown', (e) => { sel = i; redraw(); e.preventDefault(); });
+        rect.addEventListener('pointerdown', (e) => { sel = i; selOpening = null; redraw(); e.preventDefault(); });
         svg.appendChild(rect);
         const many = geom.walls.length > 6;
         svg.appendChild(el('text', { x: w.x + w.wpx / 2, y: geom.top - 10, class: many ? 'viz-small' : 'viz-label', 'text-anchor': 'middle' }, many ? `${i + 1}: ${fmt(w.len)}` : `${wallName(i)} · ${fmt(w.len)} м`));
@@ -83,13 +83,16 @@
       room.openings.forEach((o, idx) => {
         const w = geom.walls[o.wall]; if (!w || !(o.w > 0 && o.h > 0)) return;
         const ox = w.x + o.x * geom.scale, oy = geom.top + geom.hpx - (o.y + o.h) * geom.scale;
-        const g = el('g', { class: 'room-opening' });
+        const g = el('g', { class: 'room-opening' + (selOpening === idx ? ' is-selected' : '') });
         g.appendChild(el('rect', { x: ox, y: oy, width: o.w * geom.scale, height: o.h * geom.scale, class: o.kind === 'door' ? 'viz-door' : 'viz-window' }));
         g.appendChild(el('text', { x: ox + o.w * geom.scale / 2, y: oy + o.h * geom.scale / 2 + 4, class: 'viz-small', 'text-anchor': 'middle' }, `${fmt(o.w)}×${fmt(o.h)}`));
         g.addEventListener('pointerdown', (e) => {
           const p = toLocal(e);
+          // Клик по проёму выбирает его стену и сам проём — параметры и «убрать» появляются в панели
+          sel = o.wall; selOpening = idx;
           drag = { idx, dx: p.px - ox, dy: p.py - oy };
           g.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation();
+          renderPanel(m);
         });
         svg.appendChild(g);
       });
@@ -109,7 +112,7 @@
       o.y = snap(Math.max(0, Math.min(geom.H - o.h, bottom)));
       redraw(); onChange();
     });
-    const stop = () => { drag = null; };
+    const stop = () => { if (drag) { drag = null; redraw(); } };
     svg.addEventListener('pointerup', stop); svg.addEventListener('pointercancel', stop);
 
     function btn(text, cls, fn) { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text; b.addEventListener('click', fn); return b; }
@@ -144,23 +147,29 @@
       const all = document.createElement('div'); all.className = 'calc-presets';
       Object.keys(finishes).filter((f) => f !== 'none').forEach((f) => all.appendChild(btn('Все стены — ' + finishes[f].toLowerCase(), 'calc-preset', () => { room.walls = m.walls.map(() => ({ finish: f })); redraw(); onChange(); })));
       panel.appendChild(all);
-      // проёмы на выбранной стене
+      // проёмы на выбранной стене; выбранный кликом — подсвечен
       const ops = room.openings.map((o, idx) => ({ o, idx })).filter(({ o }) => o.wall === sel);
+      if (ops.length) { const st = document.createElement('p'); st.className = 'calc-openings-title'; st.textContent = 'Проёмы на этой стене (нажмите на проём в развёртке, чтобы найти его):'; panel.appendChild(st); }
+      const len = m.walls[sel].len;
       ops.forEach(({ o, idx }) => {
-        const row = document.createElement('div'); row.className = 'calc-opening';
+        const row = document.createElement('div'); row.className = 'calc-opening' + (selOpening === idx ? ' is-selected' : '');
         const kind = document.createElement('span'); kind.className = 'calc-opening-kind'; kind.textContent = o.kind === 'door' ? 'Дверь' : 'Окно'; row.appendChild(kind);
-        row.appendChild(num('ширина, м', o.w, (v) => { if (v > 0) o.w = v; redraw(); onChange(); }));
-        row.appendChild(num('высота, м', o.h, (v) => { if (v > 0) o.h = v; redraw(); onChange(); }));
-        row.appendChild(num('от левого края, м', o.x, (v) => { o.x = Math.max(0, v); redraw(); onChange(); }));
-        row.appendChild(num('от пола, м', o.y, (v) => { o.y = Math.max(0, v); redraw(); onChange(); }));
-        row.appendChild(btn('×', 'calc-opening-del', () => { room.openings.splice(idx, 1); redraw(); onChange(); }));
+        const clamp = () => { o.w = Math.min(o.w, len); o.h = Math.min(o.h, geom.H); o.x = Math.max(0, Math.min(len - o.w, o.x)); o.y = Math.max(0, Math.min(geom.H - o.h, o.y)); };
+        row.appendChild(num('ширина, м', o.w, (v) => { if (v > 0) o.w = v; clamp(); redraw(); onChange(); }));
+        row.appendChild(num('высота, м', o.h, (v) => { if (v > 0) o.h = v; clamp(); redraw(); onChange(); }));
+        row.appendChild(num('от левого края, м', o.x, (v) => { o.x = v; clamp(); redraw(); onChange(); }));
+        row.appendChild(num('от пола, м', o.y, (v) => { o.y = v; clamp(); redraw(); onChange(); }));
+        row.appendChild(btn('× убрать', 'calc-opening-del calc-opening-del--text', () => { room.openings.splice(idx, 1); selOpening = null; redraw(); onChange(); }));
         panel.appendChild(row);
       });
+      const others = room.openings.length - ops.length;
+      if (others > 0) { const p2 = document.createElement('p'); p2.className = 'calc-note'; p2.textContent = 'Ещё ' + others + ' проём(а) на других стенах: нажмите на стену или на сам проём.'; panel.appendChild(p2); }
       const adders = document.createElement('div'); adders.className = 'calc-presets';
       OPENING_PRESETS.forEach((p) => adders.appendChild(btn(`${p.label} ${p.w}×${p.h}`, 'calc-preset', () => {
         const len = geom.walls[sel].len;
         const used = room.openings.filter((o) => o.wall === sel).reduce((s, o) => Math.max(s, o.x + o.w), 0);
-        room.openings.push({ kind: p.kind, w: p.w, h: p.h, wall: sel, x: snap(Math.min(Math.max(0, len - p.w), used + 0.3)), y: p.y });
+        room.openings.push({ kind: p.kind, w: p.w, h: p.h, wall: sel, x: snap(Math.min(Math.max(0, len - p.w), used + 0.3)), y: Math.min(p.y, Math.max(0, geom.H - p.h)) });
+        selOpening = room.openings.length - 1;
         redraw(); onChange();
       })));
       panel.appendChild(adders);
