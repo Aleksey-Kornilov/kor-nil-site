@@ -490,6 +490,186 @@
       },
     },
 
+    /* --- Лестница: ступени по высоте этажа, формула удобного шага, ограждение --- */
+    stairs: {
+      modeLabel: 'Тип лестницы',
+      modes: [
+        { id: 'straight', label: 'Прямая (один марш)', fields: [
+          { id: 'height', label: 'Высота этажа (от пола до пола)', unit: 'м', value: '2.8' },
+          { id: 'riser', label: 'Желаемая высота ступени', unit: 'см', value: '17' },
+          { id: 'tread', label: 'Глубина ступени (проступь)', unit: 'см', value: '28' },
+          { id: 'width', label: 'Ширина марша', unit: 'м', value: '0.9' },
+        ] },
+        { id: 'turn', label: 'С поворотом на 90° (площадка)', fields: [
+          { id: 'height', label: 'Высота этажа', unit: 'м', value: '2.8' },
+          { id: 'riser', label: 'Желаемая высота ступени', unit: 'см', value: '17' },
+          { id: 'tread', label: 'Глубина ступени', unit: 'см', value: '28' },
+          { id: 'width', label: 'Ширина марша', unit: 'м', value: '0.9' },
+          { id: 'split', label: 'Ступеней в нижнем марше', unit: 'шт, до площадки', value: '8' },
+        ] },
+      ],
+      common: [
+        { id: 'thick', label: 'Толщина ступени', unit: 'мм', value: '40' },
+        { id: 'balusterStep', label: 'Шаг балясин', unit: 'м', value: '0.5' },
+        { id: 'headroom', label: 'Нужный просвет над головой', unit: 'м', value: '2' },
+      ],
+      prices: [
+        { id: 'step', label: 'Ступень', unit: '₽ за штуку' },
+        { id: 'baluster', label: 'Балясина', unit: '₽ за штуку' },
+        { id: 'rail', label: 'Поручень', unit: '₽ за метр' },
+      ],
+      calc(v, mode) {
+        if (!pos(v.height) || !pos(v.riser) || !pos(v.tread)) return null;
+        const H = v.height * 100;                       // высота этажа в см
+        const n = Math.max(2, Math.round(H / v.riser));  // число подъёмов
+        const riser = H / n;                             // фактическая высота ступени
+        const steps = n - 1;                             // ступеней (верхняя — это пол этажа)
+        const run = steps * v.tread;                     // длина по полу, см
+        const comfort = 2 * riser + v.tread;             // формула удобного шага, 60–65 см
+        const angle = Math.atan2(riser, v.tread) * 180 / Math.PI;
+        return { n, riser, steps, run: run / 100, comfort, angle, H };
+      },
+      draw(v, mode, box, view) {
+        const V = window.CalcViz; const c = this.calc(v, mode);
+        if (!V || !c || !pos(v.width)) return false;
+        const t = (v.tread || 0) / 100, r = c.riser / 100, w = v.width, th = (v.thick || 40) / 1000;
+        const prisms = [];
+        if (mode === 'straight') {
+          for (let i = 0; i < c.steps; i++) prisms.push({ poly: [[i * t, 0], [(i + 1) * t, 0], [(i + 1) * t, w], [i * t, w]], z: (i + 1) * r - th, dz: th });
+        } else {
+          const split = Math.max(1, Math.min(c.steps - 1, Math.round(v.split || Math.ceil(c.steps / 2))));
+          // Нижний марш идёт вдоль X у левого края
+          for (let i = 0; i < split; i++) prisms.push({ poly: [[i * t, 0], [(i + 1) * t, 0], [(i + 1) * t, w], [i * t, w]], z: (i + 1) * r - th, dz: th });
+          // Площадка — квадрат в ширину марша
+          const px = split * t;
+          prisms.push({ poly: [[px, 0], [px + w, 0], [px + w, w], [px, w]], z: (split + 1) * r - th, dz: th });
+          // Верхний марш уходит вбок под 90°: вдоль Y от дальнего края площадки
+          for (let i = 0; i < c.steps - split - 1; i++) {
+            const y = w + i * t;
+            prisms.push({ poly: [[px, y], [px + w, y], [px + w, y + t], [px, y + t]], z: (split + 2 + i) * r - th, dz: th });
+          }
+        }
+        const dims = [{ from: [0, 0, 0], to: [0, 0, v.height], label: 'высота ' + fmt(v.height) + ' м', offset: -28 }];
+        if (mode === 'straight') dims.push({ from: [0, 0, 0], to: [c.run, 0, 0], label: 'по полу ' + fmt(c.run) + ' м', offset: 24 });
+        else {
+          const split = Math.max(1, Math.min(c.steps - 1, Math.round(v.split || Math.ceil(c.steps / 2))));
+          const px = split * t, upper = (c.steps - split - 1) * t;
+          dims.push({ from: [0, 0, 0], to: [px + w, 0, 0], label: 'нижний марш ' + fmt(px) + ' м', offset: 24 });
+          dims.push({ from: [px + w, 0, 0], to: [px + w, w + upper, 0], label: 'верхний ' + fmt(upper) + ' м', offset: -24 });
+        }
+        V.iso(box, prisms, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, caption: c.steps + ' ступеней по ' + fmt(c.riser) + ' см, уклон ' + fmt(c.angle) + '°. Потяните, чтобы повернуть.' });
+        return true;
+      },
+      compute(v, mode, sel) {
+        const c = this.calc(v, mode);
+        if (!c) return null;
+        if (c.riser < 12 || c.riser > 22) return { error: 'Высота ступени получилась ' + fmt(c.riser) + ' см. Удобный диапазон 15–19 см, допустимо 12–22. Измените желаемую высоту ступени.' };
+        const rows = [], cost = [];
+        rows.push(['Подъёмов', c.n + ' по ' + fmt(c.riser) + ' см (задавали ' + fmt(v.riser) + ')']);
+        rows.push(['Ступеней', c.steps + ' шт: верхняя ступень — это пол второго этажа']);
+        rows.push(['Уклон', fmt(c.angle) + '° ' + (c.angle > 42 ? '— круто, для дома лучше до 40°' : c.angle < 25 ? '— полого, займёт много места' : '— в норме для дома')]);
+        rows.push(['Формула удобства', '2 × ' + fmt(c.riser) + ' + ' + fmt(v.tread) + ' = ' + fmt(c.comfort) + ' см ' + (c.comfort >= 60 && c.comfort <= 65 ? '(в норме 60–65)' : '(норма 60–65: подберите глубину ступени)')]);
+        if (mode === 'straight') rows.push(['Займёт по полу', fmt(c.run) + ' м при ширине марша ' + fmt(v.width || 0.9) + ' м']);
+        else {
+          const split = Math.max(1, Math.min(c.steps - 1, Math.round(v.split || Math.ceil(c.steps / 2))));
+          rows.push(['Нижний марш', split + ' ступеней, ' + fmt(split * v.tread / 100) + ' м']);
+          rows.push(['Площадка', fmt(v.width || 0.9) + ' × ' + fmt(v.width || 0.9) + ' м']);
+          rows.push(['Верхний марш', (c.steps - split - 1) + ' ступеней + верх на площадке, ' + fmt((c.steps - split - 1) * v.tread / 100) + ' м']);
+          rows.push(['Займёт в плане', fmt(split * v.tread / 100 + (v.width || 0.9)) + ' × ' + fmt((v.width || 0.9) + (c.steps - split - 1) * v.tread / 100) + ' м']);
+        }
+        if (pos(v.thick) && pos(v.width)) {
+          const vol = c.steps * (v.tread / 100) * v.width * (v.thick / 1000);
+          rows.push(['Материал ступеней', c.steps + ' шт ' + fmt(v.tread) + '×' + fmt((v.width || 0.9) * 100) + ' см, толщина ' + fmt(v.thick) + ' мм = ' + fmt(vol) + ' м³']);
+        }
+        const railLen = mode === 'straight' ? Math.hypot(c.run, v.height) : Math.hypot(c.run, v.height) + (v.width || 0.9);
+        if (pos(v.balusterStep)) {
+          const bal = Math.ceil(railLen / v.balusterStep) + 1;
+          rows.push(['Ограждение', 'поручень ' + fmt(railLen) + ' м, балясины ' + bal + ' шт с шагом ' + fmt(v.balusterStep) + ' м']);
+          cost.push({ label: 'Балясины', amount: bal, unit: 'шт', priceId: 'baluster' });
+          cost.push({ label: 'Поручень', amount: Math.ceil(railLen * 10) / 10, unit: 'м', priceId: 'rail' });
+        }
+        if (pos(v.headroom)) rows.push(['Проём в перекрытии', 'длина такая, чтобы над ступенями оставалось ' + fmt(v.headroom) + ' м: примерно ' + fmt(Math.max(0, (v.height - v.headroom) / (c.riser / 100) * (v.tread / 100))) + ' м']);
+        cost.unshift({ label: 'Ступени', amount: c.steps, unit: 'шт', priceId: 'step' });
+        return { main: { label: 'Лестница', value: c.steps + ' ' + plural(c.steps, 'ступень', 'ступени', 'ступеней') + ' по ' + fmt(c.riser) + ' см' }, rows, cost,
+          note: 'Число подъёмов = высота этажа ÷ желаемую высоту ступени с округлением, дальше высота выравнивается: все ступени должны быть одинаковыми. Формула удобного шага: два подъёма плюс проступь = 60–65 см. Для дома уклон до 40°, ширина марша от 90 см.' };
+      },
+    },
+
+    /* --- Септик и бак: объём по числу людей и запасу --- */
+    septic: {
+      modeLabel: 'Что считаем',
+      modes: [
+        { id: 'septic', label: 'Септик', fields: [
+          { id: 'people', label: 'Человек в доме', unit: '', value: '4' },
+          { id: 'perDay', label: 'Расход воды на человека', unit: 'л/сутки', value: '200' },
+          { id: 'days', label: 'Запас по времени', unit: 'суток (норма 3)', value: '3' },
+          { id: 'guests', label: 'Гости по выходным', unit: 'человек, необязательно' },
+        ] },
+        { id: 'tank', label: 'Бак для воды / накопитель', fields: [
+          { id: 'people', label: 'Человек', unit: '', value: '4' },
+          { id: 'perDay', label: 'Расход на человека', unit: 'л/сутки', value: '100' },
+          { id: 'days', label: 'На сколько суток запас', unit: '', value: '2' },
+          { id: 'garden', label: 'Полив', unit: 'л/сутки, необязательно', value: '200' },
+        ] },
+      ],
+      common: [
+        { id: 'ringD', label: 'Диаметр кольца', unit: 'м (КС-10 = 1, КС-15 = 1,5, КС-20 = 2)', value: '1' },
+        { id: 'ringH', label: 'Высота кольца', unit: 'м', value: '0.9' },
+      ],
+      presets: [{ label: 'Кольца', fieldId: 'ringD', unit: 'м', items: [['КС-10', '1'], ['КС-15', '1.5'], ['КС-20', '2']] }],
+      prices: [
+        { id: 'ring', label: 'Кольцо', unit: '₽ за штуку' },
+        { id: 'pump', label: 'Откачка', unit: '₽ за вызов' },
+      ],
+      draw(v, mode, box, view) {
+        const V = window.CalcViz; if (!V || !pos(v.ringD) || !pos(v.ringH)) return false;
+        const r = v.ringD / 2;
+        const need = this.volume(v, mode); if (!need) return false;
+        const ringVol = Math.PI * r * r * v.ringH;
+        const rings = Math.max(1, Math.ceil(need / 1000 / ringVol));
+        const poly = []; for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2; poly.push([r + r * Math.cos(a), r + r * Math.sin(a)]); }
+        const prisms = [];
+        for (let i = 0; i < rings; i++) prisms.push({ poly, z: -(i + 1) * v.ringH, dz: v.ringH * 0.94 });
+        V.iso(box, prisms, [
+          { from: [0, r, 0], to: [v.ringD, r, 0], label: '⌀ ' + fmt(v.ringD) + ' м', offset: 0 },
+          { from: [r, 0, -rings * v.ringH], to: [r, 0, 0], label: 'глубина ' + fmt(rings * v.ringH) + ' м', offset: 40 },
+        ], { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, caption: rings + ' ' + plural(rings, 'кольцо', 'кольца', 'колец') + ' по ' + fmt(v.ringH) + ' м. Потяните, чтобы повернуть.' });
+        return true;
+      },
+      volume(v, mode) {
+        if (!pos(v.people) || !pos(v.perDay) || !pos(v.days)) return null;
+        const base = v.people * v.perDay;
+        const extra = mode === 'septic' ? (v.guests || 0) * v.perDay * 2 / 7 : (v.garden || 0);
+        return (base + extra) * v.days;   // литры
+      },
+      compute(v, mode, sel) {
+        const need = this.volume(v, mode);
+        if (!need) return null;
+        const m3 = need / 1000;
+        const rows = [], cost = [];
+        rows.push(['Суточный расход', fmtInt(need / v.days) + ' л' + (mode === 'septic' && pos(v.guests) ? ' (с учётом гостей по выходным)' : mode === 'tank' && pos(v.garden) ? ' (с учётом полива)' : '')]);
+        rows.push(['Запас', fmt(v.days) + ' ' + plural(Math.round(v.days), 'сутки', 'суток', 'суток')]);
+        if (pos(v.ringD) && pos(v.ringH)) {
+          const r = v.ringD / 2, ringVol = Math.PI * r * r * v.ringH;
+          const rings = Math.ceil(m3 / ringVol);
+          rows.push(['Кольца', rings + ' шт ⌀' + fmt(v.ringD) + ' м по ' + fmt(v.ringH) + ' м = ' + fmt(rings * ringVol) + ' м³, глубина ' + fmt(rings * v.ringH) + ' м']);
+          rows.push(['Плюс сверху', 'плита перекрытия с люком и днище или подушка из щебня']);
+          cost.push({ label: 'Кольца', amount: rings, unit: 'шт', priceId: 'ring' });
+        }
+        if (mode === 'septic') {
+          rows.push(['Откачка', 'ассенизатор берёт обычно 3,6 м³ за вызов: ' + Math.max(1, Math.ceil(m3 / 3.6)) + ' ' + plural(Math.max(1, Math.ceil(m3 / 3.6)), 'вызов', 'вызова', 'вызовов') + ' на полный объём']);
+          cost.push({ label: 'Откачка', amount: Math.max(1, Math.ceil(m3 / 3.6)), unit: 'вызов', priceId: 'pump' });
+          rows.push(['Расстояния по нормам', 'от дома от 5 м, от колодца и скважины от 30 м, от границы участка от 2 м']);
+        } else {
+          rows.push(['Если бак пластиковый', 'ближайший стандартный объём: ' + [200, 500, 750, 1000, 1500, 2000, 3000, 5000].find((x) => x >= need) + ' л']);
+        }
+        return { main: { label: 'Нужен объём', value: fmt(m3) + ' м³ (' + fmtInt(need) + ' л)' }, rows, cost,
+          note: mode === 'septic'
+            ? 'Норма: трёхсуточный запас при расходе 200 л на человека в сутки. Гости по выходным считаются как два дня из семи. Расстояния до дома, колодца и границы участка — по санитарным нормам, уточняйте для своего участка.'
+            : 'Объём = расход на человека × людей × суток, плюс полив. Для питьевой воды бак нужен из пищевого пластика и с защитой от света, иначе зацветёт.' };
+      },
+    },
+
     /* --- Проценты: доля, прибавить/вычесть, разница, НДС, скидка, наценка --- */
     percent: {
       modeLabel: 'Что считаем',
