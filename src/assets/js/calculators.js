@@ -87,8 +87,8 @@
   const TRUCKS = [
     { name: 'Газель', tons: 1.5 },
     { name: 'Самосвал 5 т', tons: 5 },
-    { name: 'Самосвал 10 т', tons: 10 },
-    { name: 'Самосвал 20 т', tons: 20 },
+    { name: 'КамАЗ, самосвал 10 т', tons: 10 },
+    { name: 'Самосвал 20 т (тонар)', tons: 20 },
   ];
   function bestTrips(tons) {
     if (tons <= 0) return 0;
