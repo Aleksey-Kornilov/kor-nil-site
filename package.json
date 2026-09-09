@@ -7,7 +7,8 @@
     "dev": "npx @11ty/eleventy --serve --port=8080",
     "build": "npx @11ty/eleventy",
     "clean": "rm -rf dist",
-    "resume": "bash scripts/build-resume.sh"
+    "resume": "bash scripts/build-resume.sh",
+    "deploy": "npm run build && rsync -rlqz --no-perms -e \"ssh -o BatchMode=yes -o ConnectTimeout=15\" --delete-after dist/ root@sntchat.ru:/root/kor-nil-site/ && bash scripts/indexnow.sh"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0",
