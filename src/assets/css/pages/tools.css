@@ -173,3 +173,23 @@
   .calc-rows dd { text-align: left; margin-bottom: var(--space-2); }
   .calc-main-value { font-size: 1.5rem; }
 }
+
+/* Карточка результата: действия, приложение, строка над калькулятором */
+.calc-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); position: relative; }
+.calc-share-menu { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-elevated); }
+.calc-share-menu a { font-weight: 600; }
+.calc-app { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.calc-app p { font-size: var(--fs-small); color: var(--color-text-muted); margin: 0 0 var(--space-3); }
+.calc-topline { font-size: var(--fs-small); color: var(--color-text-muted); margin-bottom: var(--space-3); }
+
+/* Печать (Скачать PDF): только калькулятор — введённые данные, схемы и результат */
+@media print {
+  .tool-hero .section-lead, .tool-text, .calc-topline, .calc-presets, .calc-preset-rows, .plan-panel, .calc-hint, .calc-note,
+  .calc-actions, .calc-app, .calc-chips legend, .calc-chip input:not(:checked) + label, .calc-cost summary, .shots-hint { display: none !important; }
+  .calc-form { padding: 0; gap: var(--space-3); }
+  .calc, .calc-form, .calc-result, .calc-viz, .plan-svg, .room-svg { background: #fff !important; border-color: #ccc !important; box-shadow: none !important; backdrop-filter: none !important; }
+  .calc-result { break-inside: avoid; }
+  .calc-viz { max-width: 520px; }
+  .calc-cost[open] .calc-cost-body { display: grid; }
+  .calc::after { content: 'kor-nil.ru/tools · ' attr(data-print-date); display: block; margin-top: 12px; font-size: 11px; color: #666; }
+}

@@ -723,6 +723,24 @@
 
   /* ---------- Рендер ---------- */
 
+  // Схема в PNG: клонируем SVG, переносим стили из CSS в атрибуты (иначе canvas их не видит), рисуем 2×
+  async function svgToPng(svg, filename) {
+    const clone = svg.cloneNode(true);
+    const src = svg.querySelectorAll('*'), dst = clone.querySelectorAll('*');
+    const props = ['fill', 'stroke', 'stroke-width', 'stroke-opacity', 'fill-opacity', 'stroke-dasharray', 'font-size', 'font-weight', 'font-family', 'opacity', 'paint-order', 'stroke-linejoin', 'r'];
+    src.forEach((el, i) => { const cs = getComputedStyle(el); props.forEach((p) => { const val = cs.getPropertyValue(p); if (val) dst[i].style.setProperty(p, val); }); });
+    const vb = svg.viewBox.baseVal, W = vb.width || 640, H = vb.height || 400;
+    clone.setAttribute('width', W); clone.setAttribute('height', H); clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const bg = getComputedStyle(svg.parentElement).backgroundColor;
+    const xml = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml); });
+    const canvas = document.createElement('canvas'); canvas.width = W * 2; canvas.height = H * 2;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = bg && bg !== 'rgba(0, 0, 0, 0)' ? bg : '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const a = document.createElement('a'); a.download = filename; a.href = canvas.toDataURL('image/png'); a.click();
+  }
+
   const h = (tag, attrs, children) => {
     const el = document.createElement(tag);
     if (attrs) for (const k in attrs) {
@@ -895,15 +913,50 @@
       r.rows.forEach(([k, val]) => { dl.appendChild(h('dt', { text: k })); dl.appendChild(h('dd', { text: val })); });
       result.appendChild(dl);
       if (r.note) result.appendChild(h('p', { class: 'calc-note', text: r.note }));
-      const copy = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Скопировать расчёт' });
-      copy.addEventListener('click', () => {
-        const lines = [r.main.label + ': ' + r.main.value].concat(r.rows.map(([k, val]) => '• ' + k + ': ' + val));
+      // --- Действия с расчётом ---
+      const shareText = () => {
+        const lines = [document.title.split(' · ')[0].split(':')[0], '', r.main.label + ': ' + r.main.value].concat(r.rows.map(([k, val]) => '• ' + k + ': ' + val));
         const costLines = costRows(r).filter((c) => c.sum != null).map((c) => '• ' + c.label + ' — ' + fmt(c.amount) + ' ' + c.unit + ' = ' + money(c.sum));
-        if (costLines.length) lines.push('', 'Стоимость:', ...costLines, 'ИТОГО: ' + money(costRows(r).reduce((s, c) => s + (c.sum || 0), 0)));
-        lines.push('', 'Посчитано на kor-nil.ru/tools/ — тот же калькулятор есть в приложении ЧатЯдро');
-        navigator.clipboard.writeText(lines.join('\n')).then(() => { copy.textContent = 'Скопировано ✓'; setTimeout(() => { copy.textContent = 'Скопировать расчёт'; }, 1500); });
+        if (costLines.length) lines.push('', 'Стоимость:', ...costLines, 'ИТОГО: ' + money(costRows(r).reduce((s2, c) => s2 + (c.sum || 0), 0)));
+        lines.push('', 'Открыть этот расчёт: ' + shareUrl(), 'Посчитано на kor-nil.ru — тот же калькулятор есть в приложении ЧатЯдро');
+        return lines.join('\n');
+      };
+      const actions = h('div', { class: 'calc-actions' });
+      const flash = (b, txt) => { const old = b.textContent; b.textContent = txt; setTimeout(() => { b.textContent = old; }, 1600); };
+      // Поделиться: системное меню телефона (Telegram, WhatsApp, VK, MAX, СМС…), на компьютере — ссылки
+      const share = h('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Поделиться' });
+      share.addEventListener('click', async () => {
+        const data = { title: document.title, text: shareText(), url: shareUrl() };
+        if (navigator.share) { try { await navigator.share(data); } catch (e) { /* отменил */ } return; }
+        const menu = actions.querySelector('.calc-share-menu');
+        if (menu) { menu.remove(); return; }
+        const u = encodeURIComponent(shareUrl()), t = encodeURIComponent(r.main.label + ': ' + r.main.value);
+        actions.appendChild(h('div', { class: 'calc-share-menu' }, [
+          h('a', { href: 'https://t.me/share/url?url=' + u + '&text=' + t, target: '_blank', rel: 'noopener', text: 'Telegram' }),
+          h('a', { href: 'https://vk.com/share.php?url=' + u + '&title=' + t, target: '_blank', rel: 'noopener', text: 'ВКонтакте' }),
+          h('a', { href: 'https://connect.ok.ru/offer?url=' + u + '&title=' + t, target: '_blank', rel: 'noopener', text: 'Одноклассники' }),
+          h('a', { href: 'mailto:?subject=' + encodeURIComponent('Расчёт: ' + r.main.value) + '&body=' + encodeURIComponent(shareText()), text: 'Почта' }),
+        ]));
       });
-      result.appendChild(copy);
+      const copy = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Скопировать' });
+      copy.addEventListener('click', () => navigator.clipboard.writeText(shareText()).then(() => flash(copy, 'Скопировано ✓')));
+      const link = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Ссылка на расчёт' });
+      link.addEventListener('click', () => navigator.clipboard.writeText(shareUrl()).then(() => flash(link, 'Ссылка скопирована ✓')));
+      const pdf = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Скачать PDF' });
+      pdf.addEventListener('click', () => { root.dataset.printDate = new Date().toLocaleDateString('ru-RU'); window.print(); });
+      actions.appendChild(share); actions.appendChild(copy); actions.appendChild(link); actions.appendChild(pdf);
+      if (!vizBox.hidden && vizBox.querySelector('svg')) {
+        const png = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Схема PNG' });
+        png.addEventListener('click', () => svgToPng(vizBox.querySelector('svg'), (key || 'scheme') + '-schema.png').catch(() => flash(png, 'Не удалось')));
+        actions.appendChild(png);
+      }
+      result.appendChild(actions);
+      syncHash();
+      // --- Приложение: здесь, когда польза уже получена ---
+      result.appendChild(h('div', { class: 'calc-app' }, [
+        h('p', { text: 'В приложении ЧатЯдро этот расчёт сохраняется, цены запоминаются, а результат уходит соседям или мастеру в чат одной кнопкой.' }),
+        h('a', { href: 'https://www.rustore.ru/catalog/app/ru.sntchat.app', target: '_blank', rel: 'noopener', class: 'btn btn-secondary btn-sm', text: 'Установить ЧатЯдро из RuStore →' }),
+      ]));
       renderCost(r);
       if (render.after) render.after();
     }
@@ -953,6 +1006,32 @@
       table.appendChild(dl);
     }
 
+    // Расчёт по ссылке: всё введённое лежит в #c=… — получатель открывает те же цифры и рисунок
+    function encodeState() {
+      const obj = { c: key, m: state.mode, v: state.values, s: state.sel, y: Math.round(state.yaw * 100) / 100,
+        x: { plan: state.extras.plan, room: state.extras.room, openings: state.extras.openings } };
+      return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    function decodeState(code) {
+      try { return JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g, '+').replace(/_/g, '/'))))); } catch (e) { return null; }
+    }
+    function shareUrl() { return location.origin + location.pathname + '#c=' + encodeState(); }
+    let hashTimer = null;
+    function syncHash() {
+      clearTimeout(hashTimer);
+      hashTimer = setTimeout(() => { try { history.replaceState(null, '', '#c=' + encodeState()); } catch (e) { /* file:// */ } }, 300);
+    }
+    const restored = (() => {
+      const m = location.hash.match(/#c=([A-Za-z0-9_-]+)/); if (!m) return false;
+      const obj = decodeState(m[1]); if (!obj || obj.c !== key) return false;
+      if (def.modes.some((md) => md.id === obj.m)) state.mode = obj.m;
+      if (obj.v && typeof obj.v === 'object') state.values = obj.v;
+      if (obj.s && typeof obj.s === 'object') Object.keys(obj.s).forEach((k2) => { if (state.sel[k2] !== undefined) state.sel[k2] = obj.s[k2]; });
+      if (typeof obj.y === 'number') state.yaw = obj.y;
+      if (obj.x) { if (obj.x.plan) state.extras.plan = obj.x.plan; if (obj.x.room) state.extras.room = obj.x.room; if (Array.isArray(obj.x.openings)) state.extras.openings = obj.x.openings; }
+      return true;
+    })();
+
     form.appendChild(chips(key + '-mode', def.modeLabel, def.modes, state.mode, (id) => { state.mode = id; renderFields(); render(); }));
     (def.selects || []).forEach((s) => {
       const hint = h('p', { class: 'calc-hint' });
@@ -971,6 +1050,9 @@
     form.appendChild(result);
     form.appendChild(costBox);
     root.innerHTML = '';
+    if (!root.previousElementSibling || !root.previousElementSibling.classList.contains('calc-topline')) {
+      root.parentNode.insertBefore(h('p', { class: 'calc-topline', html: 'Тот же калькулятор есть в приложении <a href="/projects/chatyadro/">ЧатЯдро</a>: там расчёт сохраняется и уходит соседям в чат. ' + (restored ? '<strong>Открыт расчёт по ссылке.</strong>' : '') }), root);
+    }
     root.appendChild(form);
     renderFields();
     render();
