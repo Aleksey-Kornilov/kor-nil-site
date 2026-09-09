@@ -1679,6 +1679,298 @@
         };
       },
     },
+
+    /* --- Штукатурка стен: комната по размерам или своему плану, проёмы, маяки --- */
+    plaster: {
+      modeLabel: 'Что штукатурим',
+      modes: [
+        { id: 'room', label: 'Стены комнаты', room: true, fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+          { id: 'hei', label: 'Высота потолка', unit: 'м', value: '2.7' },
+        ] },
+        { id: 'roomplan', label: 'Комната: свой план (ниши, выступы)', room: true, plan: { simple: true, presetsKey: 'ROOM_PRESETS' }, fields: [
+          { id: 'hei', label: 'Высота потолка', unit: 'м', value: '2.7' },
+        ] },
+        { id: 'ceiling', label: 'Потолок', fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+        ] },
+        { id: 'custom', label: 'Своя площадь', fields: [
+          { id: 'area', label: 'Площадь под штукатурку', unit: 'м²', value: '30' },
+        ] },
+      ],
+      roomOpts: {
+        finishes: { plaster: 'Штукатурим', none: 'Не штукатурим' }, defaultFinish: 'plaster', wallWord: 'Стена',
+        openingsTitle: 'Окна и двери на этой стене (вычитаются из площади):',
+        hint: 'Нажмите на стену, чтобы включить или выключить штукатурку. Окно и дверь тяните по стене.',
+      },
+      common: [
+        { id: 'thick', label: 'Средняя толщина слоя', unit: 'мм', value: '20' },
+        { id: 'rateMm', label: 'Расход смеси', unit: 'кг/м² на 1 мм слоя', value: '1', group: 'own' },
+        { id: 'bag', label: 'Мешок смеси', unit: 'кг', value: '30' },
+        { id: 'primerRate', label: 'Расход грунтовки', unit: 'л/м²', value: '0.15', group: 'primer' },
+        { id: 'primerCan', label: 'Канистра грунтовки', unit: 'л', value: '10', group: 'primer' },
+        { id: 'beaconStep', label: 'Шаг маяков', unit: 'м (правило минус 20–30 см)', value: '1.2', group: 'beacon' },
+        { id: 'beaconLen', label: 'Длина маячного профиля', unit: 'м', value: '3', group: 'beacon' },
+      ],
+      selects: [
+        { id: 'mix', label: 'Смесь', default: 'gypsum', choices: [
+          { id: 'gypsum', label: 'Гипсовая', hint: 'сухие комнаты, ≈0,9 кг/м² на 1 мм, слой до 50 мм' },
+          { id: 'cement', label: 'Цементная', hint: 'ванная, кухня, фасад, ≈1,7 кг/м² на 1 мм' },
+          { id: 'own', label: 'Свой расход', hint: 'цифра с мешка вашей смеси' },
+        ] },
+        { id: 'beacons', label: 'Маяки', default: 'yes', choices: [
+          { id: 'yes', label: 'По маякам', hint: 'ровная плоскость, считаем профили' },
+          { id: 'no', label: 'Без маяков', hint: 'подмазка, тонкий слой' },
+        ] },
+        { id: 'primer', label: 'Грунтовка', default: 'yes', choices: [
+          { id: 'yes', label: 'Считать', hint: 'обязательна и до, и после штукатурки' },
+          { id: 'no', label: 'Не считать', hint: '' },
+        ] },
+      ],
+      presets: [
+        { label: 'Толщина слоя', fieldId: 'thick', unit: 'мм', items: [['Под обои, ровные стены', '10'], ['Обычная', '20'], ['Кривые стены', '30'], ['Максимум за проход', '50']] },
+        { label: 'Мешок', fieldId: 'bag', unit: 'кг', items: [['Гипсовая 30', '30'], ['Цементная 25', '25'], ['Большой 40', '40']] },
+      ],
+      prices: [
+        { id: 'bag', label: 'Цена мешка смеси', unit: '₽ за мешок' },
+        { id: 'primer', label: 'Цена грунтовки', unit: '₽ за канистру', group: 'primer' },
+        { id: 'beacon', label: 'Цена маячного профиля', unit: '₽ за штуку', group: 'beacon' },
+      ],
+      RATES: { gypsum: 0.9, cement: 1.7 },
+      groups(v, mode, extras, sel) {
+        const walls = mode === 'room' || mode === 'roomplan';
+        return { own: sel.mix === 'own', primer: sel.primer === 'yes', beacon: sel.beacons === 'yes' && walls };
+      },
+      lens(v, mode, extras) {
+        if (mode === 'room') return (pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null;
+        if (mode === 'roomplan') {
+          const P = window.CalcPlan; if (!P || !extras.plan) return null;
+          const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+          return g.valid ? g.edges.map((e) => e.len) : null;
+        }
+        return null;
+      },
+      draw(v, mode, box) {
+        const V = window.CalcViz; if (!V) return false;
+        if (mode === 'ceiling' && pos(v.len) && pos(v.wid)) {
+          V.shape(box, [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]], [
+            { from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 },
+            { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 },
+          ], { center: fmt(v.len * v.wid) + ' м²', title: 'Потолок' });
+          return true;
+        }
+        return false;
+      },
+      compute(v, mode, sel, extras) {
+        const rate = sel.mix === 'own' ? v.rateMm : this.RATES[sel.mix];
+        if (!pos(rate) || !pos(v.thick)) return null;
+
+        // Площадь: стены комнаты минус проёмы, потолок или своя цифра
+        let area = null, wallRows = [], beacons = null, m = null;
+        if (mode === 'ceiling') area = (pos(v.len) && pos(v.wid)) ? v.len * v.wid : null;
+        else if (mode === 'custom') area = pos(v.area) ? v.area : null;
+        else {
+          const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+          if (mode === 'roomplan' && !lens && extras.plan) return { error: 'Контур комнаты пересекает сам себя — поправьте углы на плане.' };
+          if (!R || !extras.room || !lens || !pos(v.hei)) return null;
+          m = R.measure(extras.room, lens, v.hei, this.roomOpts.finishes, 'plaster');
+          if (m.by.plaster.n === 0) return { error: 'Все стены отмечены «не штукатурим» — включите хотя бы одну на развёртке.' };
+          area = m.by.plaster.area;
+          // Маяки: по каждой стене свой ряд, крайние по углам
+          if (sel.beacons === 'yes' && pos(v.beaconStep)) {
+            const count = m.by.plaster.walls.reduce((s, w) => s + Math.ceil(w.len / v.beaconStep - 1e-9) + 1, 0);
+            const perBeacon = pos(v.beaconLen) ? Math.ceil(v.hei / v.beaconLen - 1e-9) : 1;
+            beacons = { count, profiles: count * perBeacon };
+          }
+          wallRows = m.walls.map((w) => ['Стена ' + (w.i + 1) + ' · ' + this.roomOpts.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]);
+        }
+        if (!(area > 0)) return null;
+
+        const perM2 = rate * v.thick;              // кг на квадратный метр при этой толщине
+        const kg = area * perM2;
+        const bags = pos(v.bag) ? Math.ceil(kg * 1.1 / v.bag) : null;
+        const rows = [
+          ['Площадь', fmt(area) + ' м²' + (m && m.openings ? ', проёмы ' + fmt(m.openings) + ' м² вычтены' : '')],
+          ['Расход при ' + fmt(v.thick) + ' мм', fmt(perM2) + ' кг/м² (' + fmt(rate) + ' кг/м² на 1 мм)'],
+          ['Смеси без запаса', fmtInt(kg) + ' кг'],
+        ];
+        const cost = [];
+        if (bags != null) {
+          rows.push(['Мешков по ' + fmt(v.bag) + ' кг', bags + ' шт (запас 10%)']);
+          cost.push({ label: 'Смесь', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'bag' });
+        }
+        if (sel.primer === 'yes' && pos(v.primerRate)) {
+          const liters = area * v.primerRate * 2;  // до штукатурки и под финиш
+          const cans = pos(v.primerCan) ? Math.ceil(liters / v.primerCan) : null;
+          rows.push(['Грунтовка', fmt(liters) + ' л на два прохода' + (cans != null ? ' ≈ ' + cans + ' ' + plural(cans, 'канистра', 'канистры', 'канистр') : '')]);
+          if (cans != null) cost.push({ label: 'Грунтовка', amount: cans, unit: plural(cans, 'канистра', 'канистры', 'канистр'), priceId: 'primer' });
+        }
+        if (beacons) {
+          rows.push(['Маяки', beacons.count + ' шт с шагом ' + fmt(v.beaconStep) + ' м → ' + beacons.profiles + ' ' + plural(beacons.profiles, 'профиль', 'профиля', 'профилей') + ' по ' + fmt(v.beaconLen) + ' м']);
+          cost.push({ label: 'Маяки', amount: beacons.profiles, unit: plural(beacons.profiles, 'профиль', 'профиля', 'профилей'), priceId: 'beacon' });
+        }
+        wallRows.forEach((r) => rows.push(r));
+
+        let note = 'Расход берите с мешка вашей смеси: у разных производителей он отличается на 10–20%. ';
+        if (sel.mix === 'gypsum' && v.thick > 50) note += 'Слой больше 50 мм гипсовой смесью за один проход не кладут: делайте два слоя с армирующей сеткой. ';
+        if (sel.mix === 'cement' && v.thick > 30) note += 'Цементную штукатурку толще 30 мм кладут в два слоя по сетке. ';
+        if (v.thick > 30) note += 'При слое больше 30 мм нужна штукатурная сетка. ';
+        note += 'Толщину считают по средней: замерьте перепад стены правилом и возьмите половину плюс минимальный слой 5 мм.';
+
+        return {
+          main: { label: 'Нужно штукатурки', value: bags != null ? bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' (' + fmtInt(kg * 1.1) + ' кг)' : fmtInt(kg) + ' кг' },
+          rows, note, cost,
+        };
+      },
+    },
+
+    /* --- Стяжка пола: пескобетон, цемент с песком или наливной пол --- */
+    screed: {
+      modeLabel: 'Форма помещения',
+      modes: [
+        { id: 'rect', label: 'Прямоугольная комната', fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+        ] },
+        { id: 'plan', label: 'Свой план (ниши, выступы)', plan: { simple: true, presetsKey: 'ROOM_PRESETS' }, fields: [] },
+        { id: 'custom', label: 'Своя площадь', fields: [
+          { id: 'area', label: 'Площадь пола', unit: 'м²', value: '20' },
+        ] },
+      ],
+      common: [
+        { id: 'thick', label: 'Толщина стяжки', unit: 'мм', value: '50' },
+        { id: 'readyRate', label: 'Расход смеси', unit: 'кг/м² на 1 см слоя', value: '20', group: 'ready' },
+        { id: 'readyBag', label: 'Мешок пескобетона', unit: 'кг', value: '40', group: 'ready' },
+        { id: 'cemPerM3', label: 'Цемента на 1 м³ раствора', unit: 'кг', value: '490', group: 'cps' },
+        { id: 'sandPerM3', label: 'Песка на 1 м³ раствора', unit: 'кг', value: '1450', group: 'cps' },
+        { id: 'cemBag', label: 'Мешок цемента', unit: 'кг', value: '50', group: 'cps' },
+        { id: 'selfRate', label: 'Расход наливного пола', unit: 'кг/м² на 1 мм слоя', value: '1.5', group: 'self' },
+        { id: 'selfBag', label: 'Мешок наливного пола', unit: 'кг', value: '20', group: 'self' },
+        { id: 'damperRoll', label: 'Демпферная лента в рулоне', unit: 'м, 0 = не считать', value: '50' },
+        { id: 'fiberRate', label: 'Фиброволокно', unit: 'кг на 1 м³ раствора', value: '0.8', group: 'fiber' },
+        { id: 'fiberPack', label: 'Упаковка фиброволокна', unit: 'кг', value: '0.6', group: 'fiber' },
+        { id: 'meshSheet', label: 'Карта или рулон сетки', unit: 'м²', value: '6', group: 'mesh' },
+      ],
+      selects: [
+        { id: 'mix', label: 'Из чего', default: 'ready', choices: [
+          { id: 'ready', label: 'Готовая смесь (пескобетон М300)', hint: 'мешки, ≈20 кг/м² на каждый сантиметр' },
+          { id: 'cps', label: 'Цемент и песок 1:3', hint: 'мешки цемента и тонны песка' },
+          { id: 'self', label: 'Наливной пол', hint: 'самовыравнивающийся, слой от 5 мм' },
+        ] },
+        { id: 'reinf', label: 'Армирование', default: 'fiber', choices: [
+          { id: 'fiber', label: 'Фиброволокно', hint: 'мешается в раствор, держит от усадочных трещин' },
+          { id: 'mesh', label: 'Сетка', hint: 'карты внахлёст, считаем с запасом 10%' },
+          { id: 'none', label: 'Без армирования', hint: '' },
+        ] },
+      ],
+      presets: [
+        { label: 'Толщина', fieldId: 'thick', unit: 'мм', items: [['Наливной пол', '10'], ['Минимум по плите', '30'], ['Обычная', '50'], ['По утеплителю', '70'], ['С трубами тёплого пола', '80']] },
+        { label: 'Мешок пескобетона', fieldId: 'readyBag', unit: 'кг', group: 'ready', items: [['40 кг', '40'], ['25 кг', '25'], ['50 кг', '50']] },
+      ],
+      prices: [
+        { id: 'readyBag', label: 'Цена пескобетона', unit: '₽ за мешок', group: 'ready' },
+        { id: 'cem', label: 'Цена цемента', unit: '₽ за мешок', group: 'cps' },
+        { id: 'sand', label: 'Цена песка', unit: '₽ за тонну', group: 'cps' },
+        { id: 'selfBag', label: 'Цена наливного пола', unit: '₽ за мешок', group: 'self' },
+        { id: 'damper', label: 'Цена демпферной ленты', unit: '₽ за рулон' },
+        { id: 'fiber', label: 'Цена фиброволокна', unit: '₽ за упаковку', group: 'fiber' },
+        { id: 'mesh', label: 'Цена сетки', unit: '₽ за карту', group: 'mesh' },
+      ],
+      groups(v, mode, extras, sel) {
+        return { ready: sel.mix === 'ready', cps: sel.mix === 'cps', self: sel.mix === 'self',
+          fiber: sel.reinf === 'fiber' && sel.mix !== 'self', mesh: sel.reinf === 'mesh' && sel.mix !== 'self' };
+      },
+      shape(v, mode, extras) {
+        if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? { area: v.len * v.wid, per: 2 * (v.len + v.wid), pts: [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]] } : null;
+        if (mode === 'custom') return pos(v.area) ? { area: v.area, per: null, pts: null } : null;
+        const P = window.CalcPlan; if (!P || !extras.plan) return null;
+        const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+        return g.valid ? { area: g.outerArea, per: g.perimeter, pts: g.verts } : null;
+      },
+      draw(v, mode, box, view, extras) {
+        const V = window.CalcViz; const sh = this.shape(v, mode, extras);
+        if (!V || !sh || !sh.pts) return false;
+        const dims = mode === 'rect'
+          ? [{ from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 }]
+          : sh.pts.map((a, i) => { const b = sh.pts[(i + 1) % sh.pts.length]; return { from: a, to: b, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 20 }; });
+        V.shape(box, sh.pts, dims, { center: fmt(sh.area) + ' м²', title: 'Стяжка',
+          caption: 'Площадь ' + fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м, слой ' + fmt(v.thick) + ' мм' });
+        return true;
+      },
+      compute(v, mode, sel, extras) {
+        const sh = this.shape(v, mode, extras);
+        if (mode === 'plan' && !sh && extras.plan) return { error: 'Контур помещения пересекает сам себя — поправьте углы на плане.' };
+        if (!sh || !pos(v.thick)) return null;
+        if (sel.mix === 'self' && v.thick > 30) return { error: 'Наливной пол толще 30 мм не льют: это дорого и он трескается. Выберите пескобетон или цемент с песком.' };
+        if (sel.mix !== 'self' && v.thick < 20) return { error: 'Стяжка тоньше 20 мм по плите трескается и отслаивается. Возьмите наливной пол или увеличьте слой.' };
+
+        const area = sh.area, vol = area * v.thick / 1000;
+        const rows = [['Площадь', fmt(area) + ' м²'], ['Объём стяжки', fmt(vol) + ' м³ (' + fmt(v.thick) + ' мм)']];
+        const cost = []; let main = null;
+
+        if (sel.mix === 'ready') {
+          if (!pos(v.readyRate)) return null;
+          const perM2 = v.readyRate * v.thick / 10, kg = area * perM2;
+          const bags = pos(v.readyBag) ? Math.ceil(kg * 1.05 / v.readyBag) : null;
+          rows.push(['Расход при ' + fmt(v.thick) + ' мм', fmt(perM2) + ' кг/м²']);
+          rows.push(['Смеси', fmtInt(kg) + ' кг без запаса']);
+          if (bags != null) {
+            rows.push(['Мешков по ' + fmt(v.readyBag) + ' кг', bags + ' шт (запас 5%)']);
+            main = bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' пескобетона';
+            cost.push({ label: 'Пескобетон', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'readyBag' });
+          } else main = fmtInt(kg) + ' кг смеси';
+        } else if (sel.mix === 'cps') {
+          if (!pos(v.cemPerM3) || !pos(v.sandPerM3)) return null;
+          const cem = vol * v.cemPerM3, sand = vol * v.sandPerM3;
+          const cemBags = pos(v.cemBag) ? Math.ceil(cem * 1.05 / v.cemBag) : null;
+          const sandT = sand * 1.05 / 1000;
+          rows.push(['Цемент М400', fmtInt(cem) + ' кг' + (cemBags != null ? ' ≈ ' + cemBags + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' по ' + fmt(v.cemBag) + ' кг' : '')]);
+          rows.push(['Песок', fmt(sandT) + ' т (' + fmtInt(sand) + ' кг, ≈ ' + fmt(sand / 1550) + ' м³)']);
+          rows.push(['Вода', '≈ ' + fmtInt(cem * 0.45) + ' л, доливать по консистенции']);
+          main = (cemBags != null ? cemBags + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' цемента' : fmtInt(cem) + ' кг цемента') + ' · ' + fmt(sandT) + ' т песка';
+          if (cemBags != null) cost.push({ label: 'Цемент', amount: cemBags, unit: plural(cemBags, 'мешок', 'мешка', 'мешков'), priceId: 'cem' });
+          cost.push({ label: 'Песок', amount: sandT, unit: 'т', priceId: 'sand' });
+        } else {
+          if (!pos(v.selfRate)) return null;
+          const perM2 = v.selfRate * v.thick, kg = area * perM2;
+          const bags = pos(v.selfBag) ? Math.ceil(kg * 1.05 / v.selfBag) : null;
+          rows.push(['Расход при ' + fmt(v.thick) + ' мм', fmt(perM2) + ' кг/м²']);
+          rows.push(['Смеси', fmtInt(kg) + ' кг без запаса']);
+          if (bags != null) {
+            rows.push(['Мешков по ' + fmt(v.selfBag) + ' кг', bags + ' шт (запас 5%)']);
+            main = bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' наливного пола';
+            cost.push({ label: 'Наливной пол', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'selfBag' });
+          } else main = fmtInt(kg) + ' кг смеси';
+        }
+
+        if (sel.mix !== 'self' && sel.reinf === 'fiber' && pos(v.fiberRate)) {
+          const kg = vol * v.fiberRate;
+          const packs = pos(v.fiberPack) ? Math.ceil(kg / v.fiberPack) : null;
+          rows.push(['Фиброволокно', fmt(kg) + ' кг' + (packs != null ? ' ≈ ' + packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок') : '')]);
+          if (packs != null) cost.push({ label: 'Фиброволокно', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок'), priceId: 'fiber' });
+        }
+        if (sel.mix !== 'self' && sel.reinf === 'mesh' && pos(v.meshSheet)) {
+          const sheets = Math.ceil(area * 1.1 / v.meshSheet);
+          rows.push(['Сетка', sheets + ' ' + plural(sheets, 'карта', 'карты', 'карт') + ' по ' + fmt(v.meshSheet) + ' м² (нахлёст 10%)']);
+          cost.push({ label: 'Сетка', amount: sheets, unit: plural(sheets, 'карта', 'карты', 'карт'), priceId: 'mesh' });
+        }
+        if (sh.per && pos(v.damperRoll)) {
+          const rolls = Math.ceil(sh.per / v.damperRoll);
+          rows.push(['Демпферная лента', fmt(sh.per) + ' м по периметру → ' + rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов')]);
+          cost.push({ label: 'Демпферная лента', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'damper' });
+        }
+        rows.push(['Вес на перекрытие', fmtInt(v.thick / 1000 * 2000) + ' кг/м² (всего ' + fmtInt(vol * 2000) + ' кг)']);
+
+        let note = 'Вес считаем по плотности 2000 кг/м³. ';
+        if (v.thick >= 70) note += 'Слой от 70 мм — это заметная нагрузка на перекрытие: в квартире её стоит проверить. ';
+        note += 'Демпферная лента по периметру обязательна: без неё стяжка упирается в стены и трескается. Ходить можно через сутки, класть покрытие — когда высохнет, примерно неделя на каждый сантиметр слоя.';
+
+        return { main: { label: 'Нужно на стяжку', value: main }, rows, note, cost };
+      },
+    },
+
   };
 
   /* ---------- Рендер ---------- */
