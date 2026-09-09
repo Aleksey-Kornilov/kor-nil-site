@@ -943,7 +943,7 @@
       const link = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Ссылка на расчёт' });
       link.addEventListener('click', () => navigator.clipboard.writeText(shareUrl()).then(() => flash(link, 'Ссылка скопирована ✓')));
       const pdf = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Скачать PDF' });
-      pdf.addEventListener('click', () => { root.dataset.printDate = new Date().toLocaleDateString('ru-RU'); window.print(); });
+      pdf.addEventListener('click', () => { result.dataset.printDate = new Date().toLocaleDateString('ru-RU'); window.print(); });
       actions.appendChild(share); actions.appendChild(copy); actions.appendChild(link); actions.appendChild(pdf);
       if (!vizBox.hidden && vizBox.querySelector('svg')) {
         const png = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Схема PNG' });

@@ -191,5 +191,6 @@
   .calc-result { break-inside: avoid; }
   .calc-viz { max-width: 520px; }
   .calc-cost[open] .calc-cost-body { display: grid; }
-  .calc::after { content: 'kor-nil.ru/tools · ' attr(data-print-date); display: block; margin-top: 12px; font-size: 11px; color: #666; }
+  .viz-caption { display: none; }
+  .calc-result::after { content: 'kor-nil.ru/tools · ' attr(data-print-date); display: block; margin-top: 12px; font-size: 11px; color: #666; }
 }
