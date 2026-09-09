@@ -34,7 +34,7 @@
   }
 
   function editor(container, room, getDims, onChange) {
-    const VW = 680, VH = 320, PAD = 34, GAP = 8, TOP = 44;
+    const VW = 680, PAD = 34, GAP = 8, TOP = 44; let VH = 320;
     let sel = 0; let drag = null; let geom = null;
 
     const wrap = document.createElement('div'); wrap.className = 'room';
@@ -48,11 +48,14 @@
       const { L, W, H } = getDims();
       const lens = [L, W, L, W];
       const total = lens.reduce((s, x) => s + x, 0);
-      const scale = Math.min((VW - PAD * 2 - GAP * 3) / total, (VH - TOP - 40) / H);
+      // Высота рисунка подстраивается под стены: масштаб от ширины, но не выше 260px по высоте
+      const scale = Math.min((VW - PAD * 2 - GAP * 3) / total, 260 / H);
       let x = PAD;
       const walls = lens.map((len) => { const w = { x, wpx: len * scale, len }; x += len * scale + GAP; return w; });
       const hpx = H * scale;
       geom = { scale, walls, hpx, top: TOP, H };
+      VH = TOP + hpx + 40;
+      svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
     }
     const wallOf = (px) => { for (let i = 0; i < 4; i++) { const w = geom.walls[i]; if (px >= w.x - GAP / 2 && px <= w.x + w.wpx + GAP / 2) return i; } return px < geom.walls[0].x ? 0 : 3; };
     function toLocal(evt) {
