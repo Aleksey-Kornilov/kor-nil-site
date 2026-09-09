@@ -776,6 +776,11 @@
           { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
         ] },
         { id: 'plan', label: 'Свой план (ниши, выступы)', plan: { simple: true, presetsKey: 'ROOM_PRESETS' }, fields: [] },
+        { id: 'bath', label: 'Ванная: пол и стены', room: true, fields: [
+          { id: 'len', label: 'Длина', unit: 'м', value: '1.7' },
+          { id: 'wid', label: 'Ширина', unit: 'м', value: '1.5' },
+          { id: 'hei', label: 'Высота укладки на стенах', unit: 'м (до потолка или фартук)', value: '2.5' },
+        ] },
       ],
       common: [
         { id: 'tileL', label: 'Длина плитки', unit: 'см', value: '60', group: 'tile' },
@@ -792,6 +797,11 @@
         { id: 'skirting', label: 'Плинтус: длина планки', unit: 'м', value: '2.5' },
         { id: 'doorways', label: 'Дверные проёмы (вычесть из плинтуса)', unit: 'шт', value: '1' },
       ],
+      roomOpts: {
+        finishes: { tile: 'Плитка', none: 'Без плитки' }, defaultFinish: 'tile', wallWord: 'Стена',
+        openingsTitle: 'Двери и окна на этой стене (вычитаются из площади):',
+        hint: 'Нажмите на стену, чтобы включить или выключить плитку. Дверь и окно тяните по стене.',
+      },
       selects: [
         { id: 'material', label: 'Покрытие', default: 'tile', choices: [
           { id: 'tile', label: 'Плитка / керамогранит', hint: 'клей, затирка, крестики' },
@@ -812,11 +822,20 @@
         { id: 'skirt', label: 'Плинтус', unit: '₽ за планку' },
       ],
       groups(v, mode, extras, sel) {
-        const m = sel.material;
+        const m = mode === 'bath' ? 'tile' : sel.material;
         return { tile: m === 'tile', board: m === 'board', roll: m === 'roll' };
       },
+      lens(v, mode) { return (mode === 'bath' && pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null; },
+      // Площадь стен под плиткой минус двери и окна
+      wallsArea(v, mode, extras) {
+        if (mode !== 'bath') return null;
+        const R = window.CalcRoom; const lens = this.lens(v, mode);
+        if (!R || !extras.room || !lens || !pos(v.hei)) return null;
+        const m = R.measure(extras.room, lens, v.hei, this.roomOpts.finishes, 'tile');
+        return { area: m.by.tile.area, n: m.by.tile.n, openings: m.openings, walls: m.walls };
+      },
       shape(v, mode, extras) {
-        if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? { area: v.len * v.wid, per: 2 * (v.len + v.wid), L: v.len, W: v.wid, pts: [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]] } : null;
+        if (mode === 'rect' || mode === 'bath') return (pos(v.len) && pos(v.wid)) ? { area: v.len * v.wid, per: 2 * (v.len + v.wid), L: v.len, W: v.wid, pts: [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]] } : null;
         const P = window.CalcPlan; if (!P || !extras.plan) return null;
         const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
         if (!g.valid) return null;
@@ -826,7 +845,7 @@
       draw(v, mode, box, view, extras) {
         const V = window.CalcViz; const sh = this.shape(v, mode, extras);
         if (!V || !sh) return false;
-        const dims = mode === 'rect'
+        const dims = (mode === 'rect' || mode === 'bath')
           ? [{ from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 }]
           : sh.pts.map((a, i) => { const b = sh.pts[(i + 1) % sh.pts.length]; return { from: a, to: b, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 20 }; });
         V.shape(box, sh.pts, dims, { center: fmt(sh.area) + ' м²', title: 'Пол', caption: 'Площадь пола ' + fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м' });
@@ -839,18 +858,26 @@
         const waste = { straight: 1.05, offset: 1.10, diagonal: 1.15 }[sel.layout] || 1.05;
         const wastePct = Math.round((waste - 1) * 100);
         const rows = [], cost = []; let main, unitCost;
-        const m = sel.material;
+        const m = mode === 'bath' ? 'tile' : sel.material;
+        const wa = this.wallsArea(v, mode, extras);
+        if (mode === 'bath' && wa && wa.n === 0 && !(sh.area > 0)) return { error: 'Плитка нигде не выбрана: включите её хотя бы на одной стене.' };
+        const totalArea = sh.area + (wa ? wa.area : 0);
         if (m === 'tile') {
           if (!pos(v.tileL) || !pos(v.tileW)) return null;
           const seam = (v.seam || 0) / 1000;
           const tileArea = (v.tileL / 100 + seam) * (v.tileW / 100 + seam);
-          const tiles = Math.ceil(sh.area * waste / tileArea);
+          const tiles = Math.ceil(totalArea * waste / tileArea);
           const perM2 = 1 / tileArea;
-          const glueKg = sh.area * (v.glueRate || 0);
+          const glueKg = totalArea * (v.glueRate || 0);
           const bags = pos(v.glueBag) ? Math.ceil(glueKg / v.glueBag) : null;
-          const grout = sh.area * (v.groutRate || 0);
+          const grout = totalArea * (v.groutRate || 0);
           main = tiles + ' ' + plural(tiles, 'плитка', 'плитки', 'плиток');
           rows.push(['Плитка', tiles + ' шт ' + fmt(v.tileL) + '×' + fmt(v.tileW) + ' см (' + fmt(perM2) + ' шт/м², запас ' + wastePct + '%)']);
+          if (wa) {
+            rows.push(['Пол', fmt(sh.area) + ' м²']);
+            rows.push(['Стены', fmt(wa.area) + ' м²: ' + wa.n + ' ' + plural(wa.n, 'стена', 'стены', 'стен') + ' до ' + fmt(v.hei) + ' м' + (wa.openings ? ', проёмы ' + fmt(wa.openings) + ' м² вычтены' : '')]);
+            rows.push(['Всего под плитку', fmt(totalArea) + ' м²']);
+          }
           if (glueKg > 0) rows.push(['Клей', fmtInt(glueKg) + ' кг' + (bags != null ? ' ≈ ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') : '')]);
           if (grout > 0) rows.push(['Затирка', fmt(grout) + ' кг']);
           rows.push(['Крестики', '≈ ' + Math.ceil(tiles * 2) + ' шт']);
@@ -876,6 +903,13 @@
           rows.push(['Линолеум', strips === 1 ? 'одним куском ' + fmt(across + 0.1) + ' м при ширине рулона ' + fmt(v.rollW2) + ' м' : strips + ' полосы по ' + fmt(across + 0.1) + ' м = ' + fmt(len) + ' м (шов посередине)']);
           rows.push(['Площадь', fmt(len * v.rollW2) + ' м² при площади пола ' + fmt(sh.area) + ' м²']);
           unitCost = { label: 'Покрытие', amount: Math.ceil(len * 10) / 10, unit: 'м' };
+        }
+        if (mode === 'bath') {
+          rows.push(['Затирочный уголок и профили', 'по внутренним углам ' + fmt(4 * v.hei) + ' м и по низу стен ' + fmt(sh.per) + ' м']);
+          rows.push(['Площадь пола', fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м']);
+          cost.unshift(Object.assign({ priceId: 'unit' }, unitCost));
+          return { main: { label: 'Нужно на ванную', value: main + ' · ' + fmt(totalArea) + ' м²' }, rows, cost,
+            note: 'Пол и стены считаются вместе: плитка обычно берётся одной партией, иначе оттенок разойдётся. Двери и окна вычитаются из площади стен. Запас на подрезку: прямая раскладка 5%, вразбежку 10%, по диагонали 15%.' };
         }
         // Плинтус общий для всех
         if (pos(v.skirting)) {
