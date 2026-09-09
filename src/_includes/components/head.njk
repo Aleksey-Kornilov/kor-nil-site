@@ -95,7 +95,9 @@
 <script>
 (function () {
   if (!location.hostname.endsWith('kor-nil.ru')) return;
-  var events = ['scroll', 'click', 'keydown', 'touchstart', 'mousemove'];
+  // Без 'scroll': прокрутку делает и сама страница (обучение в калькуляторах, якоря),
+  // а это не действие посетителя — Метрика стартовала бы зря и попадала в замеры скорости.
+  var events = ['pointerdown', 'click', 'keydown', 'touchstart', 'mousemove', 'wheel'];
   var started = false;
   function start() {
     if (started) return;
@@ -175,7 +177,7 @@
       "@id": "{{ _canonical }}#breadcrumb",
       "itemListElement": [
         { "@type": "ListItem", "position": 1, "name": "{{ t.crumbHome }}", "item": "{{ site.url }}{{ t.home }}" },
-        {%- if pageCrumbParent %}
+        {%- if pageCrumbParent and pageCrumbParent.href != page.url %}
         { "@type": "ListItem", "position": 2, "name": "{{ pageCrumbParent.label }}", "item": "{{ site.url }}{{ pageCrumbParent.href }}" },
         { "@type": "ListItem", "position": 3, "name": "{{ pageCrumb }}", "item": "{{ _canonical }}" }
         {%- else %}

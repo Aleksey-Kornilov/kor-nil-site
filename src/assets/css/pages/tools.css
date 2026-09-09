@@ -225,7 +225,8 @@
 .tour-title { font-weight: 700; margin: 0 0 var(--space-1); }
 .tour-text { font-size: var(--fs-small); margin: 0 0 var(--space-3); opacity: 0.95; }
 .tour-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.tour-card .btn-primary { background: #fff; color: var(--color-accent); }
+.tour-card .btn-primary { background: #fff; color: #1d4ed8; } /* фиксированный синий: акцент тёмной темы на белом не читается */
+[data-theme="dark"] .tour-card .btn-primary { color: #1a4fbf; }
 .tour-card .btn-secondary { background: transparent; border-color: currentColor; color: inherit; }
 .tour-count { font-size: var(--fs-tiny); opacity: 0.8; margin-left: auto; }
 

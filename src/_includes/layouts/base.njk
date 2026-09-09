@@ -17,7 +17,7 @@
 <nav class="breadcrumbs container" aria-label="{{ t.crumbs }}">
   <ol>
     <li><a href="{{ t.home }}">{{ t.crumbHome }}</a></li>
-    {%- if pageCrumbParent %}<li><a href="{{ pageCrumbParent.href }}">{{ pageCrumbParent.label }}</a></li>{% endif %}
+    {%- if pageCrumbParent and pageCrumbParent.href != page.url %}<li><a href="{{ pageCrumbParent.href }}">{{ pageCrumbParent.label }}</a></li>{% endif %}
     <li aria-current="page">{{ pageCrumb }}</li>
   </ol>
 </nav>

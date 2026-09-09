@@ -36,7 +36,9 @@
     card.querySelector('.tour-next').addEventListener('click', () => show(n + 1));
     card.querySelector('.tour-skip').addEventListener('click', () => { clear(); store.set('done'); });
     current.el.insertAdjacentElement('afterend', card);
-    current.el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // Прокручиваем только если цель не видна: лишняя прокрутка мешает и на телефоне, и в замерах
+    const r = current.el.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > innerHeight) current.el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
   function start() { list = steps(); if (list.length) show(0); }
 
