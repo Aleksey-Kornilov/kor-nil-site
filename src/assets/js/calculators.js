@@ -1971,6 +1971,357 @@
       },
     },
 
+
+    /* --- Гипсокартон: листы, профиль, подвесы и расходники --- */
+    drywall: {
+      modeLabel: 'Что обшиваем',
+      modes: [
+        { id: 'wall', label: 'Стены комнаты', room: true, fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+          { id: 'hei', label: 'Высота потолка', unit: 'м', value: '2.7' },
+        ] },
+        { id: 'ceiling', label: 'Потолок', fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+        ] },
+        { id: 'partition', label: 'Перегородка', fields: [
+          { id: 'plen', label: 'Длина перегородки', unit: 'м', value: '4' },
+          { id: 'phei', label: 'Высота перегородки', unit: 'м', value: '2.7' },
+          { id: 'pdoor', label: 'Дверных проёмов', unit: 'шт', value: '1' },
+          { id: 'pdoorW', label: 'Ширина проёма', unit: 'м', value: '0.9' },
+          { id: 'pdoorH', label: 'Высота проёма', unit: 'м', value: '2.1' },
+        ] },
+        { id: 'custom', label: 'Своя площадь', fields: [
+          { id: 'area', label: 'Площадь обшивки', unit: 'м²', value: '30' },
+        ] },
+      ],
+      roomOpts: {
+        finishes: { gkl: 'Обшиваем', none: 'Не обшиваем' }, defaultFinish: 'gkl', wallWord: 'Стена',
+        openingsTitle: 'Окна и двери на этой стене (вычитаются из площади):',
+        hint: 'Нажмите на стену, чтобы включить или выключить обшивку. Окно и дверь тяните по стене.',
+      },
+      common: [
+        { id: 'sheetL', label: 'Длина листа', unit: 'см', value: '250' },
+        { id: 'sheetW', label: 'Ширина листа', unit: 'см', value: '120' },
+        { id: 'waste', label: 'Запас на подрезку', unit: '%', value: '10' },
+        { id: 'studStep', label: 'Шаг несущего профиля', unit: 'мм', value: '600' },
+        { id: 'profileLen', label: 'Длина профиля', unit: 'м', value: '3' },
+        { id: 'hangerStep', label: 'Шаг подвесов вдоль профиля', unit: 'м', value: '0.6', group: 'ceil' },
+        { id: 'crabRate', label: 'Соединителей (крабов)', unit: 'шт на 1 м²', value: '1.7', group: 'ceil' },
+        { id: 'screwRate', label: 'Саморезов по гипсокартону', unit: 'шт на 1 м² обшивки', value: '23' },
+        { id: 'tapeRate', label: 'Ленты для швов', unit: 'м на 1 м²', value: '1.1' },
+        { id: 'tapeRoll', label: 'Лента в рулоне', unit: 'м', value: '20' },
+        { id: 'puttyRate', label: 'Шпаклёвка для швов', unit: 'кг на 1 м²', value: '0.5' },
+        { id: 'primerRate', label: 'Грунтовка', unit: 'л на 1 м², 0 = не считать', value: '0.15' },
+      ],
+      selects: [
+        { id: 'layers', label: 'Слоёв обшивки', default: 'one', choices: [
+          { id: 'one', label: 'Один слой', hint: 'обычная обшивка' },
+          { id: 'two', label: 'Два слоя', hint: 'жёсткость и звукоизоляция: листов и саморезов вдвое больше' },
+        ] },
+      ],
+      presets: [
+        { label: 'Лист', fieldId: 'sheetL', unit: 'см', items: [['Стандарт 2500', '250'], ['Малый 2000', '200'], ['Длинный 3000', '300']] },
+        { label: 'Шаг профиля', fieldId: 'studStep', unit: 'мм', items: [['Стандарт', '600'], ['Под плитку', '400'], ['Экономный', '625']] },
+      ],
+      prices: [
+        { id: 'sheet', label: 'Цена листа', unit: '₽ за лист' },
+        { id: 'stud', label: 'Цена несущего профиля', unit: '₽ за штуку' },
+        { id: 'track', label: 'Цена направляющего профиля', unit: '₽ за штуку' },
+        { id: 'hanger', label: 'Цена подвеса', unit: '₽ за штуку', group: 'ceil' },
+        { id: 'crab', label: 'Цена соединителя', unit: '₽ за штуку', group: 'ceil' },
+        { id: 'tape', label: 'Цена ленты', unit: '₽ за рулон' },
+        { id: 'putty', label: 'Цена шпаклёвки', unit: '₽ за килограмм' },
+      ],
+      groups(v, mode) { return { ceil: mode === 'ceiling' }; },
+      lens(v, mode, extras) {
+        return (mode === 'wall' && pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null;
+      },
+      draw(v, mode, box) {
+        const V = window.CalcViz; if (!V) return false;
+        if (mode === 'ceiling' && pos(v.len) && pos(v.wid)) {
+          const step = (v.studStep || 600) / 1000;
+          V.shape(box, [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]], [
+            { from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 },
+            { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 },
+          ], { center: fmt(v.len * v.wid) + ' м²', title: 'Потолок', caption: 'Несущие профили вдоль длинной стороны с шагом ' + fmt(step) + ' м' });
+          return true;
+        }
+        return false;
+      },
+      compute(v, mode, sel, extras) {
+        const layers = sel.layers === 'two' ? 2 : 1;
+        const step = (v.studStep || 0) / 1000;
+        if (!pos(v.sheetL) || !pos(v.sheetW)) return null;
+        const sheetArea = v.sheetL / 100 * (v.sheetW / 100);
+
+        // Площадь обшивки и каркас считаются по-разному для стен, потолка и перегородки
+        let area = null, per = null, studs = null, trackLen = null, hangers = null, crabs = null, note = '';
+        const rows = [], cost = [], extra = [];
+
+        if (mode === 'wall') {
+          const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+          if (!R || !extras.room || !lens || !pos(v.hei)) return null;
+          const m = R.measure(extras.room, lens, v.hei, this.roomOpts.finishes, 'gkl');
+          if (m.by.gkl.n === 0) return { error: 'Все стены отмечены «не обшиваем» — включите хотя бы одну на развёртке.' };
+          area = m.by.gkl.area;
+          const runLen = m.by.gkl.len;                    // погонные метры обшиваемых стен
+          if (!pos(step)) return null;
+          const studCount = m.by.gkl.walls.reduce((s, w) => s + Math.ceil(w.len / step - 1e-9) + 1, 0);
+          studs = studCount * Math.ceil(v.hei / (v.profileLen || 3) - 1e-9);
+          trackLen = runLen * 2;                          // по полу и по потолку
+          extra.push(['Обшиваем', m.by.gkl.n + ' ' + plural(m.by.gkl.n, 'стена', 'стены', 'стен') + ', ' + fmt(runLen) + ' погонных метров' + (m.openings ? ', проёмы ' + fmt(m.openings) + ' м² вычтены' : '')]);
+          m.walls.forEach((w) => extra.push(['Стена ' + (w.i + 1) + ' · ' + this.roomOpts.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
+        } else if (mode === 'ceiling') {
+          if (!pos(v.len) || !pos(v.wid) || !pos(step)) return null;
+          area = v.len * v.wid; per = 2 * (v.len + v.wid);
+          const long = Math.max(v.len, v.wid), short = Math.min(v.len, v.wid);
+          const runs = Math.ceil(short / step - 1e-9) + 1;                    // несущие вдоль длинной стороны
+          studs = runs * Math.ceil(long / (v.profileLen || 3) - 1e-9);
+          trackLen = per;                                                     // направляющий по периметру
+          if (pos(v.hangerStep)) hangers = runs * (Math.ceil(long / v.hangerStep - 1e-9) + 1);
+          if (pos(v.crabRate)) crabs = Math.ceil(area * v.crabRate);
+          extra.push(['Несущих профилей', runs + ' ряда(ов) по ' + fmt(long) + ' м с шагом ' + fmt(step) + ' м']);
+        } else if (mode === 'partition') {
+          if (!pos(v.plen) || !pos(v.phei) || !pos(step)) return null;
+          const doors = Math.max(0, Math.round(v.pdoor || 0));
+          const doorArea = doors * (v.pdoorW || 0) * (v.pdoorH || 0);
+          const oneSide = v.plen * v.phei - doorArea;
+          if (oneSide <= 0) return { error: 'Проёмы занимают всю перегородку — проверьте размеры.' };
+          area = oneSide * 2;                                                 // обшивка с двух сторон
+          per = 2 * (v.plen + v.phei);
+          const studCount = Math.ceil(v.plen / step - 1e-9) + 1 + doors * 2;  // плюс стойки по краям проёмов
+          studs = studCount * Math.ceil(v.phei / (v.profileLen || 3) - 1e-9);
+          trackLen = v.plen * 2;
+          extra.push(['Обшивка', fmt(oneSide) + ' м² × 2 стороны = ' + fmt(area) + ' м²' + (doorArea ? ' (проёмы ' + fmt(doorArea) + ' м² вычтены)' : '')]);
+          extra.push(['Стойки', studCount + ' шт: по шагу ' + fmt(step) + ' м плюс по две на каждый проём']);
+          note += 'Каркас перегородки один, а обшивка с двух сторон — это уже учтено. ';
+        } else {
+          area = pos(v.area) ? v.area : null;
+          if (!(area > 0)) return null;
+          note += 'В режиме «своя площадь» каркас не считается: для профиля укажите комнату, потолок или перегородку. ';
+        }
+        if (!(area > 0)) return null;
+
+        const covered = area * layers;
+        const sheets = Math.ceil(covered * (1 + (v.waste || 0) / 100) / sheetArea);
+        rows.push(['Площадь обшивки', fmt(area) + ' м²' + (layers > 1 ? ' × 2 слоя = ' + fmt(covered) + ' м²' : '')]);
+        rows.push(['Листы ' + fmt(v.sheetL) + '×' + fmt(v.sheetW) + ' см', sheets + ' шт по ' + fmt(sheetArea) + ' м² (запас ' + fmt(v.waste || 0) + '%)']);
+        cost.push({ label: 'Гипсокартон', amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов'), priceId: 'sheet' });
+
+        if (studs != null) {
+          rows.push(['Несущий профиль', studs + ' ' + plural(studs, 'штука', 'штуки', 'штук') + ' по ' + fmt(v.profileLen) + ' м']);
+          cost.push({ label: 'Несущий профиль', amount: studs, unit: plural(studs, 'штука', 'штуки', 'штук'), priceId: 'stud' });
+        }
+        if (trackLen != null && pos(v.profileLen)) {
+          const tracks = Math.ceil(trackLen / v.profileLen);
+          rows.push(['Направляющий профиль', fmt(trackLen) + ' м → ' + tracks + ' ' + plural(tracks, 'штука', 'штуки', 'штук') + ' по ' + fmt(v.profileLen) + ' м']);
+          cost.push({ label: 'Направляющий профиль', amount: tracks, unit: plural(tracks, 'штука', 'штуки', 'штук'), priceId: 'track' });
+        }
+        if (hangers != null) {
+          rows.push(['Подвесы', hangers + ' шт с шагом ' + fmt(v.hangerStep) + ' м']);
+          cost.push({ label: 'Подвесы', amount: hangers, unit: 'шт', priceId: 'hanger' });
+        }
+        if (crabs != null) {
+          rows.push(['Соединители (крабы)', crabs + ' шт']);
+          cost.push({ label: 'Соединители', amount: crabs, unit: 'шт', priceId: 'crab' });
+        }
+        if (pos(v.screwRate)) rows.push(['Саморезы по гипсокартону', Math.ceil(covered * v.screwRate) + ' шт']);
+        if (pos(v.tapeRate)) {
+          const tapeM = area * v.tapeRate;
+          const rolls = pos(v.tapeRoll) ? Math.ceil(tapeM / v.tapeRoll) : null;
+          rows.push(['Лента для швов', fmt(tapeM) + ' м' + (rolls != null ? ' → ' + rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') : '')]);
+          if (rolls != null) cost.push({ label: 'Лента', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'tape' });
+        }
+        if (pos(v.puttyRate)) {
+          const kg = area * v.puttyRate;
+          rows.push(['Шпаклёвка для швов', fmt(kg) + ' кг']);
+          cost.push({ label: 'Шпаклёвка', amount: Math.ceil(kg), unit: 'кг', priceId: 'putty' });
+        }
+        if (pos(v.primerRate)) rows.push(['Грунтовка', fmt(area * v.primerRate) + ' л']);
+        extra.forEach((r) => rows.push(r));
+
+        note += 'Саморезы, лента, шпаклёвка и крабы считаются по нормам расхода — их можно поменять под систему вашего производителя. ';
+        note += 'Под плитку и в местах, где будет висеть тяжёлое, шаг профиля уменьшают до 400 мм и ставят закладные.';
+
+        return { main: { label: 'Нужно материалов', value: sheets + ' ' + plural(sheets, 'лист', 'листа', 'листов') + (studs != null ? ' · ' + studs + ' ' + plural(studs, 'профиль', 'профиля', 'профилей') : '') }, rows, note, cost };
+      },
+    },
+
+    /* --- Тёплый пол: длина трубы и число контуров или мощность кабеля --- */
+    warmfloor: {
+      modeLabel: 'Форма помещения',
+      modes: [
+        { id: 'rect', label: 'Прямоугольная комната', fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+        ] },
+        { id: 'plan', label: 'Свой план (ниши, выступы)', plan: { simple: true, presetsKey: 'ROOM_PRESETS' }, fields: [] },
+        { id: 'custom', label: 'Своя площадь', fields: [
+          { id: 'area', label: 'Площадь пола', unit: 'м²', value: '20' },
+        ] },
+      ],
+      common: [
+        { id: 'edge', label: 'Отступ от стен', unit: 'м', value: '0.1' },
+        { id: 'skip', label: 'Не греем под мебелью и сантехникой', unit: 'м²', value: '0' },
+        { id: 'step', label: 'Шаг укладки трубы', unit: 'мм', value: '150', group: 'water' },
+        { id: 'loopMax', label: 'Максимальная длина контура', unit: 'м', value: '100', group: 'water' },
+        { id: 'supply', label: 'Подводка до коллектора', unit: 'м в одну сторону', value: '5', group: 'water' },
+        { id: 'coil', label: 'Труба в бухте', unit: 'м', value: '200', group: 'water' },
+        { id: 'clips', label: 'Клипсы крепления', unit: 'шт на 1 м трубы', value: '2', group: 'water' },
+        { id: 'power', label: 'Нужная мощность', unit: 'Вт/м²', value: '150', group: 'el' },
+        { id: 'cableW', label: 'Мощность кабеля', unit: 'Вт на 1 м', value: '20', group: 'cable' },
+        { id: 'matW', label: 'Мощность мата', unit: 'Вт/м²', value: '150', group: 'mat' },
+        { id: 'volt', label: 'Напряжение сети', unit: 'В', value: '220', group: 'el' },
+        { id: 'damperRoll', label: 'Демпферная лента в рулоне', unit: 'м, 0 = не считать', value: '50' },
+      ],
+      selects: [
+        { id: 'type', label: 'Тип пола', default: 'water', choices: [
+          { id: 'water', label: 'Водяной', hint: 'труба в стяжке, длина и число контуров' },
+          { id: 'cable', label: 'Электрический кабель', hint: 'секция кабеля в стяжку, шаг укладки' },
+          { id: 'mat', label: 'Электрический мат', hint: 'под плитку в слой клея, считаем квадратные метры' },
+        ] },
+        { id: 'layout', label: 'Схема укладки', default: 'snail', choices: [
+          { id: 'snail', label: 'Улитка', hint: 'подача и обратка рядом, пол греет равномернее' },
+          { id: 'snake', label: 'Змейка', hint: 'проще уложить, но у дальней стены прохладнее' },
+        ] },
+      ],
+      presets: [
+        { label: 'Шаг укладки', fieldId: 'step', unit: 'мм', group: 'water', items: [['Основное отопление', '100'], ['Комфорт', '150'], ['Дополнительный обогрев', '200'], ['Экономный', '300']] },
+        { label: 'Мощность', fieldId: 'power', unit: 'Вт/м²', group: 'el', items: [['Комфортный подогрев', '130'], ['Основной обогрев', '180'], ['Балкон, лоджия', '200']] },
+      ],
+      prices: [
+        { id: 'pipe', label: 'Цена трубы', unit: '₽ за метр', group: 'water' },
+        { id: 'clip', label: 'Цена клипсы', unit: '₽ за штуку', group: 'water' },
+        { id: 'cable', label: 'Цена кабеля', unit: '₽ за метр', group: 'cable' },
+        { id: 'mat', label: 'Цена мата', unit: '₽ за м²', group: 'mat' },
+        { id: 'insul', label: 'Цена теплоизоляции', unit: '₽ за м²' },
+        { id: 'damper', label: 'Цена демпферной ленты', unit: '₽ за рулон' },
+      ],
+      // Ориентир теплоотдачи водяного пола под плиткой при подаче 40–45 °C
+      HEAT: [[100, 90], [150, 75], [200, 60], [250, 50], [300, 45]],
+      groups(v, mode, extras, sel) {
+        return { water: sel.type === 'water', el: sel.type !== 'water', cable: sel.type === 'cable', mat: sel.type === 'mat' };
+      },
+      shape(v, mode, extras) {
+        if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? { area: v.len * v.wid, per: 2 * (v.len + v.wid), minDim: Math.min(v.len, v.wid), pts: [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]] } : null;
+        if (mode === 'custom') return pos(v.area) ? { area: v.area, per: null, pts: null } : null;
+        const P = window.CalcPlan; if (!P || !extras.plan) return null;
+        const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+        if (!g.valid) return null;
+        const xs = g.verts.map((p) => p[0]), ys = g.verts.map((p) => p[1]);
+        return { area: g.outerArea, per: g.perimeter, pts: g.verts,
+          minDim: Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) };
+      },
+      // Полезная площадь: минус рамка вдоль стен и минус то, что не греем.
+      // Для прямоугольника area − периметр×отступ + 4×отступ² — это ровно (L−2e)(W−2e).
+      // Если отступ съедает комнату целиком, площадь обогрева нулевая, а не отрицательная.
+      heated(v, sh) {
+        if (!sh) return null;
+        const e = v.edge || 0;
+        let inset = sh.area;
+        if (sh.per && e > 0) {
+          inset = (sh.minDim && 2 * e >= sh.minDim) ? 0 : Math.max(0, sh.area - sh.per * e + 4 * e * e);
+        }
+        return Math.max(0, inset - (v.skip || 0));
+      },
+      draw(v, mode, box, view, extras) {
+        const V = window.CalcViz; const sh = this.shape(v, mode, extras);
+        if (!V || !sh || !sh.pts) return false;
+        const dims = mode === 'rect'
+          ? [{ from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 }]
+          : sh.pts.map((a, i) => { const b = sh.pts[(i + 1) % sh.pts.length]; return { from: a, to: b, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 20 }; });
+        const H = this.heated(v, sh);
+        V.shape(box, sh.pts, dims, { center: fmt(H) + ' м²', title: 'Обогрев',
+          caption: 'Пол ' + fmt(sh.area) + ' м², греем ' + fmt(H) + ' м² (отступ от стен ' + fmt(v.edge || 0) + ' м)' });
+        return true;
+      },
+      compute(v, mode, sel, extras) {
+        const sh = this.shape(v, mode, extras);
+        if (mode === 'plan' && !sh && extras.plan) return { error: 'Контур помещения пересекает сам себя — поправьте углы на плане.' };
+        if (!sh) return null;
+        const H = this.heated(v, sh);
+        if (!(H > 0)) return { error: 'После отступа от стен и вычета мебели греть нечего — уменьшите отступ или площадь под мебелью.' };
+
+        // Отступ от стен можно посчитать только по контуру: в режиме «своя площадь» его нет
+        const cut = [];
+        if (sh.per && v.edge) cut.push('отступ от стен ' + fmt(v.edge) + ' м');
+        if (v.skip) cut.push('минус ' + fmt(v.skip) + ' м² под мебелью');
+        if (!sh.per && v.edge) cut.push('отступ от стен не учтён: в режиме «своя площадь» контура нет');
+        const rows = [['Площадь пола', fmt(sh.area) + ' м²'],
+          ['Площадь обогрева', fmt(H) + ' м²' + (cut.length ? ' (' + cut.join(', ') + ')' : '')]];
+        const cost = []; let main;
+
+        if (sel.type === 'water') {
+          const step = (v.step || 0) / 1000;
+          if (!pos(step)) return null;
+          const supply = (v.supply || 0) * 2;   // до коллектора и обратно, на каждый контур
+          const field = H / step;               // труба в самом полу, без подводки
+          // Подводка идёт к каждому контуру, поэтому число контуров подбираем с ней заодно
+          let loops = 1;
+          if (pos(v.loopMax)) {
+            if (supply >= v.loopMax) return { error: 'Подводка до коллектора длиннее предела контура — коллектор стоит слишком далеко.' };
+            while (field / loops + supply > v.loopMax && loops < 40) loops++;
+          }
+          const pipe = field + supply * loops;
+          const perLoop = pipe / loops;
+          if (pos(v.loopMax) && perLoop > v.loopMax) return { error: 'Не получается уложиться в длину контура — увеличьте шаг укладки или поставьте коллектор ближе.' };
+          const coils = pos(v.coil) ? Math.ceil(pipe / v.coil) : null;
+          const heat = this.HEAT.reduce((best, [s, w]) => Math.abs(s - v.step) < Math.abs(best[0] - v.step) ? [s, w] : best, this.HEAT[0])[1];
+          main = fmtInt(pipe) + ' м трубы · ' + loops + ' ' + plural(loops, 'контур', 'контура', 'контуров');
+          rows.push(['Длина трубы', fmt(H) + ' м² ÷ ' + fmt(step) + ' м = ' + fmtInt(field) + ' м в полу + подводка ' + fmtInt(supply * loops) + ' м = ' + fmtInt(pipe) + ' м']);
+          rows.push(['Контуров', loops + ' по ' + fmtInt(perLoop) + ' м (предел ' + fmt(v.loopMax) + ' м)']);
+          rows.push(['Коллектор', 'на ' + loops + ' ' + plural(loops, 'выход', 'выхода', 'выходов')]);
+          if (coils != null) rows.push(['Бухты по ' + fmt(v.coil) + ' м', coils + ' шт']);
+          if (pos(v.clips)) rows.push(['Клипсы крепления', Math.ceil(pipe * v.clips) + ' шт']);
+          rows.push(['Ориентир теплоотдачи', '≈ ' + heat + ' Вт/м², всего ≈ ' + fmtInt(H * heat) + ' Вт']);
+          cost.push({ label: 'Труба', amount: Math.ceil(pipe), unit: 'м', priceId: 'pipe' });
+          if (pos(v.clips)) cost.push({ label: 'Клипсы', amount: Math.ceil(pipe * v.clips), unit: 'шт', priceId: 'clip' });
+        } else if (sel.type === 'cable') {
+          if (!pos(v.power) || !pos(v.cableW)) return null;
+          const watts = H * v.power;
+          const cable = watts / v.cableW;
+          const step = H / cable * 1000;
+          main = fmtInt(cable) + ' м кабеля · ' + fmtInt(watts) + ' Вт';
+          rows.push(['Мощность', fmt(v.power) + ' Вт/м² × ' + fmt(H) + ' м² = ' + fmtInt(watts) + ' Вт (' + fmt(watts / 1000) + ' кВт)']);
+          rows.push(['Длина кабеля', fmtInt(watts) + ' Вт ÷ ' + fmt(v.cableW) + ' Вт/м = ' + fmtInt(cable) + ' м']);
+          rows.push(['Шаг укладки', '≈ ' + fmtInt(step) + ' мм']);
+          if (pos(v.volt)) rows.push(['Ток', '≈ ' + fmt(watts / v.volt) + ' А при ' + fmt(v.volt) + ' В']);
+          cost.push({ label: 'Кабель', amount: Math.ceil(cable), unit: 'м', priceId: 'cable' });
+          if (step < 80) rows.push(['⚠ Проверьте', 'шаг меньше 80 мм — возьмите кабель мощнее']);
+        } else {
+          if (!pos(v.matW)) return null;
+          const watts = H * v.matW;
+          main = fmt(H) + ' м² мата · ' + fmtInt(watts) + ' Вт';
+          rows.push(['Мат', fmt(H) + ' м² по ' + fmt(v.matW) + ' Вт/м²']);
+          rows.push(['Мощность', fmtInt(watts) + ' Вт (' + fmt(watts / 1000) + ' кВт)']);
+          if (pos(v.volt)) rows.push(['Ток', '≈ ' + fmt(watts / v.volt) + ' А при ' + fmt(v.volt) + ' В']);
+          rows.push(['Терморегулятор', '1 шт на комнату, датчик в гофре между витками']);
+          cost.push({ label: 'Мат', amount: H, unit: 'м²', priceId: 'mat' });
+        }
+
+        cost.push({ label: 'Теплоизоляция', amount: Math.ceil(sh.area), unit: 'м²', priceId: 'insul' });
+        rows.push(['Теплоизоляция под пол', fmt(sh.area) + ' м²']);
+        if (sh.per && pos(v.damperRoll)) {
+          const rolls = Math.ceil(sh.per / v.damperRoll);
+          rows.push(['Демпферная лента', fmt(sh.per) + ' м по периметру → ' + rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов')]);
+          cost.push({ label: 'Демпферная лента', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'damper' });
+        }
+
+        let note = sel.layout === 'snail'
+          ? 'Улитка: труба идёт к центру и обратно, горячая подача чередуется с обраткой, поэтому пол греет ровнее. '
+          : 'Змейка: проще укладывать, но к дальней стене вода приходит остывшей. Её обычно пускают вдоль холодной стены. ';
+        if (sel.type === 'water') {
+          note += 'Контуры делают примерно одинаковой длины: иначе короткий заберёт весь поток, а длинный останется холодным. ';
+          note += 'Теплоотдача — ориентир для плитки при подаче 40–45 °C; под ламинатом и ковром она заметно ниже.';
+        } else {
+          note += 'Электрический пол нельзя укладывать под мебель без ножек: кабель перегреется. Терморегулятору нужна отдельная линия, а во влажных комнатах — УЗО.';
+        }
+        return { main: { label: 'Нужно на тёплый пол', value: main }, rows, note, cost };
+      },
+    },
+
   };
 
   /* ---------- Рендер ---------- */
