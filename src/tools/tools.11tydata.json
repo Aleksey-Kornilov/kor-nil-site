@@ -1,4 +1,10 @@
 {
   "layout": "layouts/base.njk",
-  "pageCrumbParent": { "href": "/tools/", "label": "Калькуляторы" }
+  "pageCrumbParent": {
+    "href": "/tools/",
+    "label": "Калькуляторы"
+  },
+  "eleventyComputed": {
+    "pageAppSchema": "{% if page.url != '/tools/' %}{\"@type\": \"WebApplication\", \"@id\": \"https://kor-nil.ru{{ page.url }}#app\", \"name\": \"{{ pageCrumb }}: онлайн-калькулятор\", \"url\": \"https://kor-nil.ru{{ page.url }}\", \"applicationCategory\": \"UtilitiesApplication\", \"operatingSystem\": \"Любой браузер\", \"browserRequirements\": \"Требуется JavaScript\", \"inLanguage\": \"ru\", \"isAccessibleForFree\": true, \"offers\": { \"@type\": \"Offer\", \"price\": \"0\", \"priceCurrency\": \"RUB\" }, \"author\": { \"@id\": \"https://kor-nil.ru#person\" }}{% endif %}"
+  }
 }

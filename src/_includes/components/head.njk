@@ -169,6 +169,7 @@
       "description": "{{ _desc }}",
       "isPartOf": { "@id": "{{ site.url }}#website" },
       "about": { "@id": "{{ site.url }}#person" },
+      "dateModified": "{{ page.date | date('iso') }}",
       "inLanguage": "{{ lang }}"
     }
     {%- if pageCrumb and not pageNoindex %},
@@ -202,6 +203,7 @@
       "isPartOf": { "@id": "{{ site.url }}/blog/#blog" }
     }
     {%- endif %}
+    {%- if pageAppSchema %},{{ pageAppSchema | safe }}{% endif %}
     {%- if pageSchema %},{{ pageSchema | safe }}{% endif %}
   ]
 }
