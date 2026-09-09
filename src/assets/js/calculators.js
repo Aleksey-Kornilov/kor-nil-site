@@ -490,6 +490,103 @@
       },
     },
 
+    /* --- Проценты: доля, прибавить/вычесть, разница, НДС, скидка, наценка --- */
+    percent: {
+      modeLabel: 'Что считаем',
+      modes: [
+        { id: 'of', label: 'Сколько процентов от числа', fields: [
+          { id: 'ofP', label: 'Процент', unit: '%', value: '15' },
+          { id: 'ofA', label: 'от числа', unit: '', value: '2500' },
+        ] },
+        { id: 'ratio', label: 'Число от числа в процентах', fields: [
+          { id: 'rA', label: 'Число', unit: '', value: '375' },
+          { id: 'rB', label: 'от числа', unit: '', value: '2500' },
+        ] },
+        { id: 'add', label: 'Прибавить или вычесть процент', fields: [
+          { id: 'adA', label: 'Число', unit: '', value: '2500' },
+          { id: 'adP', label: 'Процент', unit: '% (минус — вычесть)', value: '15' },
+        ] },
+        { id: 'diff', label: 'На сколько процентов отличаются', fields: [
+          { id: 'dA', label: 'Было', unit: '', value: '2500' },
+          { id: 'dB', label: 'Стало', unit: '', value: '2875' },
+        ] },
+        { id: 'vat', label: 'НДС', fields: [
+          { id: 'vA', label: 'Сумма', unit: '', value: '120000' },
+          { id: 'vRate', label: 'Ставка НДС', unit: '%', value: '20' },
+        ] },
+        { id: 'discount', label: 'Скидка или наценка', fields: [
+          { id: 'scA', label: 'Цена', unit: '', value: '4990' },
+          { id: 'scP', label: 'Скидка', unit: '%', value: '30' },
+        ] },
+      ],
+      selects: [{ id: 'vatMode', label: 'НДС считаем', default: 'add', choices: [
+        { id: 'add', label: 'Начислить сверху', hint: 'сумма без НДС → с НДС' },
+        { id: 'extract', label: 'Выделить из суммы', hint: 'сумма уже с НДС → сколько в ней налога' },
+      ] }],
+      groups(v, mode) { return { vat: mode === 'vat' }; },
+      compute(v, mode, sel) {
+        const num = (x) => x != null && Number.isFinite(x);
+        const f = (x) => fmt(x, 2);
+        if (mode === 'of') {
+          if (!num(v.ofP) || !num(v.ofA)) return null;
+          const r = v.ofA * v.ofP / 100;
+          return { main: { label: fmt(v.ofP) + '% от ' + fmt(v.ofA), value: f(r) }, rows: [
+            ['Формула', fmt(v.ofA) + ' × ' + fmt(v.ofP) + ' ÷ 100'],
+            ['Число плюс этот процент', f(v.ofA + r)],
+            ['Число минус этот процент', f(v.ofA - r)],
+          ], note: 'Процент от числа: умножаем число на процент и делим на сто.', cost: [] };
+        }
+        if (mode === 'ratio') {
+          if (!num(v.rA) || !pos(v.rB)) return null;
+          const r = v.rA / v.rB * 100;
+          return { main: { label: fmt(v.rA) + ' от ' + fmt(v.rB) + ' — это', value: f(r) + '%' }, rows: [
+            ['Формула', fmt(v.rA) + ' ÷ ' + fmt(v.rB) + ' × 100'],
+            ['Остаток до целого', f(100 - r) + '% = ' + f(v.rB - v.rA)],
+          ], note: 'Доля числа: делим одно на другое и умножаем на сто.', cost: [] };
+        }
+        if (mode === 'add') {
+          if (!num(v.adA) || !num(v.adP)) return null;
+          const r = v.adA * (1 + v.adP / 100);
+          return { main: { label: fmt(v.adA) + (v.adP < 0 ? ' минус ' : ' плюс ') + fmt(Math.abs(v.adP)) + '%', value: f(r) }, rows: [
+            ['Сам процент', f(v.adA * v.adP / 100)],
+            ['Формула', fmt(v.adA) + ' × (1 ' + (v.adP < 0 ? '−' : '+') + ' ' + fmt(Math.abs(v.adP)) + ' ÷ 100)'],
+          ], note: 'Чтобы вычесть процент, введите его со знаком минус.', cost: [] };
+        }
+        if (mode === 'diff') {
+          if (!pos(v.dA) || !num(v.dB)) return null;
+          const d = (v.dB - v.dA) / v.dA * 100;
+          return { main: { label: v.dB >= v.dA ? 'Рост' : 'Падение', value: f(Math.abs(d)) + '%' }, rows: [
+            ['Разница', f(v.dB - v.dA)],
+            ['Формула', '(' + fmt(v.dB) + ' − ' + fmt(v.dA) + ') ÷ ' + fmt(v.dA) + ' × 100'],
+            ['Обратно', 'чтобы вернуться с ' + fmt(v.dB) + ' к ' + fmt(v.dA) + ', нужно ' + (v.dB > v.dA ? 'снизить' : 'поднять') + ' на ' + f(Math.abs((v.dA - v.dB) / v.dB * 100)) + '%'],
+          ], note: 'Проценты роста и падения считаются от разных баз: рост на 25% и падение на 25% не возвращают к исходному числу.', cost: [] };
+        }
+        if (mode === 'vat') {
+          if (!num(v.vA) || !pos(v.vRate)) return null;
+          const k = v.vRate / 100;
+          if (sel.vatMode === 'add') {
+            const tax = v.vA * k;
+            return { main: { label: 'Сумма с НДС ' + fmt(v.vRate) + '%', value: f(v.vA + tax) }, rows: [
+              ['Без НДС', f(v.vA)], ['НДС', f(tax)],
+              ['Формула', fmt(v.vA) + ' × ' + fmt(v.vRate) + ' ÷ 100'],
+            ], note: 'Начисление сверху: налог считается от суммы без НДС.', cost: [] };
+          }
+          const tax = v.vA * k / (1 + k);
+          return { main: { label: 'НДС ' + fmt(v.vRate) + '% в сумме', value: f(tax) }, rows: [
+            ['С НДС', f(v.vA)], ['Без НДС', f(v.vA - tax)],
+            ['Формула', fmt(v.vA) + ' × ' + fmt(v.vRate) + ' ÷ (100 + ' + fmt(v.vRate) + ')'],
+          ], note: 'Выделение из суммы: делим на 120 и умножаем на 20 при ставке 20%. Просто вычесть 20% нельзя — получится меньше.', cost: [] };
+        }
+        if (!num(v.scA) || !num(v.scP)) return null;
+        const off = v.scA * v.scP / 100;
+        return { main: { label: 'Цена со скидкой ' + fmt(v.scP) + '%', value: f(v.scA - off) }, rows: [
+          ['Скидка в деньгах', f(off)],
+          ['Если это наценка', f(v.scA + off)],
+          ['Чтобы вернуть исходную цену', 'нужна наценка ' + f(off / (v.scA - off) * 100) + '%'],
+        ], note: 'После скидки 30% нужна наценка не 30, а больше: база стала меньше.', cost: [] };
+      },
+    },
+
     /* --- Пол: плитка, ламинат, линолеум по комнате (прямоугольник или свой план) --- */
     floor: {
       modeLabel: 'Форма помещения',
@@ -1516,7 +1613,7 @@
       def._sel = state.sel;
       const r = def.compute(v, state.mode, state.sel, extras);
       result.innerHTML = '';
-      costBox.hidden = !r || !!r.error;
+      costBox.hidden = !r || !!r.error || !(def.prices && def.prices.length);
       if (!r || r.error) {
         result.appendChild(h('p', { class: 'calc-empty' + (r && r.error ? ' calc-empty--error' : ''), text: r && r.error ? r.error : 'Заполните поля — результат появится сразу.' }));
         return;
