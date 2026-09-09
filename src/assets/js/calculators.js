@@ -437,7 +437,7 @@
         if (mode === 'rect') { if (pos(v.len) && pos(v.wid)) verts = [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]]; }
         else { const P = window.CalcPlan; if (P && extras.plan) { const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 }); if (g.valid) verts = g.verts; } }
         if (!verts) return false;
-        const dims = verts.length <= 8 ? verts.map((a, i) => { const b = verts[(i + 1) % verts.length]; return { from: [a[0], a[1], 0], to: [b[0], b[1], 0], label: (i + 1) + ': ' + fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 22 }; }) : [];
+        const dims = verts.length <= 8 ? verts.map((a, i) => { const b = verts[(i + 1) % verts.length]; return { from: [a[0], a[1], v.hei], to: [b[0], b[1], v.hei], label: (i + 1) + ': ' + fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: -18 }; }) : [];
         dims.push({ from: [verts[0][0], verts[0][1], 0], to: [verts[0][0], verts[0][1], v.hei], label: 'высота ' + fmt(v.hei) + ' м', offset: -28 });
         V.iso(box, [{ poly: verts, z: 0, dz: v.hei }], dims, { yaw, ground: true, caption: 'Коробка дома без кровли. Номера — стены на развёртке. Потяните, чтобы повернуть.' });
         return true;
@@ -533,7 +533,8 @@
         const net = v.len - openings;
         if (net <= 0) return null;
         const sections = Math.ceil(net / v.step - 1e-9);
-        const posts = sections + 1 + (pos(v.gate) ? 2 : 0) + (pos(v.wicket) ? 1 : 0);
+        // Ворота и калитка стоят подряд в начале: каждый проём добавляет один столб (общий столб делится)
+        const posts = sections + 1 + (pos(v.gate) ? 1 : 0) + (pos(v.wicket) ? 1 : 0);
         const postLen = v.hei + (v.postDepth || 1);
         const rows = v.lagRows == null ? 2 : v.lagRows;
         const lagPieces = Math.ceil(rows * net / 6 - 1e-9);
@@ -563,11 +564,11 @@
           unitLabel = { amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов') };
         }
         out.push(['Пролётов', sections + ' по ' + fmt(v.step) + ' м (полезная длина ' + fmt(net) + ' м)']);
-        out.push(['Столбы', posts + ' шт длиной ' + fmt(postLen) + ' м (' + fmt(v.postDepth || 1) + ' м в земле)' + (openings ? ', включая под ворота и калитку' : '')]);
+        out.push(['Столбы', posts + ' шт длиной ' + fmt(postLen) + ' м (' + fmt(v.postDepth || 1) + ' м в земле)' + (openings ? ', включая столбы ворот и калитки' : '')]);
         out.push(['Лаги', rows + ' ' + plural(rows, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м = ' + fmt(rows * net) + ' м → ' + lagPieces + ' шт по 6 м']);
         out.push(['Бетон под столбы', fmt(holes) + ' м³ (лунки ⌀20 см) ≈ ' + cementBags + ' ' + plural(cementBags, 'мешок', 'мешка', 'мешков') + ' цемента']);
         return { main, rows: out,
-          note: 'Полезная длина = длина забора минус ворота и калитка. Столбы: пролёты + 1, плюс два под ворота и один под калитку. Лаги считаются по полезной длине, профтруба по 6 м. Бетон — лунки диаметром 20 см на глубину столба в земле, бетон М200 с запасом 10%.',
+          note: 'Полезная длина = длина забора минус ворота и калитка. Столбы: пролёты + 1, плюс по одному на ворота и калитку (они стоят подряд и делят столб с соседним пролётом). Лаги считаются по полезной длине, профтруба по 6 м. Бетон — лунки диаметром 20 см на глубину столба в земле, бетон М200 с запасом 10%.',
           cost: [Object.assign({ label: mode === 'proflist' ? 'Профнастил' : mode === 'picket' ? 'Штакетник' : 'Сетка', priceId: 'unit' }, unitLabel),
             { label: 'Столбы', amount: posts, unit: plural(posts, 'столб', 'столба', 'столбов'), priceId: 'post' },
             { label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' }] };

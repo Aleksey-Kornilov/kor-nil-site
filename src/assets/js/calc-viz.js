@@ -204,7 +204,7 @@
     svg.appendChild(el('line', { x1: PAD - 10, y1: ground, x2: W - PAD + 10, y2: ground, stroke: '#5f9466', 'stroke-width': 2 }));
     // проёмы: ворота у начала, калитка сразу за ними
     let x = x0;
-    const seg = (w, cls, label) => { svg.appendChild(el('rect', { x, y: TOP, width: w * scale, height: hpx, class: cls })); svg.appendChild(el('text', { x: x + w * scale / 2, y: TOP + hpx / 2 + 4, class: 'viz-small', 'text-anchor': 'middle' }, label)); x += w * scale; };
+    const seg = (w, cls, label) => { svg.appendChild(el('rect', { x, y: TOP, width: w * scale, height: hpx, class: cls })); if (w * scale > 44) svg.appendChild(el('text', { x: x + w * scale / 2, y: TOP + hpx / 2 + 4, class: 'viz-small', 'text-anchor': 'middle' }, label)); x += w * scale; };
     if (gate > 0) seg(gate, 'viz-door', 'ворота ' + f1(gate));
     if (wicket > 0) seg(wicket, 'viz-door', 'калитка');
     const net = len - gate - wicket;
