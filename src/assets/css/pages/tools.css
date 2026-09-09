@@ -195,3 +195,36 @@
   .viz-caption { display: none; }
   .calc-result::after { content: 'kor-nil.ru/tools · ' attr(data-print-date); display: block; margin-top: 12px; font-size: 11px; color: #666; }
 }
+
+/* Предложение установить ЧатЯдро — с иконкой */
+.app-cta { display: grid; grid-template-columns: auto 1fr; gap: var(--space-4); align-items: start; }
+.app-cta-icon { border-radius: 16px; box-shadow: var(--shadow-md); }
+.app-cta-body h2 { margin-bottom: var(--space-2); }
+.app-cta-title { font-weight: 700; margin: 0 0 var(--space-1); }
+.app-cta-text { font-size: var(--fs-small); color: var(--color-text-muted); margin: 0 0 var(--space-3); }
+.app-cta--result { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.calc-topline { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.calc-topline-icon { border-radius: 6px; }
+.btn-app { gap: var(--space-3); }
+.btn-app-icon { border-radius: 7px; }
+
+/* Управление объёмной схемой */
+.calc-viz { position: relative; }
+.viz-controls { position: absolute; top: var(--space-2); right: var(--space-2); display: flex; gap: 4px; }
+.viz-controls button { width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--color-border-strong); background: var(--color-bg-elevated); color: var(--color-text); font-size: 1.1rem; line-height: 1; }
+.viz-controls button:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.calc-viz.viz-flat .viz-controls { display: none; }
+
+/* Обучение */
+.tour-help { font-size: var(--fs-small); color: var(--color-accent); padding: var(--space-1) 0; margin-bottom: var(--space-2); text-decoration: underline; text-underline-offset: 0.15em; }
+.tour-target { outline: 3px solid var(--color-accent); outline-offset: 6px; border-radius: var(--radius-md); animation: tour-pulse 1.4s ease-in-out infinite; }
+@keyframes tour-pulse { 0%, 100% { outline-color: var(--color-accent); } 50% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .tour-target { animation: none; } }
+.tour-card { margin: var(--space-4) 0; padding: var(--space-4) var(--space-5); border-radius: var(--radius-md); background: var(--color-accent); color: #fff; box-shadow: var(--shadow-lg); }
+[data-theme="dark"] .tour-card { color: #0e1621; }
+.tour-title { font-weight: 700; margin: 0 0 var(--space-1); }
+.tour-text { font-size: var(--fs-small); margin: 0 0 var(--space-3); opacity: 0.95; }
+.tour-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.tour-card .btn-primary { background: #fff; color: var(--color-accent); }
+.tour-card .btn-secondary { background: transparent; border-color: currentColor; color: inherit; }
+.tour-count { font-size: var(--fs-tiny); opacity: 0.8; margin-left: auto; }

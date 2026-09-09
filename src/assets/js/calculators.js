@@ -142,7 +142,7 @@
             { from: [0, W, 0], to: [L, W, 0], label: 'длина ' + fmt(L) + ' м', offset: 22 },
             { from: [L, 0, 0], to: [L, W, 0], label: 'ширина ' + fmt(W) + ' м', offset: -22 },
             { from: [0, 0, 0], to: [0, 0, t], label: 'толщина ' + fmt(v.thick) + ' см', offset: -22 },
-          ], { yaw, caption: 'Плита. Потяните, чтобы повернуть.' });
+          ], { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, caption: 'Плита. Потяните, чтобы повернуть.' });
           return true;
         }
         if (mode === 'strip') {
@@ -169,7 +169,7 @@
             { from: [L, 0, z0], to: [L, 0, 0], label: 'в земле ' + fmt(v.sDepth) + ' см', offset: 40 },
           ];
           if (a > 0) dims.push({ from: [0, 0, 0], to: [0, 0, a], label: 'цоколь ' + fmt(v.sAbove) + ' см', offset: -30 });
-          V.iso(box, boxes, dims, { yaw, ground: true, caption: 'Зелёное — уровень земли. Потяните, чтобы повернуть.' });
+          V.iso(box, boxes, dims, { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, ground: true, caption: 'Зелёное — уровень земли. Потяните, чтобы повернуть.' });
           return true;
         }
         if (mode === 'plan') {
@@ -188,7 +188,7 @@
           const e0 = g.edges[0];
           dims.push({ from: [e0.a[0], e0.a[1], -e0.depth], to: [e0.a[0], e0.a[1], 0], label: 'в земле ' + fmt(e0.depth * 100) + ' см', offset: 40 });
           if (g.above > 0) dims.push({ from: [e0.b[0], e0.b[1], 0], to: [e0.b[0], e0.b[1], g.above], label: 'цоколь ' + fmt(g.above * 100) + ' см', offset: -30 });
-          V.iso(box, P.prisms(g), dims, { yaw, ground: true, caption: 'Зелёное — уровень земли. Потяните, чтобы повернуть.' });
+          V.iso(box, P.prisms(g), dims, { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, ground: true, caption: 'Зелёное — уровень земли. Потяните, чтобы повернуть.' });
           return true;
         }
         if (mode === 'columns') {
@@ -200,7 +200,7 @@
           V.iso(box, boxes, [
             { from: [0, 0, 0], to: [0, 0, hgt], label: 'высота ' + fmt(hgt) + ' м', offset: -26 },
             { from: [0, s, hgt], to: [s, s, hgt], label: 'сечение ' + fmt(v.cSide) + ' см', offset: 18 },
-          ], { yaw, ground: true, caption: n + ' ' + plural(n, 'столб', 'столба', 'столбов') + '. Потяните, чтобы повернуть.' });
+          ], { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, ground: true, caption: n + ' ' + plural(n, 'столб', 'столба', 'столбов') + '. Потяните, чтобы повернуть.' });
           return true;
         }
         return false;
@@ -445,7 +445,7 @@
         if (!verts) return false;
         const dims = verts.length <= 8 ? verts.map((a, i) => { const b = verts[(i + 1) % verts.length]; return { from: [a[0], a[1], v.hei], to: [b[0], b[1], v.hei], label: (i + 1) + ': ' + fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: -18 }; }) : [];
         dims.push({ from: [verts[0][0], verts[0][1], 0], to: [verts[0][0], verts[0][1], v.hei], label: 'высота ' + fmt(v.hei) + ' м', offset: -28 });
-        V.iso(box, [{ poly: verts, z: 0, dz: v.hei }], dims, { yaw, ground: true, caption: 'Коробка дома без кровли. Номера — стены на развёртке. Потяните, чтобы повернуть.' });
+        V.iso(box, [{ poly: verts, z: 0, dz: v.hei }], dims, { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, ground: true, caption: 'Коробка дома без кровли. Номера — стены на развёртке. Потяните, чтобы повернуть.' });
         return true;
       },
       compute(v, mode, sel, extras) {
@@ -621,7 +621,7 @@
         });
         if (!prisms.length) return false;
         const dims = g.edges.length <= 8 ? g.edges.map((e, i) => ({ from: [e.a[0], e.a[1], 0], to: [e.b[0], e.b[1], 0], label: (i + 1) + ': ' + fmt(e.len) + ' м', offset: 22 })) : [];
-        V.iso(box, prisms, dims, { yaw, ground: true, caption: 'Забор по участку: разрывы — ворота и калитки. Потяните, чтобы повернуть.' });
+        V.iso(box, prisms, dims, { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, ground: true, caption: 'Забор по участку: разрывы — ворота и калитки. Потяните, чтобы повернуть.' });
         return true;
       },
       compute(v, mode, sel, extras) {
@@ -726,7 +726,7 @@
           { from: [0, v.wid, 0], to: [v.len, v.wid, 0], label: 'длина ' + fmt(v.len) + ' м', offset: 22 },
           { from: [v.len, 0, 0], to: [v.len, v.wid, 0], label: 'ширина ' + fmt(v.wid) + ' м', offset: -22 },
           { from: [0, 0, 0], to: [0, 0, t], label: 'слой ' + fmt(v.thick) + ' см', offset: -22 },
-        ], { yaw, caption: 'Слой засыпки. Потяните, чтобы повернуть.' });
+        ], { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, caption: 'Слой засыпки. Потяните, чтобы повернуть.' });
         return true;
       },
       compute(v, mode, sel) {
@@ -929,7 +929,7 @@
     const key = root.dataset.calc;
     const def = CALCS[key];
     if (!def) return;
-    const state = { mode: def.modes[0].id, sel: {}, values: {}, prices: {}, extras: { openings: [] }, yaw: -0.6 };
+    const state = { mode: def.modes[0].id, sel: {}, values: {}, prices: {}, extras: { openings: [] }, yaw: -0.6, pitch: 32 * Math.PI / 180, zoom: 1 };
     (def.selects || []).forEach((s) => { state.sel[s.id] = s.default; });
     const storageKey = (id) => 'kn_calc_price_' + key + '_' + id;
     (def.prices || []).forEach((p) => { try { state.prices[p.id] = localStorage.getItem(storageKey(p.id)) || ''; } catch (e) { state.prices[p.id] = ''; } });
@@ -1115,9 +1115,13 @@
       result.appendChild(actions);
       syncHash();
       // --- Приложение: здесь, когда польза уже получена ---
-      result.appendChild(h('div', { class: 'calc-app' }, [
-        h('p', { text: 'В приложении ЧатЯдро этот расчёт сохраняется, цены запоминаются, а результат уходит соседям или мастеру в чат одной кнопкой.' }),
-        h('a', { href: 'https://www.rustore.ru/catalog/app/ru.sntchat.app', target: '_blank', rel: 'noopener', class: 'btn btn-secondary btn-sm', text: 'Установить ЧатЯдро из RuStore →' }),
+      result.appendChild(h('div', { class: 'app-cta app-cta--result' }, [
+        h('img', { src: '/assets/images/chatyadro-icon-128.webp', width: '64', height: '64', alt: 'ЧатЯдро', class: 'app-cta-icon', loading: 'lazy' }),
+        h('div', { class: 'app-cta-body' }, [
+          h('p', { class: 'app-cta-title', text: 'Этот расчёт — в приложении ЧатЯдро' }),
+          h('p', { class: 'app-cta-text', text: 'Сохраняется, помнит ваши цены и уходит соседям или мастеру в чат одной кнопкой.' }),
+          h('a', { href: 'https://www.rustore.ru/catalog/app/ru.sntchat.app', target: '_blank', rel: 'noopener', class: 'btn btn-primary btn-sm', text: 'Установить из RuStore →' }),
+        ]),
       ]));
       renderCost(r);
       if (render.after) render.after();
@@ -1126,10 +1130,11 @@
     let lastViz = null;
     function drawViz() {
       if (!def.draw || !lastViz) { vizBox.hidden = true; return; }
-      const ok = def.draw(lastViz.v, state.mode, vizBox, state.yaw, lastViz.extras);
+      const ok = def.draw(lastViz.v, state.mode, vizBox, { yaw: state.yaw, pitch: state.pitch, zoom: state.zoom }, lastViz.extras);
       vizBox.hidden = !ok;
+      if (ok && !vizBox.querySelector('svg')) vizBox.hidden = true;
     }
-    if (window.CalcViz) window.CalcViz.rotatable(vizBox, () => state.yaw, (yaw) => { state.yaw = yaw; drawViz(); });
+    if (window.CalcViz) window.CalcViz.rotatable(vizBox, () => ({ yaw: state.yaw, pitch: state.pitch, zoom: state.zoom }), (view) => { state.yaw = view.yaw; state.pitch = view.pitch; state.zoom = view.zoom; drawViz(); syncHash(); });
 
     function costRows(r) {
       return r.cost.map((c) => {
@@ -1170,7 +1175,7 @@
 
     // Расчёт по ссылке: всё введённое лежит в #c=… — получатель открывает те же цифры и рисунок
     function encodeState() {
-      const obj = { c: key, m: state.mode, v: state.values, s: state.sel, y: Math.round(state.yaw * 100) / 100,
+      const obj = { c: key, m: state.mode, v: state.values, s: state.sel, y: Math.round(state.yaw * 100) / 100, p: Math.round(state.pitch * 100) / 100, z: Math.round(state.zoom * 100) / 100,
         x: { plan: state.extras.plan, room: state.extras.room, openings: state.extras.openings } };
       return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
@@ -1190,6 +1195,8 @@
       if (obj.v && typeof obj.v === 'object') state.values = obj.v;
       if (obj.s && typeof obj.s === 'object') Object.keys(obj.s).forEach((k2) => { if (state.sel[k2] !== undefined) state.sel[k2] = obj.s[k2]; });
       if (typeof obj.y === 'number') state.yaw = obj.y;
+      if (typeof obj.p === 'number') state.pitch = obj.p;
+      if (typeof obj.z === 'number') state.zoom = obj.z;
       if (obj.x) { if (obj.x.plan) state.extras.plan = obj.x.plan; if (obj.x.room) state.extras.room = obj.x.room; if (Array.isArray(obj.x.openings)) state.extras.openings = obj.x.openings; }
       return true;
     })();
@@ -1213,7 +1220,7 @@
     form.appendChild(costBox);
     root.innerHTML = '';
     if (!root.previousElementSibling || !root.previousElementSibling.classList.contains('calc-topline')) {
-      root.parentNode.insertBefore(h('p', { class: 'calc-topline', html: 'Тот же калькулятор есть в приложении <a href="/projects/chatyadro/">ЧатЯдро</a>: там расчёт сохраняется и уходит соседям в чат. ' + (restored ? '<strong>Открыт расчёт по ссылке.</strong>' : '') }), root);
+      root.parentNode.insertBefore(h('p', { class: 'calc-topline', html: '<img src="/assets/images/chatyadro-icon-64.webp" width="22" height="22" alt="" class="calc-topline-icon"> Тот же калькулятор есть в приложении <a href="/projects/chatyadro/">ЧатЯдро</a>: там расчёт сохраняется и уходит соседям в чат. ' + (restored ? '<strong>Открыт расчёт по ссылке.</strong>' : '') }), root);
     }
     root.appendChild(form);
     renderFields();

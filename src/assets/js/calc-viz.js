@@ -18,12 +18,12 @@
      dims:  [{ from:[x,y,z], to:[x,y,z], label }] — размерные линии.
      opts:  { yaw, ground: bool }
   */
-  const ELEV = 32 * Math.PI / 180;
-  function project(p, yaw) {
+  const DEFAULT_PITCH = 32 * Math.PI / 180;
+  function project(p, yaw, pitch) {
     const c = Math.cos(yaw), s = Math.sin(yaw);
     const x = p[0] * c - p[1] * s;
     const y = p[0] * s + p[1] * c;
-    return { sx: x, sy: y * Math.sin(ELEV) - p[2] * Math.cos(ELEV), depth: y * Math.cos(ELEV) + p[2] * Math.sin(ELEV) };
+    return { sx: x, sy: y * Math.sin(pitch) - p[2] * Math.cos(pitch), depth: y * Math.cos(pitch) + p[2] * Math.sin(pitch) };
   }
   // Призма: poly [[x,y],…] (против часовой), z — низ, dz — высота. Брусок — частный случай.
   function toPrism(b) {
@@ -54,7 +54,10 @@
   function iso(container, boxes, dims, opts) {
     opts = opts || {};
     const yaw = opts.yaw == null ? -0.6 : opts.yaw;
-    const pr = (p) => project(p, yaw);
+    const pitch = opts.pitch == null ? DEFAULT_PITCH : Math.max(0.12, Math.min(1.45, opts.pitch));
+    const zoom = opts.zoom == null ? 1 : Math.max(0.4, Math.min(4, opts.zoom));
+    const ELEV = pitch;
+    const pr = (p) => project(p, yaw, pitch);
 
     // Масштаб НЕ зависит от угла: берём радиус модели вокруг её центра, иначе при
     // вращении картинка «дышит» и кажется, что искажается.
@@ -65,7 +68,7 @@
     const rx = (Math.max(...xs) - Math.min(...xs)) / 2 + gm, ry = (Math.max(...ys) - Math.min(...ys)) / 2 + gm, rz = (Math.max(...zs) - Math.min(...zs)) / 2;
     const radiusXY = Math.hypot(rx, ry);
     const W = 640, H = 400, pad = 64;
-    const scale = Math.min((W - pad * 2) / (2 * radiusXY), (H - pad * 2) / (2 * (radiusXY * Math.sin(ELEV) + rz * Math.cos(ELEV))));
+    const scale = Math.min((W - pad * 2) / (2 * radiusXY), (H - pad * 2) / (2 * (radiusXY * 1 + rz * 1))) * zoom;
     const c0 = pr([cx, cy, cz]);
     const X = (q) => W / 2 + (q.sx - c0.sx) * scale;
     const Y = (q) => H / 2 + (q.sy - c0.sy) * scale;
@@ -114,19 +117,40 @@
       svg.appendChild(el('text', { x: (x1 + x2) / 2, y: (y1 + y2) / 2 - 6, class: 'viz-label', 'text-anchor': 'middle' }, d.label));
     });
     if (opts.caption) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
-    container.innerHTML = '';
-    container.appendChild(svg);
+    const old = container.querySelector('svg'); if (old) old.remove();
+    container.insertBefore(svg, container.firstChild);
+    container.classList.remove('viz-flat');
     return svg;
   }
 
-  // Поворот мышью/пальцем: горизонтальное движение меняет угол, вызывается redraw(yaw).
-  function rotatable(container, getYaw, redraw) {
-    let dragging = false, startX = 0, startYaw = 0;
-    container.style.touchAction = 'pan-y';
-    container.addEventListener('pointerdown', (e) => { dragging = true; startX = e.clientX; startYaw = getYaw(); container.setPointerCapture(e.pointerId); });
-    container.addEventListener('pointermove', (e) => { if (!dragging) return; redraw(startYaw + (e.clientX - startX) / 120); });
-    const stop = () => { dragging = false; };
+  // Вращение и масштаб: тянем — поворот (влево-вправо) и наклон (вверх-вниз), колесо или щипок — масштаб,
+  // кнопки +/−/сброс. get() → {yaw, pitch, zoom}, set(view) → перерисовать.
+  function rotatable(container, get, set) {
+    let drag = null; const pointers = new Map(); let pinch = null;
+    container.style.touchAction = 'none';
+    const bar = document.createElement('div'); bar.className = 'viz-controls';
+    const mk = (txt, title, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; b.title = title; b.setAttribute('aria-label', title); b.addEventListener('click', (e) => { e.stopPropagation(); fn(); }); bar.appendChild(b); return b; };
+    mk('+', 'Увеличить', () => { const v = get(); set({ yaw: v.yaw, pitch: v.pitch, zoom: v.zoom * 1.25 }); });
+    mk('−', 'Уменьшить', () => { const v = get(); set({ yaw: v.yaw, pitch: v.pitch, zoom: v.zoom / 1.25 }); });
+    mk('⟲', 'Сбросить вид', () => set({ yaw: -0.6, pitch: DEFAULT_PITCH, zoom: 1 }));
+    container.appendChild(bar);
+    container.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.viz-controls')) return;
+      pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      container.setPointerCapture(e.pointerId);
+      if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), zoom: get().zoom }; drag = null; }
+      else { const v = get(); drag = { x: e.clientX, y: e.clientY, yaw: v.yaw, pitch: v.pitch }; }
+    });
+    container.addEventListener('pointermove', (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pinch && pointers.size === 2) { const [a, b] = [...pointers.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); set(Object.assign({}, get(), { zoom: pinch.zoom * d / pinch.d })); return; }
+      if (!drag) return;
+      set({ yaw: drag.yaw + (e.clientX - drag.x) / 120, pitch: drag.pitch + (e.clientY - drag.y) / 160, zoom: get().zoom });
+    });
+    const stop = (e) => { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) drag = null; };
     container.addEventListener('pointerup', stop); container.addEventListener('pointercancel', stop);
+    container.addEventListener('wheel', (e) => { e.preventDefault(); const v = get(); set({ yaw: v.yaw, pitch: v.pitch, zoom: v.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1) }); }, { passive: false });
   }
 
   /* ---------- Стены под покраску (развёртка) ----------
@@ -161,7 +185,8 @@
     svg.appendChild(el('text', { x: pad - 6, y: top + hpx / 2, class: 'viz-label', 'text-anchor': 'end', transform: `rotate(-90 ${pad - 6} ${top + hpx / 2})` }, `${f1(height)} м`));
     if (placed < items.length) svg.appendChild(el('text', { x: W / 2, y: H - 8, class: 'viz-caption', 'text-anchor': 'middle' }, `Не поместилось на схеме: ${items.length - placed} проём(а). В расчёте учтены все.`));
     else if (opts && opts.caption) svg.appendChild(el('text', { x: W / 2, y: H - 8, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
-    container.innerHTML = ''; container.appendChild(svg);
+    const old = container.querySelector('svg'); if (old) old.remove(); container.insertBefore(svg, container.firstChild);
+    container.classList.add('viz-flat');
   }
 
   /* ---------- Плоская фигура (участок, потолок) ----------
@@ -191,7 +216,8 @@
     });
     if (opts && opts.center) svg.appendChild(el('text', { x: W / 2, y: H / 2 + 5, class: 'viz-big', 'text-anchor': 'middle' }, opts.center));
     if (opts && opts.caption) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
-    container.innerHTML = ''; container.appendChild(svg);
+    const old = container.querySelector('svg'); if (old) old.remove(); container.insertBefore(svg, container.firstChild);
+    container.classList.add('viz-flat');
   }
 
   /* ---------- Забор: вид сбоку со столбами, воротами и калиткой ---------- */
@@ -218,7 +244,8 @@
     posts.forEach((p) => svg.appendChild(el('rect', { x: p - 3, y: TOP - 6, width: 6, height: hpx + 6 + 14, fill: '#4b5563' })));
     svg.appendChild(el('text', { x: x0 - 10, y: TOP + hpx / 2, class: 'viz-label', 'text-anchor': 'end', transform: `rotate(-90 ${x0 - 10} ${TOP + hpx / 2})` }, f1(H) + ' м'));
     svg.appendChild(el('text', { x: W / 2, y: HH - 8, class: 'viz-caption', 'text-anchor': 'middle' }, `Длина ${f1(len)} м · пролётов ${n} · столбов ${posts.length}`));
-    container.innerHTML = ''; container.appendChild(svg);
+    const old = container.querySelector('svg'); if (old) old.remove(); container.insertBefore(svg, container.firstChild);
+    container.classList.add('viz-flat');
   }
 
   window.CalcViz = { iso, rotatable, walls, shape, fence };
