@@ -10,9 +10,11 @@
 /* Форма калькулятора */
 .calc { max-width: 720px; }
 .calc-form { display: grid; gap: var(--space-5); padding: var(--space-6); }
+/* Дети сеток не могут быть уже своего min-content по умолчанию — на телефоне это распирало форму */
+.calc-form > *, .calc-fields > *, .calc-field > *, .calc-input > *, .plan > *, .room > * { min-width: 0; }
 .calc-form, .calc-result { border-radius: var(--radius-lg); }
 
-.calc-chips { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.calc-chips { border: 0; padding: 0; margin: 0; min-inline-size: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); } /* fieldset по умолчанию min-content — на телефоне распирал форму */
 .calc-chips legend { font-size: var(--fs-small); font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--space-2); }
 .calc-chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .calc-chip label {
@@ -45,7 +47,7 @@
   font-size: 1.0625rem; /* ≥16px — iOS не зумит поле */
 }
 .calc-input input:focus { outline: 2px solid var(--color-accent); outline-offset: 1px; border-color: transparent; }
-.calc-unit { font-size: var(--fs-small); color: var(--color-text-subtle); white-space: nowrap; max-width: 45%; }
+.calc-unit { font-size: var(--fs-small); color: var(--color-text-subtle); max-width: 45%; line-height: 1.2; }
 
 .calc-presets { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .calc-presets:empty { display: none; }
@@ -155,3 +157,19 @@
 .calc-opening.is-selected { outline: 2px solid var(--color-accent); outline-offset: 4px; border-radius: var(--radius-sm); }
 .calc-opening-del--text { width: auto; padding-inline: var(--space-3); font-size: var(--fs-small); }
 .plan-inner.is-selected { stroke: var(--color-accent); }
+
+/* Телефон: подписи на схемах крупнее (SVG сжимается в ~2 раза), ручки под палец */
+@media (max-width: 560px) {
+  .calc-form { padding: var(--space-4); }
+  .viz-label { font-size: 19px; }
+  .viz-small { font-size: 15px; }
+  .viz-caption { font-size: 16px; }
+  .viz-big { font-size: 30px; }
+  .plan-handle { r: 17; }
+  .plan-handle--inner { r: 14; }
+  .plan-edge { stroke-width: 26; }
+  .calc-opening-f input { width: 72px; }
+  .calc-rows { grid-template-columns: 1fr; gap: 2px var(--space-3); }
+  .calc-rows dd { text-align: left; margin-bottom: var(--space-2); }
+  .calc-main-value { font-size: 1.5rem; }
+}

@@ -134,6 +134,9 @@ h3 { font-size: var(--fs-h3); }
   text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
 }
 
+/* hidden должен побеждать любой display (flex/grid у контейнеров) */
+[hidden] { display: none !important; }
+
 /* Утилиты доступности */
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
