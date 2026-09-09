@@ -57,8 +57,8 @@
   background: var(--color-accent-subtle);
 }
 
-/* Мобильное меню */
-@media (max-width: 720px) {
+/* Мобильное меню (до 900px: семь пунктов в строку не помещаются) */
+@media (max-width: 900px) {
   .nav-toggle { display: block; order: 2; margin-left: auto; }
   .nav-menu {
     position: fixed;

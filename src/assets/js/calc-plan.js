@@ -112,6 +112,14 @@
     L: { label: 'Г-образная', make: () => [[0, 0], [6, 0], [6, 2.5], [3, 2.5], [3, 5], [0, 5]] },
     corridor: { label: 'Коридор', make: () => [[0, 0], [8, 0], [8, 1.5], [0, 1.5]] },
   };
+  // Заготовки участка (сотки): 6 соток 20×30, Г-образный, пятиугольник, трапеция
+  const PLOT_PRESETS = {
+    rect: { label: 'Прямоугольник 20×30', make: () => [[0, 0], [20, 0], [20, 30], [0, 30]] },
+    square: { label: 'Квадрат 25×25', make: () => [[0, 0], [25, 0], [25, 25], [0, 25]] },
+    L: { label: 'Г-образный', make: () => [[0, 0], [30, 0], [30, 15], [15, 15], [15, 30], [0, 30]] },
+    trap: { label: 'Трапеция', make: () => [[0, 0], [24, 0], [20, 30], [4, 30]] },
+    pent: { label: 'Пятиугольник', make: () => [[0, 0], [22, 0], [26, 18], [11, 32], [-4, 18]] },
+  };
   function regular(n, r) { const p = []; for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / n; p.push([snap(r + r * Math.cos(a)), snap(r + r * Math.sin(a))]); } return p; }
 
   /* ---------- Редактор ---------- */
@@ -277,5 +285,5 @@
     return { redraw };
   }
 
-  window.CalcPlan = { geometry, prisms, editor, PRESETS, ROOM_PRESETS };
+  window.CalcPlan = { geometry, prisms, editor, PRESETS, ROOM_PRESETS, PLOT_PRESETS };
 })();

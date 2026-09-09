@@ -54,6 +54,8 @@
   }
 
   const pos = (v) => v != null && v > 0;
+  // Текущий тип забора для рисунка (draw не получает sel): сохраняется движком в def._sel
+  const state_type = (def) => (def._sel && def._sel.type) || 'proflist';
 
   /* ---------- Описания калькуляторов ---------- */
 
@@ -488,95 +490,190 @@
       },
     },
 
-    /* --- Забор --- */
+    /* --- Забор: по длине или по плану участка; типы забора и ворот --- */
     fence: {
-      modeLabel: 'Тип забора',
+      modeLabel: 'Как задаём забор',
+      finishes: { fence: 'Забор', none: 'Без забора (сосед, дом)' },
       modes: [
-        { id: 'proflist', label: 'Профнастил', fields: [
+        { id: 'plan', label: 'По плану участка', room: true, plan: { simple: true, presetsKey: 'PLOT_PRESETS' }, fields: [
+          { id: 'hei', label: 'Высота забора', unit: 'м', value: '2' },
+          { id: 'step', label: 'Шаг столбов', unit: 'м', value: '2.5' },
+        ] },
+        { id: 'line', label: 'Просто по длине', fields: [
           { id: 'len', label: 'Длина забора', unit: 'м', value: '40' },
-          { id: 'hei', label: 'Высота', unit: 'м', value: '2' },
+          { id: 'hei', label: 'Высота забора', unit: 'м', value: '2' },
           { id: 'step', label: 'Шаг столбов', unit: 'м', value: '2.5' },
           { id: 'gate', label: 'Ворота', unit: 'м, необязательно', value: '3' },
           { id: 'wicket', label: 'Калитка', unit: 'м, необязательно', value: '1' },
-          { id: 'sheetW', label: 'Рабочая ширина листа', unit: 'м', value: '1.15' },
         ] },
-        { id: 'picket', label: 'Штакетник', fields: [
-          { id: 'len', label: 'Длина забора', unit: 'м', value: '40' },
-          { id: 'hei', label: 'Высота', unit: 'м', value: '1.8' },
-          { id: 'step', label: 'Шаг столбов', unit: 'м', value: '2.5' },
-          { id: 'gate', label: 'Ворота', unit: 'м, необязательно', value: '3' },
-          { id: 'wicket', label: 'Калитка', unit: 'м, необязательно', value: '1' },
-          { id: 'plankW', label: 'Ширина штакетины', unit: 'м', value: '0.1' },
-          { id: 'gap', label: 'Зазор между штакетинами', unit: 'м', value: '0.05' },
+      ],
+      selects: [
+        { id: 'type', label: 'Из чего забор', default: 'proflist', choices: [
+          { id: 'proflist', label: 'Профнастил', hint: 'листы по рабочей ширине, лаги, саморезы' },
+          { id: 'picket', label: 'Штакетник', hint: 'односторонний: штакетины с зазором' },
+          { id: 'picket2', label: 'Штакетник шахматный', hint: 'с двух сторон вразбежку — штакетин почти вдвое больше, зато просветов нет' },
+          { id: 'chainlink', label: 'Сетка-рабица', hint: 'рулоны по длине' },
+          { id: 'block', label: 'Блоки / кирпич', hint: 'кладка: штук на м² и раствор' },
         ] },
-        { id: 'chainlink', label: 'Сетка-рабица', fields: [
-          { id: 'len', label: 'Длина забора', unit: 'м', value: '40' },
-          { id: 'hei', label: 'Высота', unit: 'м', value: '1.5' },
-          { id: 'step', label: 'Шаг столбов', unit: 'м', value: '2.5' },
-          { id: 'gate', label: 'Ворота', unit: 'м, необязательно', value: '' },
-          { id: 'wicket', label: 'Калитка', unit: 'м, необязательно', value: '1' },
-          { id: 'rollL', label: 'Длина рулона сетки', unit: 'м', value: '10' },
+        { id: 'gateType', label: 'Ворота', default: 'swing', choices: [
+          { id: 'swing', label: 'Распашные', hint: 'две створки, два столба' },
+          { id: 'sliding', label: 'Откатные', hint: 'нужен фундамент под ролики и свободное место вдоль забора ≈ 1,5 ширины ворот' },
+          { id: 'lift', label: 'Подъёмные', hint: 'секционные/подъёмно-поворотные, обычно в гараж; нужен проём с перемычкой' },
         ] },
       ],
       common: [
+        { id: 'sheetW', label: 'Рабочая ширина листа', unit: 'м', value: '1.15', group: 'proflist' },
+        { id: 'plankW', label: 'Ширина штакетины', unit: 'м', value: '0.1', group: 'picket' },
+        { id: 'gap', label: 'Зазор между штакетинами', unit: 'м', value: '0.05', group: 'picket' },
+        { id: 'plankW2', label: 'Ширина штакетины', unit: 'м', value: '0.1', group: 'picket2' },
+        { id: 'gap2', label: 'Шаг на одной стороне', unit: 'м (между соседними на одной стороне)', value: '0.1', group: 'picket2' },
+        { id: 'rollL', label: 'Длина рулона сетки', unit: 'м', value: '10', group: 'chainlink' },
+        { id: 'perM2', label: 'Блоков / кирпичей на м²', unit: 'шт (блок 390×190 ≈ 12,5; кирпич в полкирпича ≈ 51)', value: '12.5', group: 'block' },
+        { id: 'mortar', label: 'Раствор', unit: 'кг/м² кладки', value: '30', group: 'block' },
         { id: 'postDepth', label: 'Столб в земле', unit: 'м', value: '1' },
-        { id: 'lagRows', label: 'Рядов лаг (поперечин)', unit: 'шт', value: '2' },
+        { id: 'lagRows', label: 'Рядов лаг (поперечин)', unit: 'шт', value: '2', group: 'lags' },
       ],
+      presets: [{ label: 'Кладка', fieldId: 'perM2', unit: 'шт/м²', group: 'block', items: [['Блок 390×190', '12.5'], ['Кирпич в полкирпича', '51'], ['Кирпич в кирпич', '102']] }],
       prices: [
-        { id: 'unit', label: 'Лист / штакетина / рулон', unit: '₽ за штуку' },
+        { id: 'unit', label: 'Лист / штакетина / рулон / блок', unit: '₽ за штуку' },
         { id: 'post', label: 'Столб', unit: '₽ за штуку' },
-        { id: 'lag', label: 'Лага 6 м', unit: '₽ за штуку' },
+        { id: 'lag', label: 'Лага 6 м', unit: '₽ за штуку', group: 'lags' },
       ],
-      draw(v, mode, box) {
-        const V = window.CalcViz; if (!V || !(pos(v.len) && pos(v.hei) && pos(v.step))) return false;
-        V.fence(box, v.len, v.hei, v.step, v.gate || 0, v.wicket || 0, mode);
+      roomOpts: {
+        finishes: { fence: 'Забор', none: 'Без забора (сосед, дом)' }, defaultFinish: 'fence', fullHeight: true, wallWord: 'Сторона',
+        kindLabels: { gate: 'Ворота', wicket: 'Калитка' },
+        openingPresets: [{ kind: 'gate', label: '+ ворота', w: 3, h: 2, y: 0 }, { kind: 'gate', label: '+ ворота 4 м', w: 4, h: 2, y: 0 }, { kind: 'wicket', label: '+ калитка', w: 1, h: 2, y: 0 }],
+        openingLabel: (o) => (o.kind === 'wicket' ? 'калитка ' : 'ворота ') + String(o.w).replace('.', ',') + ' м',
+        openingsTitle: 'Ворота и калитки на этой стороне (нажмите на них в развёртке, чтобы найти):',
+        hint: 'Нажмите на сторону, чтобы включить или выключить забор на ней. Ворота и калитки тяните по стороне, можно перетащить на соседнюю.',
+        wallTitle: (i, w) => 'Сторона ' + (i + 1) + ': ' + String(Math.round(w.len * 100) / 100).replace('.', ',') + ' м' + (w.count ? ', проёмов ' + w.count : ''),
+      },
+      lens(v, mode, extras) {
+        if (mode !== 'plan') return null;
+        const P = window.CalcPlan; if (!P || !extras.plan) return null;
+        const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+        return g.valid ? g.edges.map((e) => e.len) : null;
+      },
+      groups(v, mode, extras, sel) {
+        const t = sel.type;
+        return { proflist: t === 'proflist', picket: t === 'picket', picket2: t === 'picket2', chainlink: t === 'chainlink', block: t === 'block', lags: t !== 'block' && t !== 'chainlink' };
+      },
+      // Сводка по забору: полезная длина, пролёты, столбы, проёмы — для обоих режимов
+      summary(v, mode, sel, extras) {
+        if (!(pos(v.hei) && pos(v.step))) return null;
+        if (mode === 'line') {
+          if (!pos(v.len)) return null;
+          const gate = v.gate || 0, wicket = v.wicket || 0, net = v.len - gate - wicket;
+          if (net <= 0) return { error: 'Ворота и калитка длиннее самого забора — проверьте длины.' };
+          const sections = Math.ceil(net / v.step - 1e-9);
+          return { net, sections, posts: sections + 1 + (gate > 0 ? 1 : 0) + (wicket > 0 ? 1 : 0), gates: gate > 0 ? 1 : 0, wickets: wicket > 0 ? 1 : 0, gateLen: gate, sides: null, corners: 0 };
+        }
+        const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+        if (!lens && extras.plan) return { error: 'Контур участка пересекает сам себя — поправьте углы на плане.' };
+        if (!R || !extras.room || !lens) return null;
+        const m = R.measure(extras.room, lens, v.hei, this.finishes, 'fence', true);
+        const sides = m.walls.filter((w) => w.finish === 'fence');
+        if (!sides.length) return { error: 'На всех сторонах выключен забор — включите хотя бы одну.' };
+        let net = 0, sections = 0, posts = 0, gates = 0, wickets = 0, gateLen = 0;
+        sides.forEach((w) => {
+          const sec = Math.ceil(w.netLen / v.step - 1e-9);
+          net += w.netLen; sections += sec; posts += sec + 1 + w.ops.length;
+          w.ops.forEach((o) => { if (o.kind === 'wicket') wickets++; else { gates++; gateLen += o.w; } });
+        });
+        // Соседние огороженные стороны делят угловой столб
+        const n = m.walls.length; let shared = 0;
+        for (let i = 0; i < n; i++) { const a = m.walls[i], b = m.walls[(i + 1) % n]; if (a.finish === 'fence' && b.finish === 'fence') shared++; }
+        posts -= shared;
+        return { net, sections, posts, gates, wickets, gateLen, sides, corners: shared };
+      },
+      draw(v, mode, box, yaw, extras) {
+        const V = window.CalcViz; if (!V) return false;
+        if (mode === 'line') {
+          if (!(pos(v.len) && pos(v.hei) && pos(v.step))) return false;
+          V.fence(box, v.len, v.hei, v.step, v.gate || 0, v.wicket || 0, state_type(this));
+          return true;
+        }
+        const P = window.CalcPlan, R = window.CalcRoom; if (!P || !R || !extras.plan || !extras.room || !pos(v.hei)) return false;
+        const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 }); if (!g.valid) return false;
+        const m = R.measure(extras.room, g.edges.map((e) => e.len), v.hei, this.finishes, 'fence', true);
+        // Забор в объёме: тонкие призмы по каждой стороне, с разрывами под ворота и калитки
+        const prisms = [];
+        g.edges.forEach((e, i) => {
+          const w = m.walls[i]; if (w.finish !== 'fence') return;
+          const dx = (e.b[0] - e.a[0]) / e.len, dy = (e.b[1] - e.a[1]) / e.len, nx = -dy * 0.06, ny = dx * 0.06;
+          const cuts = w.ops.map((o) => [o.x, o.x + o.w]).sort((p, q) => p[0] - q[0]);
+          let pos0 = 0; const segs = [];
+          cuts.forEach(([c0, c1]) => { if (c0 > pos0) segs.push([pos0, c0]); pos0 = Math.max(pos0, c1); });
+          if (pos0 < e.len) segs.push([pos0, e.len]);
+          segs.forEach(([s0, s1]) => {
+            const a = [e.a[0] + dx * s0, e.a[1] + dy * s0], b = [e.a[0] + dx * s1, e.a[1] + dy * s1];
+            prisms.push({ poly: [[a[0] - nx, a[1] - ny], [b[0] - nx, b[1] - ny], [b[0] + nx, b[1] + ny], [a[0] + nx, a[1] + ny]], z: 0, dz: v.hei });
+          });
+        });
+        if (!prisms.length) return false;
+        const dims = g.edges.length <= 8 ? g.edges.map((e, i) => ({ from: [e.a[0], e.a[1], 0], to: [e.b[0], e.b[1], 0], label: (i + 1) + ': ' + fmt(e.len) + ' м', offset: 22 })) : [];
+        V.iso(box, prisms, dims, { yaw, ground: true, caption: 'Забор по участку: разрывы — ворота и калитки. Потяните, чтобы повернуть.' });
         return true;
       },
-      compute(v, mode) {
-        if (!(pos(v.len) && pos(v.hei) && pos(v.step))) return null;
-        const openings = (v.gate || 0) + (v.wicket || 0);
-        const net = v.len - openings;
-        if (net <= 0) return { error: 'Ворота и калитка длиннее самого забора — проверьте длины.' };
-        const sections = Math.ceil(net / v.step - 1e-9);
-        // Ворота и калитка стоят подряд в начале: каждый проём добавляет один столб (общий столб делится)
-        const posts = sections + 1 + (pos(v.gate) ? 1 : 0) + (pos(v.wicket) ? 1 : 0);
+      compute(v, mode, sel, extras) {
+        const sm = this.summary(v, mode, sel, extras);
+        if (!sm) return null; if (sm.error) return sm;
+        const { net, sections, posts, gates, wickets, gateLen } = sm;
+        const rows = [], cost = []; let main, unitCost = null;
         const postLen = v.hei + (v.postDepth || 1);
-        const rows = v.lagRows == null ? 2 : v.lagRows;
-        const lagPieces = Math.ceil(rows * net / 6 - 1e-9);
         const holes = posts * Math.PI * 0.1 * 0.1 * (v.postDepth || 1);
         const cementBags = Math.ceil(holes * 1.1 * 286 / 50);
-        const out = [];
-        let main, unitLabel;
-        if (mode === 'proflist') {
+        const P = (n, a, b, c) => n + ' ' + plural(n, a, b, c);
+        const t = sel.type;
+        if (t === 'proflist') {
           if (!pos(v.sheetW)) return null;
           const sheets = Math.ceil(net / v.sheetW - 1e-9);
-          main = { label: 'Нужно', value: sheets + ' ' + plural(sheets, 'лист', 'листа', 'листов') + ' · ' + posts + ' ' + plural(posts, 'столб', 'столба', 'столбов') };
-          out.push(['Листы профнастила', sheets + ' шт высотой ' + fmt(v.hei) + ' м (по ' + fmt(v.sheetW) + ' м рабочей ширины)']);
-          out.push(['Саморезы', '≈ ' + sheets * 8 + ' шт (по 8 на лист)']);
-          unitLabel = { amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов') };
-        } else if (mode === 'picket') {
-          if (!pos(v.plankW)) return null;
-          const planks = Math.ceil(net / (v.plankW + (v.gap || 0)) - 1e-9);
-          main = { label: 'Нужно', value: planks + ' ' + plural(planks, 'штакетина', 'штакетины', 'штакетин') + ' · ' + posts + ' ' + plural(posts, 'столб', 'столба', 'столбов') };
-          out.push(['Штакетины', planks + ' шт × ' + fmt(v.hei) + ' м, шаг ' + fmt(v.plankW + (v.gap || 0)) + ' м']);
-          out.push(['Саморезы', '≈ ' + planks * rows * 2 + ' шт (по 2 на ряд лаг)']);
-          unitLabel = { amount: planks, unit: plural(planks, 'штакетина', 'штакетины', 'штакетин') };
-        } else {
+          main = P(sheets, 'лист', 'листа', 'листов') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
+          rows.push(['Листы профнастила', sheets + ' шт высотой ' + fmt(v.hei) + ' м (рабочая ширина ' + fmt(v.sheetW) + ' м)']);
+          rows.push(['Саморезы', '≈ ' + sheets * 8 + ' шт (по 8 на лист)']);
+          unitCost = { label: 'Профнастил', amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов') };
+        } else if (t === 'picket' || t === 'picket2') {
+          const pw = t === 'picket' ? v.plankW : v.plankW2, gp = t === 'picket' ? (v.gap || 0) : (v.gap2 || 0);
+          if (!pos(pw)) return null;
+          const planks = Math.ceil(net / (pw + gp) - 1e-9) * (t === 'picket2' ? 2 : 1);
+          main = P(planks, 'штакетина', 'штакетины', 'штакетин') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
+          rows.push(['Штакетины', planks + ' шт × ' + fmt(v.hei) + ' м' + (t === 'picket2' ? ' (шахматка: с двух сторон вразбежку)' : ', шаг ' + fmt(pw + gp) + ' м')]);
+          rows.push(['Саморезы', '≈ ' + planks * (v.lagRows || 2) * 2 + ' шт (по 2 на ряд лаг)']);
+          unitCost = { label: 'Штакетник', amount: planks, unit: plural(planks, 'штакетина', 'штакетины', 'штакетин') };
+        } else if (t === 'chainlink') {
           if (!pos(v.rollL)) return null;
           const rolls = Math.ceil(net / v.rollL - 1e-9);
-          main = { label: 'Нужно', value: rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' сетки · ' + posts + ' ' + plural(posts, 'столб', 'столба', 'столбов') };
-          out.push(['Сетка-рабица', rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.rollL) + ' м, высота ' + fmt(v.hei) + ' м']);
-          unitLabel = { amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов') };
+          main = P(rolls, 'рулон', 'рулона', 'рулонов') + ' сетки · ' + P(posts, 'столб', 'столба', 'столбов');
+          rows.push(['Сетка-рабица', rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.rollL) + ' м, высота ' + fmt(v.hei) + ' м']);
+          unitCost = { label: 'Сетка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов') };
+        } else {
+          if (!pos(v.perM2)) return null;
+          const area = net * v.hei, blocks = Math.ceil(area * v.perM2 * 1.05), mortarKg = area * (v.mortar || 0), bags = Math.ceil(mortarKg / 25);
+          main = P(blocks, 'блок', 'блока', 'блоков') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
+          rows.push(['Кладка', fmt(area) + ' м² × ' + fmt(v.perM2) + ' шт/м² + 5% бой = ' + blocks + ' шт']);
+          if (mortarKg > 0) rows.push(['Раствор', fmtInt(mortarKg) + ' кг ≈ ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по 25 кг']);
+          unitCost = { label: 'Блоки / кирпич', amount: blocks, unit: 'шт' };
         }
-        out.push(['Пролётов', sections + ' по ' + fmt(v.step) + ' м (полезная длина ' + fmt(net) + ' м)']);
-        out.push(['Столбы', posts + ' шт длиной ' + fmt(postLen) + ' м (' + fmt(v.postDepth || 1) + ' м в земле)' + (openings ? ', включая столбы ворот и калитки' : '')]);
-        out.push(['Лаги', rows + ' ' + plural(rows, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м = ' + fmt(rows * net) + ' м → ' + lagPieces + ' шт по 6 м']);
-        out.push(['Бетон под столбы', fmt(holes) + ' м³ (лунки ⌀20 см) ≈ ' + cementBags + ' ' + plural(cementBags, 'мешок', 'мешка', 'мешков') + ' цемента']);
-        return { main, rows: out,
-          note: 'Полезная длина = длина забора минус ворота и калитка. Столбы: пролёты + 1, плюс по одному на ворота и калитку (они стоят подряд и делят столб с соседним пролётом). Лаги считаются по полезной длине, профтруба по 6 м. Бетон — лунки диаметром 20 см на глубину столба в земле, бетон М200 с запасом 10%.',
-          cost: [Object.assign({ label: mode === 'proflist' ? 'Профнастил' : mode === 'picket' ? 'Штакетник' : 'Сетка', priceId: 'unit' }, unitLabel),
-            { label: 'Столбы', amount: posts, unit: plural(posts, 'столб', 'столба', 'столбов'), priceId: 'post' },
-            { label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' }] };
+        rows.push(['Пролётов', sections + ' по ' + fmt(v.step) + ' м (полезная длина ' + fmt(net) + ' м)']);
+        rows.push(['Столбы', posts + ' шт длиной ' + fmt(postLen) + ' м (' + fmt(v.postDepth || 1) + ' м в земле)' + (sm.corners ? ', угловые общие' : '')]);
+        if (gates || wickets) {
+          const gt = { swing: 'распашные', sliding: 'откатные', lift: 'подъёмные' }[sel.gateType];
+          let note = gates ? P(gates, 'ворота', 'ворот', 'ворот') + ' ' + gt : '';
+          if (wickets) note += (note ? ', ' : '') + P(wickets, 'калитка', 'калитки', 'калиток');
+          if (gates && sel.gateType === 'sliding') note += '. Откатным нужно ≈ ' + fmt(gateLen * 1.5) + ' м свободного места вдоль забора и фундамент под ролики';
+          if (gates && sel.gateType === 'lift') note += '. Подъёмные: проём с жёсткой перемычкой сверху, обычно в гараж';
+          rows.push(['Проёмы', note]);
+        }
+        if (t !== 'block' && t !== 'chainlink') {
+          const rowsL = v.lagRows == null ? 2 : v.lagRows, lagPieces = Math.ceil(rowsL * net / 6 - 1e-9);
+          rows.push(['Лаги', rowsL + ' ' + plural(rowsL, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м → ' + lagPieces + ' шт по 6 м']);
+          cost.push({ label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' });
+        }
+        rows.push(['Бетон под столбы', fmt(holes) + ' м³ (лунки ⌀20 см) ≈ ' + cementBags + ' ' + plural(cementBags, 'мешок', 'мешка', 'мешков') + ' цемента']);
+        if (sm.sides) sm.sides.forEach((w) => rows.push(['Сторона ' + (w.i + 1), fmt(w.len) + ' м' + (w.opLen ? ', проёмы ' + fmt(w.opLen) + ' м' : '')]));
+        cost.unshift(Object.assign({ priceId: 'unit' }, unitCost), { label: 'Столбы', amount: posts, unit: plural(posts, 'столб', 'столба', 'столбов'), priceId: 'post' });
+        return { main: { label: 'Нужно', value: main }, rows, cost,
+          note: 'Полезная длина = стороны с забором минус ворота и калитки. Столбы: пролёты + 1 на каждой стороне, угловые общие, плюс по одному на ворота и калитку. Бетон — лунки ⌀20 см на глубину столба, М200 с запасом 10%.' };
       },
     },
 
@@ -635,12 +732,39 @@
 
     /* --- Площадь участка --- */
     area: {
+      // Четырёхугольник по 4 сторонам: без диагонали считаем угол у переднего левого прямым.
+      // Точки: A(0,0) передний левый, B — передний правый, D — задний левый, C — задний правый.
+      quad(v) {
+        const a = v.qa, b = v.qb, c = v.qc, d = v.qd;
+        if (!(pos(a) && pos(b) && pos(c) && pos(d))) return null;
+        const assumed = !pos(v.qdiag);
+        const diag = assumed ? Math.hypot(a, d) : v.qdiag; // BD
+        const tri = (x, y, z) => { const p = (x + y + z) / 2, q = p * (p - x) * (p - y) * (p - z); return q > 0 ? Math.sqrt(q) : null; };
+        const t1 = tri(a, d, diag), t2 = tri(b, c, diag);
+        if (t1 == null || t2 == null) return { error: 'С такими сторонами четырёхугольник не сходится — проверьте замеры и диагональ.' };
+        const cosA = (a * a + d * d - diag * diag) / (2 * a * d);
+        const angA = Math.acos(Math.max(-1, Math.min(1, cosA)));
+        const D = [d * Math.cos(angA), d * Math.sin(angA)];
+        const B = [a, 0]; const bd = [D[0] - B[0], D[1] - B[1]]; const L = Math.hypot(bd[0], bd[1]);
+        const x = (b * b - c * c + L * L) / (2 * L); const hh = Math.max(0, b * b - x * x); const h = Math.sqrt(hh);
+        const ux = bd[0] / L, uy = bd[1] / L;
+        const C1 = [B[0] + ux * x + uy * h, B[1] + uy * x - ux * h], C2 = [B[0] + ux * x - uy * h, B[1] + uy * x + ux * h];
+        const C = Math.hypot(C1[0], C1[1]) > Math.hypot(C2[0], C2[1]) ? C1 : C2;
+        return { area: t1 + t2, perimeter: a + b + c + d, pts: [[0, 0], B, C, D], assumed, diag };
+      },
       modeLabel: 'Форма участка',
       modes: [
         { id: 'rect', label: 'Прямоугольник', fields: [{ id: 'a', label: 'Длина', unit: 'м' }, { id: 'b', label: 'Ширина', unit: 'м' }] },
         { id: 'triangle', label: 'Треугольник', fields: [{ id: 'a', label: 'Основание', unit: 'м' }, { id: 'b', label: 'Высота', unit: 'м' }] },
         { id: 'circle', label: 'Круг', fields: [{ id: 'a', label: 'Радиус', unit: 'м' }] },
         { id: 'trapezoid', label: 'Трапеция', fields: [{ id: 'a', label: 'Верхнее основание', unit: 'м' }, { id: 'b', label: 'Нижнее основание', unit: 'м' }, { id: 'c', label: 'Высота', unit: 'м' }] },
+        { id: 'quad', label: 'Четыре стороны (не совсем прямоугольник)', fields: [
+          { id: 'qa', label: 'Передняя сторона', unit: 'м' },
+          { id: 'qb', label: 'Правая сторона', unit: 'м' },
+          { id: 'qc', label: 'Задняя сторона', unit: 'м' },
+          { id: 'qd', label: 'Левая сторона', unit: 'м' },
+          { id: 'qdiag', label: 'Диагональ: от переднего левого угла до заднего правого', unit: 'м, необязательно' },
+        ] },
       ],
       prices: [{ id: 'm2', label: 'Цена (земля, газон, плитка)', unit: '₽ за м²' }],
       draw(v, mode, box) {
@@ -658,6 +782,16 @@
           V.shape(box, [[-v.a, -v.a], [v.a, v.a]], [{ from: [0, 0], to: [v.a, 0], label: 'радиус ' + m(v.a), offset: 0 }], { circle: { cx: 0, cy: 0, r: v.a }, center: '', title: 'Участок' });
           return true;
         }
+        if (mode === 'quad') {
+          const q = this.quad(v); if (!q || q.error) return false;
+          const [A, B, C, D] = q.pts;
+          V.shape(box, q.pts, [
+            { from: A, to: B, label: 'перед ' + m(v.qa), offset: 22 }, { from: B, to: C, label: 'право ' + m(v.qb), offset: 22 },
+            { from: C, to: D, label: 'зад ' + m(v.qc), offset: 22 }, { from: D, to: A, label: 'лево ' + m(v.qd), offset: 22 },
+            { from: A, to: C, label: 'диагональ ' + m(q.diag) + (q.assumed ? ' (принято)' : ''), offset: 0 },
+          ], { center: fmt(q.area / 100) + ' сот.', title: 'Участок', caption: q.assumed ? 'Угол у переднего левого принят прямым. Введите диагональ — будет точно.' : 'По четырём сторонам и диагонали.' });
+          return true;
+        }
         if (mode === 'trapezoid' && pos(v.a) && pos(v.b) && pos(v.c)) {
           const off = (v.b - v.a) / 2;
           V.shape(box, [[0, 0], [v.b, 0], [v.b - off, v.c], [off, v.c]], [{ from: [0, 0], to: [v.b, 0], label: 'нижнее ' + m(v.b), offset: 22 }, { from: [v.b - off, v.c], to: [off, v.c], label: 'верхнее ' + m(v.a), offset: 22 }, { from: [v.b, 0], to: [v.b, v.c], label: 'высота ' + m(v.c), offset: 22 }], { center: fmt((v.a + v.b) / 2 * v.c / 100) + ' сот.', title: 'Участок' });
@@ -670,6 +804,7 @@
         if (mode === 'rect') { if (pos(v.a) && pos(v.b)) { area = v.a * v.b; perimeter = 2 * (v.a + v.b); } }
         else if (mode === 'triangle') { if (pos(v.a) && pos(v.b)) area = v.a * v.b / 2; }
         else if (mode === 'circle') { if (pos(v.a)) { area = Math.PI * v.a * v.a; perimeter = 2 * Math.PI * v.a; } }
+        else if (mode === 'quad') { const q = this.quad(v); if (!q) return null; if (q.error) return q; area = q.area; perimeter = q.perimeter; }
         else if (pos(v.a) && pos(v.b) && pos(v.c)) area = (v.a + v.b) / 2 * v.c;
         if (area == null) return null;
         const rows = [['В квадратных метрах', fmt(area) + ' м²'], ['В гектарах', fmt(area / 10000, 4) + ' га']];
@@ -677,7 +812,9 @@
         return {
           main: { label: 'Площадь', value: fmt(area / 100) + ' ' + plural(Math.round(area / 100), 'сотка', 'сотки', 'соток') },
           rows,
-          note: '1 сотка = 100 м². Для сложного участка разбейте его на простые фигуры и сложите площади.',
+          note: mode === 'quad'
+            ? (this.quad(v).assumed ? 'Диагональ не введена: угол у переднего левого принят прямым, погрешность обычно до 1–2%. Измерьте диагональ рулеткой от переднего левого до заднего правого угла и введите — расчёт станет точным. ' : 'По четырём сторонам и диагонали: точный расчёт. ') + '1 сотка = 100 м².'
+            : '1 сотка = 100 м². Для сложного участка разбейте его на простые фигуры и сложите площади.',
           cost: [{ label: 'Площадь', amount: area, unit: 'м²', priceId: 'm2' }],
         };
       },
@@ -874,13 +1011,13 @@
       const mode = def.modes.find((m) => m.id === state.mode);
       if (!mode.room || !window.CalcRoom) { roomBox.innerHTML = ''; roomEditor = null; return; }
       const finishes = def.finishes || window.CalcRoom.FINISH;
-      const defaultFinish = finishes[root.dataset.finish] ? root.dataset.finish : Object.keys(finishes)[0];
+      const defaultFinish = (def.roomOpts && def.roomOpts.defaultFinish) || (finishes[root.dataset.finish] ? root.dataset.finish : Object.keys(finishes)[0]);
       if (!state.extras.room) state.extras.room = { walls: [], openings: [], defaultFinish };
       state.extras.room.defaultFinish = defaultFinish;
       roomEditor = window.CalcRoom.editor(roomBox, state.extras.room, () => {
         const v = {}; Object.keys(state.values).forEach((k) => { v[k] = parseNum(state.values[k]); });
         return { lens: def.lens ? def.lens(v, state.mode, { plan: state.extras.plan, room: state.extras.room }) : null, H: parseNum(state.values.hei) || 0 };
-      }, () => render(), { finishes, defaultFinish });
+      }, () => render(), Object.assign({ finishes, defaultFinish }, def.roomOpts || {}));
     }
 
     function render() {
@@ -901,6 +1038,7 @@
       render.after = applyGroups;
       lastViz = { v, extras };
       drawViz();
+      def._sel = state.sel;
       const r = def.compute(v, state.mode, state.sel, extras);
       result.innerHTML = '';
       costBox.hidden = !r || !!r.error;
