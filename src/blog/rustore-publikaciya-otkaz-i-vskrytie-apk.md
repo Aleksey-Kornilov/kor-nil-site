@@ -4,12 +4,14 @@ description: "Как ЧатЯдро попало в RuStore за девять д
 date: 2026-09-08
 order: 3
 crumb: "Публикация в RuStore"
-image: /assets/images/og-chatyadro.png
+image: /assets/images/blog/og-rustore-publikaciya-otkaz-i-vskrytie-apk.png
 ---
 
 [ЧатЯдро](/projects/chatyadro/) подано в RuStore 7 августа 2026, отклонено 11-го, пересобрано
 в тот же вечер и опубликовано 16-го. Ниже — что именно пришлось узнать по дороге. Документация
 магазина в день подачи отдавала 429, так что половина лимитов выяснилась только в живой форме.
+
+{% figure "release" %}
 
 ## Форма подачи: пять шагов и их ловушки
 

@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0",
-    "clean-css": "^5.3.3"
+    "clean-css": "^5.3.3",
+    "sharp": "^0.35.4"
   }
 }

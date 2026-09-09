@@ -3,7 +3,8 @@ permalink: /sitemap.xml
 eleventyExcludeFromCollections: true
 ---
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 {%- for page in collections.all %}
 {%- if page.url and not page.data.eleventyExcludeFromCollections %}
   <url>
@@ -11,6 +12,13 @@ eleventyExcludeFromCollections: true
     <lastmod>{{ page.date | date('iso') }}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>{% if page.url == '/' %}1.0{% else %}0.8{% endif %}</priority>
+{%- if page.data.pageImage and '/blog/og-' in page.data.pageImage %}
+    {#- Своя обложка статьи: заявляем её отдельно, иначе поиск по картинкам её не найдёт. -#}
+    <image:image>
+      <image:loc>{{ site.url }}{{ page.data.pageImage }}</image:loc>
+      <image:title>{{ page.data.title | escape }}</image:title>
+    </image:image>
+{%- endif %}
   </url>
 {%- endif %}
 {%- endfor %}

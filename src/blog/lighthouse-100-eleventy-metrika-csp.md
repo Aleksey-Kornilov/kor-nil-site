@@ -4,7 +4,7 @@ description: "Как этот сайт получил четыре сотни в
 date: 2026-09-08
 order: 4
 crumb: "Lighthouse 100 на Eleventy"
-image: /assets/images/og-default.png
+image: /assets/images/blog/og-lighthouse-100-eleventy-metrika-csp.png
 ---
 
 Сайт, который вы читаете, собран на [Eleventy](https://www.11ty.dev/) и отдаётся nginx как чистая статика.
@@ -106,6 +106,8 @@ export function buildCss() {
 Живой человек на телефоне касается экрана в первую секунду, так что для него ничего не меняется:
 Метрика стартует почти сразу. А вот лабораторный замер ни к чему не прикасается — и получает
 чистую страницу.
+
+{% figure "timeline" %}
 
 ## Ловушка: четыре секунды — мало
 

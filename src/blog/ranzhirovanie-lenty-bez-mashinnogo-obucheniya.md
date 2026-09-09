@@ -4,7 +4,7 @@ description: "Хронологическая лента выглядела мё�
 date: 2026-09-08
 order: 0
 crumb: "Ранжирование ленты"
-image: /assets/images/og-chatyadro.png
+image: /assets/images/blog/og-ranzhirovanie-lenty-bez-mashinnogo-obucheniya.png
 ---
 
 Лента в [ЧатЯдре](/projects/chatyadro/) была строго хронологической: `ORDER BY id DESC LIMIT 20`.
@@ -72,6 +72,8 @@ ORDER BY rank ASC, id DESC
 ```js
 const UNSEEN_WINDOW_DAYS = 7;
 ```
+
+{% figure "feed" %}
 
 ## Уровень 2: не больше двух подряд от автора
 

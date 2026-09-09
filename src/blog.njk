@@ -29,13 +29,18 @@ pageSchema: |
   <div class="post-list">
     {%- for post in collections.posts %}
     <a href="{{ post.url }}" class="card card-link post-card">
-      <p class="post-meta">
-        <time datetime="{{ post.date | date('iso') }}">{{ post.date | date }}</time>
-        · {{ post.templateContent | readingTime }} мин
-      </p>
-      <h2 class="card-title">{{ post.data.title }}</h2>
-      <p class="card-description">{{ post.data.description }}</p>
-      <div class="card-footer">Читать →</div>
+      <img src="/assets/images/blog/thumb-{{ post.fileSlug }}.webp" width="640" height="336"
+           alt="" class="post-thumb" decoding="async"
+           loading="{{ 'eager' if loop.first else 'lazy' }}"{% if loop.first %} fetchpriority="high"{% endif %}>
+      <div class="post-card-body">
+        <p class="post-meta">
+          <time datetime="{{ post.date | date('iso') }}">{{ post.date | date }}</time>
+          · {{ post.templateContent | readingTime }} мин
+        </p>
+        <h2 class="card-title">{{ post.data.title }}</h2>
+        <p class="card-description">{{ post.data.description }}</p>
+        <div class="card-footer">Читать →</div>
+      </div>
     </a>
     {%- endfor %}
   </div>

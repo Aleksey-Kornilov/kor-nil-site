@@ -10,6 +10,18 @@
   margin-inline: auto;
 }
 .post-card .card-title { margin-top: var(--space-2); }
+/* Превью статьи: та же карточка, что уходит в соцсети, — узнаваемость и клик в списке.
+   На широком экране картинка слева, чтобы пять статей помещались в один-два экрана. */
+.post-thumb {
+  display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630;
+  border-radius: var(--radius-md); margin-bottom: var(--space-4);
+  background: var(--color-bg-subtle); object-fit: cover;
+}
+@media (min-width: 700px) {
+  .post-card { display: grid; grid-template-columns: 264px minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+  .post-thumb { margin-bottom: 0; }
+  .post-card .card-title { font-size: var(--fs-h3); }
+}
 .post-meta {
   font-size: var(--fs-small);
   color: var(--color-text-muted); /* subtle не проходит контраст 4.5:1 */
@@ -137,3 +149,26 @@
 .comments-status { margin: 0; font-size: var(--fs-small); min-height: 1.2em; }
 .comments-status.is-error { color: var(--color-danger); }
 .comments-status.is-success { color: var(--color-success); }
+
+/* Схемы в статьях (lib/blog-figures.mjs) */
+.fig { margin: var(--space-6) 0; }
+.fig-svg { width: 100%; height: auto; display: block; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-elevated); }
+.fig figcaption { margin-top: var(--space-3); font-size: var(--fs-small); color: var(--color-text-muted); line-height: 1.5; }
+.fig-box { fill: var(--color-bg-subtle); stroke: var(--color-border-strong); stroke-width: 1; }
+.fig-ok { fill: var(--color-accent-subtle); stroke: var(--color-accent); }
+.fig-ok.fig-soft { fill: var(--color-bg-subtle); stroke: var(--color-border-strong); }
+.fig-bad { fill: color-mix(in srgb, var(--color-danger) 16%, transparent); stroke: var(--color-danger); }
+.fig-t { font-size: 14px; fill: var(--color-text); }
+.fig-b { font-weight: 700; }
+.fig-s { font-size: 12px; fill: var(--color-text-muted); }
+.fig-grid { stroke: var(--color-border); stroke-width: 1; stroke-dasharray: 3 4; }
+.fig-arrow { stroke: var(--color-accent); stroke-width: 1.6; }
+.fig-arrhead { fill: var(--color-accent); }
+.fig-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.fig-hint { display: none; }
+@media (max-width: 720px) {
+  .fig-t { font-size: 17px; }
+  .fig-s { font-size: 15px; }
+  .fig-svg { min-width: 640px; }
+  .fig-hint { display: inline; }
+}

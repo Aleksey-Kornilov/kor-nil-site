@@ -4,7 +4,7 @@ description: "В вебе у Flutter нет системной проверки 
 date: 2026-09-08
 order: 1
 crumb: "Орфография в PWA"
-image: /assets/images/og-chatyadro.png
+image: /assets/images/blog/og-proverka-orfografii-v-pwa-flutter-hunspell.png
 ---
 
 Просьба от пользователя ЧатЯдра: в приложении на телефоне опечатки подчёркиваются, а в веб-версии
@@ -110,6 +110,8 @@ bool _suspicious(String chunk) {
 
 Точка в конце куска — обычный конец предложения, точка в середине — признак домена. Это
 поймал скрипт проверки разбора на 16 сценариях **до выката**, а не пользователь после.
+
+{% figure "tokenize" %}
 
 ## Что осталось за кадром
 

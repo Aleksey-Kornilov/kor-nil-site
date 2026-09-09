@@ -2,6 +2,7 @@
 // Собирает src/ → dist/, копирует assets как есть, использует Nunjucks для шаблонов.
 
 import markdownIt from 'markdown-it';
+import { FIGURES } from './lib/blog-figures.mjs';
 import { buildCss, writeBundle, resetCssCache } from './lib/css-bundle.mjs';
 
 export default async function (eleventyConfig) {
@@ -30,6 +31,13 @@ export default async function (eleventyConfig) {
 
   // Markdown для статей блога: html внутри разрешён, ссылки распознаются, типографика («ёлочки», тире).
   eleventyConfig.setLibrary('md', markdownIt({ html: true, linkify: true, typographer: true, quotes: '«»‚‘' }));
+
+  // Схемы в статьях: {% figure "имя" %} → готовый SVG из lib/blog-figures.mjs.
+  eleventyConfig.addShortcode('figure', (name) => {
+    const f = FIGURES[name];
+    if (!f) throw new Error('Нет такой схемы для блога: ' + name);
+    return f();
+  });
 
   // Статьи блога: src/blog/*.md, новые сверху.
   eleventyConfig.addCollection('posts', (api) =>
