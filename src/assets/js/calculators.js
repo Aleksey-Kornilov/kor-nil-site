@@ -253,41 +253,53 @@
       },
     },
 
-    /* --- Краска / побелка --- */
-    paint: {
-      modeLabel: 'Что красим',
+    /* --- Комната: стены с проёмами, отделка по стенам, краска и обои --- */
+    room: {
+      modeLabel: 'Что считаем',
       modes: [
-        { id: 'walls', label: 'Стены комнаты', fields: [
-          { id: 'len', label: 'Длина комнаты', unit: 'м' },
-          { id: 'wid', label: 'Ширина комнаты', unit: 'м' },
-          { id: 'hei', label: 'Высота потолка', unit: 'м' },
-        ], openings: true },
-        { id: 'ceiling', label: 'Потолок', fields: [
+        { id: 'room', label: 'Стены комнаты', room: true, fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+          { id: 'hei', label: 'Высота потолка', unit: 'м', value: '2.7' },
+        ] },
+        { id: 'ceiling', label: 'Потолок (краска)', fields: [
           { id: 'len', label: 'Длина комнаты', unit: 'м' },
           { id: 'wid', label: 'Ширина комнаты', unit: 'м' },
         ] },
-        { id: 'custom', label: 'Своя площадь', fields: [
+        { id: 'custom', label: 'Своя площадь (краска)', fields: [
           { id: 'area', label: 'Площадь поверхности', unit: 'м²' },
         ] },
       ],
       common: [
-        { id: 'coats', label: 'Количество слоёв', unit: '', value: '2' },
-        { id: 'rate', label: 'Расход краски (м² на 1 литр)', unit: 'на банке', value: '10' },
-        { id: 'can', label: 'Объём банки', unit: 'л', value: '2.7' },
+        { id: 'coats', label: 'Слоёв краски', unit: '', value: '2', group: 'paint' },
+        { id: 'rate', label: 'Расход краски (м² на 1 литр)', unit: 'на банке', value: '10', group: 'paint' },
+        { id: 'can', label: 'Объём банки краски', unit: 'л', value: '2.7', group: 'paint' },
+        { id: 'rollW', label: 'Ширина рулона обоев', unit: 'м', value: '1.06', group: 'paper' },
+        { id: 'rollL', label: 'Длина рулона', unit: 'м', value: '10.05', group: 'paper' },
+        { id: 'rapport', label: 'Раппорт (повтор рисунка)', unit: 'см, 0 = без подгонки', value: '0', group: 'paper' },
+        { id: 'trim', label: 'Запас на подрезку полосы', unit: 'см', value: '10', group: 'paper' },
+        { id: 'overlap', label: 'Нахлёст', unit: 'см, 0 = встык', value: '0', group: 'paper' },
+        { id: 'glue', label: 'Пачки клея хватает на', unit: 'м²', value: '30', group: 'paper' },
       ],
-      presets: { label: 'Расход по типу краски', fieldId: 'rate', unit: 'м²/л', items: [
-        ['Водоэмульсионка', '10'], ['Эмаль', '12'], ['Побелка/известь', '7'], ['По дереву', '8'],
-      ] },
-      prices: [{ id: 'can', label: 'Цена краски', unit: '₽ за банку' }],
-      draw(v, mode, box, yaw, extras) {
+      presets: [
+        { label: 'Расход краски', fieldId: 'rate', unit: 'м²/л', group: 'paint', items: [['Водоэмульсионка', '10'], ['Эмаль', '12'], ['Побелка/известь', '7'], ['По дереву', '8']] },
+        { label: 'Рулон', fieldId: 'rollW', unit: 'м', group: 'paper', items: [['Метровые', '1.06'], ['Полуметровые', '0.53']] },
+        { label: 'Длина рулона', fieldId: 'rollL', unit: 'м', group: 'paper', items: [['Обычный', '10.05'], ['Длинный', '25']] },
+      ],
+      prices: [
+        { id: 'roll', label: 'Цена рулона обоев', unit: '₽ за рулон' },
+        { id: 'glue', label: 'Цена клея', unit: '₽ за пачку' },
+        { id: 'can', label: 'Цена краски', unit: '₽ за банку' },
+      ],
+      // Какие группы полей показывать: по отделке стен
+      groups(v, mode, extras) {
+        if (mode !== 'room') return { paint: true, paper: false };
+        const R = window.CalcRoom; if (!R || !extras.room) return { paint: true, paper: false };
+        const m = R.measure(extras.room, v.len || 0, v.wid || 0, v.hei || 0);
+        return { paint: m.paint.n > 0, paper: m.paper.n > 0 };
+      },
+      draw(v, mode, box) {
         const V = window.CalcViz; if (!V) return false;
-        if (mode === 'walls' && pos(v.len) && pos(v.wid) && pos(v.hei)) {
-          const ops = (extras.openings || []).filter((o) => pos(o.w) && pos(o.h));
-          const opArea = ops.reduce((s, o) => s + o.w * o.h * (o.count || 1), 0);
-          V.walls(box, [{ label: 'Стена', len: v.len }, { label: 'Стена', len: v.wid }, { label: 'Стена', len: v.len }, { label: 'Стена', len: v.wid }], v.hei, ops,
-            { caption: 'Развёртка стен. Проёмы: ' + fmt(opArea) + ' м², под покраску ' + fmt(2 * (v.len + v.wid) * v.hei - opArea) + ' м²' });
-          return true;
-        }
         if (mode === 'ceiling' && pos(v.len) && pos(v.wid)) {
           V.shape(box, [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]], [
             { from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 },
@@ -297,33 +309,64 @@
         return false;
       },
       compute(v, mode, sel, extras) {
-        let area = null;
-        if (mode === 'walls') {
-          if (pos(v.len) && pos(v.wid) && pos(v.hei)) {
-            const ops = (extras.openings || []).filter((o) => pos(o.w) && pos(o.h));
-            const opArea = ops.reduce((s, o) => s + o.w * o.h * (o.count || 1), 0);
-            const a = 2 * (v.len + v.wid) * v.hei - opArea;
-            area = a > 0 ? a : null;
-          }
-        } else if (mode === 'ceiling') {
-          if (pos(v.len) && pos(v.wid)) area = v.len * v.wid;
-        } else if (pos(v.area)) area = v.area;
         const coats = v.coats == null ? 1 : v.coats;
-        if (area == null || !pos(v.rate) || !(coats > 0)) return null;
-        const liters = area * coats / v.rate;
-        const reserve = liters * 1.1;
-        const cans = pos(v.can) ? Math.ceil(reserve / v.can) : null;
-        const rows = [
-          ['Без запаса', fmt(liters) + ' л'],
-          ['Площадь окраски', fmt(area) + ' м² × ' + fmt(coats) + ' сл.'],
-        ];
-        if (cans != null) rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + cans + ' шт']);
-        return {
-          main: { label: 'Нужно краски (с запасом 10%)', value: fmt(reserve) + ' л' },
-          rows,
-          note: 'Расход указан на банке (обычно 8–12 м²/л). Для тёмного по светлому может понадобиться больше слоёв.',
-          cost: cans != null ? [{ label: 'Краска', amount: cans, unit: plural(cans, 'банка', 'банки', 'банок'), priceId: 'can' }] : [],
+        const paintCalc = (area) => {
+          if (!(area > 0) || !pos(v.rate) || !(coats > 0)) return null;
+          const liters = area * coats / v.rate, reserve = liters * 1.1;
+          const cans = pos(v.can) ? Math.ceil(reserve / v.can) : null;
+          return { area, liters, reserve, cans };
         };
+        if (mode !== 'room') {
+          const area = mode === 'ceiling' ? (pos(v.len) && pos(v.wid) ? v.len * v.wid : null) : (pos(v.area) ? v.area : null);
+          const p = paintCalc(area);
+          if (!p) return null;
+          const rows = [['Без запаса', fmt(p.liters) + ' л'], ['Площадь окраски', fmt(area) + ' м² × ' + fmt(coats) + ' сл.']];
+          if (p.cans != null) rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + p.cans + ' шт']);
+          return { main: { label: 'Нужно краски (с запасом 10%)', value: fmt(p.reserve) + ' л' }, rows,
+            note: 'Расход указан на банке (обычно 8–12 м²/л). Для тёмного по светлому может понадобиться больше слоёв.',
+            cost: p.cans != null ? [{ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }] : [] };
+        }
+        const R = window.CalcRoom;
+        if (!R || !extras.room || !(pos(v.len) && pos(v.wid) && pos(v.hei))) return null;
+        const m = R.measure(extras.room, v.len, v.wid, v.hei);
+        const rows = [], cost = [], mains = [];
+        let note = '';
+        // Обои
+        if (m.paper.n > 0) {
+          const effW = (v.rollW || 0) - (v.overlap || 0) / 100;
+          let stripLen = v.hei + (v.trim || 0) / 100;
+          if (pos(v.rapport)) { const r = v.rapport / 100; stripLen = Math.ceil(stripLen / r - 1e-9) * r; }
+          if (pos(effW) && pos(v.rollL)) {
+            const strips = m.paper.walls.reduce((s2, w) => s2 + Math.ceil(w.len / effW - 1e-9), 0);
+            const perRoll = Math.floor(v.rollL / stripLen + 1e-9);
+            if (perRoll < 1) { note = 'Полоса длиннее рулона: проверьте длину рулона и раппорт. '; }
+            else {
+              const rolls = Math.ceil(strips / perRoll);
+              const glue = pos(v.glue) ? Math.ceil(m.paper.area / v.glue) : null;
+              mains.push('обои ' + rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов'));
+              rows.push(['Обои: стен', m.paper.n + ' ' + plural(m.paper.n, 'стена', 'стены', 'стен') + ', ' + fmt(m.paper.area) + ' м² (с проёмами ' + fmt(m.paper.len * v.hei) + ')']);
+              rows.push(['Полос', strips + ' по ' + fmt(stripLen) + ' м' + (pos(v.rapport) ? ' (с подгонкой рисунка)' : '')]);
+              rows.push(['Полос из рулона', String(perRoll)]);
+              if (glue != null) rows.push(['Клей', glue + ' ' + plural(glue, 'пачка', 'пачки', 'пачек') + ' (на ' + fmt(m.paper.area) + ' м²)']);
+              cost.push({ label: 'Обои', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'roll' });
+              if (glue != null) cost.push({ label: 'Клей', amount: glue, unit: plural(glue, 'пачка', 'пачки', 'пачек'), priceId: 'glue' });
+              note += 'Полосы считаются по ширине каждой стены с округлением вверх; проёмы из полос не вычитаются — остатки уходят над окнами и дверями. ';
+            }
+          }
+        }
+        // Краска
+        if (m.paint.n > 0) {
+          const p = paintCalc(m.paint.area);
+          if (p) {
+            mains.push('краска ' + fmt(p.reserve) + ' л');
+            rows.push(['Краска: стен', m.paint.n + ' ' + plural(m.paint.n, 'стена', 'стены', 'стен') + ', ' + fmt(m.paint.area) + ' м² × ' + fmt(coats) + ' сл.']);
+            rows.push(['Без запаса', fmt(p.liters) + ' л']);
+            if (p.cans != null) { rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + p.cans + ' шт']); cost.push({ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }); }
+          }
+        }
+        if (!mains.length) return null;
+        m.walls.forEach((w) => rows.push(['Стена ' + (w.i + 1) + ' · ' + R.FINISH[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
+        return { main: { label: 'Нужно (с запасом)', value: mains.join(' · ') }, rows, note: note + 'Проёмы: ' + fmt(m.openings) + ' м² вычтены из площади.', cost };
       },
     },
 
@@ -507,9 +550,10 @@
     const fieldsBox = h('div', { class: 'calc-fields' });
     const openingsBox = h('div', { class: 'calc-openings' });
     const planBox = h('div', { class: 'calc-planbox' });
-    let planEditor = null;
+    const roomBox = h('div', { class: 'calc-roombox' });
+    let planEditor = null, roomEditor = null;
     const vizBox = h('div', { class: 'calc-viz', hidden: '' });
-    const presetsBox = h('div', { class: 'calc-presets' });
+    const presetsBox = h('div', { class: 'calc-preset-rows' });
     const selectsBox = h('div');
     const result = h('div', { class: 'calc-result', 'aria-live': 'polite' });
     const costBox = h('details', { class: 'calc-cost' }, [h('summary', { text: 'Посчитать стоимость' })]);
@@ -521,7 +565,7 @@
         placeholder: f.placeholder || '0', value: saved != null ? saved : (f.value || '') });
       if (saved == null && f.value) state.values[f.id] = f.value;
       input.addEventListener('input', () => { state.values[f.id] = input.value; render(); });
-      return h('div', { class: 'calc-field' }, [
+      return h('div', { class: 'calc-field', 'data-group': f.group || '' }, [
         h('label', { for: id, text: f.label }),
         h('div', { class: 'calc-input' }, [input, f.unit ? h('span', { class: 'calc-unit', text: f.unit }) : null]),
       ]);
@@ -575,11 +619,13 @@
       mode.fields.forEach((f) => fieldsBox.appendChild(field(f)));
       renderOpenings();
       renderPlan();
+      renderRoom();
       (def.common || []).forEach((f) => fieldsBox.appendChild(field(f)));
       presetsBox.innerHTML = '';
-      const pr = mode.presets || def.presets;
-      if (pr) {
-        presetsBox.appendChild(h('span', { class: 'calc-presets-label', text: pr.label + ':' }));
+      const prs = mode.presets || def.presets;
+      (Array.isArray(prs) ? prs : (prs ? [prs] : [])).forEach((pr) => {
+        const row = h('div', { class: 'calc-presets', 'data-group': pr.group || '' });
+        row.appendChild(h('span', { class: 'calc-presets-label', text: pr.label + ':' }));
         pr.items.forEach(([label, value]) => {
           const b = h('button', { type: 'button', class: 'calc-preset', text: label + ' · ' + value + ' ' + pr.unit });
           b.addEventListener('click', () => {
@@ -588,17 +634,36 @@
             if (input) input.value = value;
             render();
           });
-          presetsBox.appendChild(b);
+          row.appendChild(b);
         });
+        presetsBox.appendChild(row);
+      });
+    }
+
+    function renderRoom() {
+      const mode = def.modes.find((m) => m.id === state.mode);
+      if (!mode.room || !window.CalcRoom) { roomBox.innerHTML = ''; roomEditor = null; return; }
+      if (!state.extras.room) {
+        const finish = root.dataset.finish === 'paper' ? 'paper' : 'paint';
+        state.extras.room = { walls: [0, 1, 2, 3].map(() => ({ finish })), openings: [] };
       }
+      roomEditor = window.CalcRoom.editor(roomBox, state.extras.room, () => ({
+        L: parseNum(state.values.len) || 0, W: parseNum(state.values.wid) || 0, H: parseNum(state.values.hei) || 0,
+      }), () => render());
     }
 
     function render() {
       const v = {};
       const mode = def.modes.find((m) => m.id === state.mode);
       mode.fields.concat(def.common || []).forEach((f) => { v[f.id] = parseNum(state.values[f.id]); });
-      const extras = { openings: state.extras.openings.map((o) => ({ kind: o.kind, w: parseNum(o.w), h: parseNum(o.h), count: Math.max(1, Math.round(parseNum(o.count) || 1)) })), plan: state.extras.plan };
-      if (planEditor && !render.fromPlan) planEditor.redraw();
+      const extras = { openings: state.extras.openings.map((o) => ({ kind: o.kind, w: parseNum(o.w), h: parseNum(o.h), count: Math.max(1, Math.round(parseNum(o.count) || 1)) })), plan: state.extras.plan, room: state.extras.room };
+      if (planEditor) planEditor.redraw();
+      if (roomEditor) roomEditor.redraw();
+      // Группы полей (краска/обои) — по тому, какая отделка выбрана у стен
+      if (def.groups) {
+        const gs = def.groups(v, state.mode, extras);
+        form.querySelectorAll('[data-group]').forEach((elm) => { const g = elm.dataset.group; if (g) elm.hidden = !gs[g]; });
+      }
       lastViz = { v, extras };
       drawViz();
       const r = def.compute(v, state.mode, state.sel, extras);
@@ -682,6 +747,7 @@
     form.appendChild(fieldsBox);
     form.appendChild(openingsBox);
     form.appendChild(planBox);
+    form.appendChild(roomBox);
     form.appendChild(presetsBox);
     form.appendChild(vizBox);
     form.appendChild(result);
