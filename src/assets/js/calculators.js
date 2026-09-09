@@ -490,6 +490,206 @@
       },
     },
 
+    /* --- Кровля: одно-, двух- и четырёхскатная; листы, обрешётка, водосток, утеплитель --- */
+    roof: {
+      modeLabel: 'Форма крыши',
+      modes: [
+        { id: 'gable', label: 'Двускатная', fields: [
+          { id: 'len', label: 'Длина дома (по коньку)', unit: 'м', value: '9' },
+          { id: 'wid', label: 'Ширина дома', unit: 'м', value: '8' },
+          { id: 'angle', label: 'Угол наклона', unit: '° (или задайте высоту)', value: '30' },
+          { id: 'ridgeH', label: 'Высота конька над стенами', unit: 'м, вместо угла' },
+          { id: 'over', label: 'Свес по краям', unit: 'м', value: '0.5' },
+        ] },
+        { id: 'shed', label: 'Односкатная', fields: [
+          { id: 'len', label: 'Длина дома', unit: 'м', value: '6' },
+          { id: 'wid', label: 'Ширина (по уклону)', unit: 'м', value: '4' },
+          { id: 'angle', label: 'Угол наклона', unit: '°', value: '20' },
+          { id: 'ridgeH', label: 'Перепад высоты', unit: 'м, вместо угла' },
+          { id: 'over', label: 'Свес по краям', unit: 'м', value: '0.4' },
+        ] },
+        { id: 'hip', label: 'Четырёхскатная (вальмовая)', fields: [
+          { id: 'len', label: 'Длина дома', unit: 'м', value: '10' },
+          { id: 'wid', label: 'Ширина дома', unit: 'м', value: '8' },
+          { id: 'angle', label: 'Угол наклона', unit: '°', value: '30' },
+          { id: 'ridgeH', label: 'Высота конька над стенами', unit: 'м, вместо угла' },
+          { id: 'over', label: 'Свес по краям', unit: 'м', value: '0.5' },
+        ] },
+      ],
+      common: [
+        { id: 'sheetL', label: 'Длина листа', unit: 'м', value: '2', group: 'sheet' },
+        { id: 'sheetW', label: 'Рабочая ширина листа', unit: 'м', value: '1.1', group: 'sheet' },
+        { id: 'overlapV', label: 'Нахлёст по вертикали', unit: 'м', value: '0.15', group: 'sheet' },
+        { id: 'rollW', label: 'Ширина рулона', unit: 'м', value: '1', group: 'roll' },
+        { id: 'rollL', label: 'Длина рулона', unit: 'м', value: '10', group: 'roll' },
+        { id: 'rollOver', label: 'Нахлёст', unit: 'м', value: '0.1', group: 'roll' },
+        { id: 'perM2', label: 'Черепицы на м²', unit: 'шт', value: '10', group: 'piece' },
+        { id: 'battenStep', label: 'Шаг обрешётки', unit: 'м', value: '0.35' },
+        { id: 'rafterStep', label: 'Шаг стропил', unit: 'м', value: '0.6' },
+        { id: 'insulation', label: 'Утеплитель: толщина', unit: 'см, 0 = холодная крыша', value: '0' },
+      ],
+      selects: [{ id: 'material', label: 'Покрытие', default: 'metal', choices: [
+        { id: 'metal', label: 'Металлочерепица', hint: 'листы, нахлёст по волне и по длине' },
+        { id: 'prof', label: 'Профнастил', hint: 'листы, обрешётка реже' },
+        { id: 'ondulin', label: 'Ондулин', hint: 'листы 2×0,95 м, рабочая ширина 0,86' },
+        { id: 'soft', label: 'Мягкая черепица', hint: 'гонт в упаковках по 3 м², сплошная обрешётка' },
+        { id: 'seam', label: 'Фальцевая кровля', hint: 'картины из рулона' },
+      ] }],
+      prices: [
+        { id: 'unit', label: 'Лист / упаковка / рулон', unit: '₽ за штуку' },
+        { id: 'batten', label: 'Обрешётка', unit: '₽ за метр' },
+        { id: 'rafter', label: 'Стропило', unit: '₽ за метр' },
+        { id: 'film', label: 'Плёнки (гидро- и пароизоляция)', unit: '₽ за м²' },
+        { id: 'insul', label: 'Утеплитель', unit: '₽ за м³' },
+      ],
+      groups(v, mode, extras, sel) {
+        const m = sel.material;
+        return { sheet: m === 'metal' || m === 'prof' || m === 'ondulin', roll: m === 'seam', piece: m === 'soft' };
+      },
+      // Геометрия: возвращает площадь скатов, длины конька, ребёр, ендов, карниза
+      geom(v, mode) {
+        const a = (v.angle || 0) * Math.PI / 180;
+        if (!pos(v.len) || !pos(v.wid)) return null;
+        const over = v.over || 0;
+        const L = v.len + 2 * over, W = v.wid + 2 * over;
+        if (mode === 'shed') {
+          const rise = pos(v.ridgeH) ? v.ridgeH : W * Math.tan(a);
+          const slope = Math.hypot(W, rise);
+          return { area: L * slope, ridge: 0, eaves: L * 2 + slope * 2, hips: 0, rise, slopeLen: slope, L, W, faces: 1, angle: pos(v.ridgeH) ? Math.atan2(rise, W) * 180 / Math.PI : v.angle };
+        }
+        if (mode === 'gable') {
+          const half = W / 2;
+          const rise = pos(v.ridgeH) ? v.ridgeH : half * Math.tan(a);
+          const slope = Math.hypot(half, rise);
+          return { area: 2 * L * slope, ridge: L, eaves: 2 * L, hips: 0, rise, slopeLen: slope, L, W, faces: 2, angle: pos(v.ridgeH) ? Math.atan2(rise, half) * 180 / Math.PI : v.angle };
+        }
+        // вальмовая: два трапециевидных ската + два треугольных, конёк короче на ширину
+        const half = W / 2;
+        const rise = pos(v.ridgeH) ? v.ridgeH : half * Math.tan(a);
+        const slope = Math.hypot(half, rise);
+        const ridge = Math.max(0.1, v.len - v.wid); // конёк по дому: вальмы начинаются от его углов
+        const trap = (L + ridge) / 2 * slope;      // площадь одного трапециевидного ската
+        const tri = half * slope;                  // площадь одного вальмового треугольника
+        const hip = Math.hypot(slope, half);       // длина накосного ребра
+        return { area: 2 * trap + 2 * tri, ridge, eaves: 2 * (L + W), hips: 4 * hip, rise, slopeLen: slope, L, W, faces: 4, angle: pos(v.ridgeH) ? Math.atan2(rise, half) * 180 / Math.PI : v.angle };
+      },
+      draw(v, mode, box, view) {
+        const V = window.CalcViz; const g = this.geom(v, mode);
+        if (!V || !g) return false;
+        const wallH = 0.6; // условная высота стен под кровлей, чтобы схема читалась
+        const L = g.L, W = g.W, o = v.over || 0;
+        const walls = [{ poly: [[o, o], [o + v.len, o], [o + v.len, o + v.wid], [o, o + v.wid]], z: 0, dz: wallH }];
+        let faces = [], dims = [];
+        const z0 = wallH;
+        if (mode === 'shed') {
+          faces = [[[0, 0, z0], [L, 0, z0], [L, W, z0 + g.rise], [0, W, z0 + g.rise]]];
+          dims = [
+            { from: [0, 0, z0], to: [L, 0, z0], label: 'длина ' + fmt(v.len) + ' м', offset: 24 },
+            { from: [0, W, z0 + g.rise], to: [0, 0, z0], label: 'скат ' + fmt(g.slopeLen) + ' м', offset: -26 },
+          ];
+        } else if (mode === 'gable') {
+          const mid = W / 2, top = z0 + g.rise;
+          faces = [
+            [[0, 0, z0], [L, 0, z0], [L, mid, top], [0, mid, top]],
+            [[0, W, z0], [L, W, z0], [L, mid, top], [0, mid, top]],
+          ];
+          dims = [
+            { from: [0, 0, z0], to: [L, 0, z0], label: 'длина ' + fmt(v.len) + ' м', offset: 24 },
+            { from: [0, mid, top], to: [L, mid, top], label: 'конёк ' + fmt(g.ridge) + ' м', offset: -22 },
+            { from: [0, 0, z0], to: [0, mid, top], label: 'скат ' + fmt(g.slopeLen) + ' м', offset: -26 },
+          ];
+        } else {
+          const mid = W / 2, top = z0 + g.rise, r0 = (L - g.ridge) / 2, r1 = r0 + g.ridge;
+          faces = [
+            [[0, 0, z0], [L, 0, z0], [r1, mid, top], [r0, mid, top]],
+            [[0, W, z0], [L, W, z0], [r1, mid, top], [r0, mid, top]],
+            [[0, 0, z0], [0, W, z0], [r0, mid, top]],
+            [[L, 0, z0], [L, W, z0], [r1, mid, top]],
+          ];
+          dims = [
+            { from: [0, 0, z0], to: [L, 0, z0], label: 'длина ' + fmt(v.len) + ' м', offset: 24 },
+            { from: [r0, mid, top], to: [r1, mid, top], label: 'конёк ' + fmt(g.ridge) + ' м', offset: -22 },
+            { from: [0, 0, z0], to: [r0, mid, top], label: 'ребро ' + fmt(Math.hypot(g.slopeLen, W / 2)) + ' м', offset: -26 },
+          ];
+        }
+        V.roof(box, faces, walls, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, caption: 'Крыша со свесом ' + fmt(o) + ' м, уклон ' + fmt(g.angle) + '°. Потяните, чтобы повернуть.' });
+        return true;
+      },
+      compute(v, mode, sel) {
+        const g = this.geom(v, mode);
+        if (!g) return null;
+        if (!(g.rise > 0)) return { error: 'Укажите угол наклона или высоту конька.' };
+        if (g.angle < 8 && sel.material !== 'seam') return { error: 'Уклон ' + fmt(g.angle) + '° слишком мал для этого покрытия: металлочерепице и профнастилу нужно от 12°, ондулину от 10°, мягкой черепице от 12°. Фальцевую кровлю кладут от 3°.' };
+        const rows = [], cost = [];
+        let main, unitCost = null;
+        const m = sel.material;
+        if (m === 'metal' || m === 'prof' || m === 'ondulin') {
+          if (!pos(v.sheetL) || !pos(v.sheetW)) return null;
+          const useful = v.sheetL - (v.overlapV || 0);
+          if (useful <= 0) return { error: 'Нахлёст больше длины листа — проверьте размеры.' };
+          const rowsCount = Math.ceil(g.slopeLen / useful - 1e-9);
+          const cols = Math.ceil(g.L / v.sheetW - 1e-9);
+          const waste = g.faces === 4 ? 1.15 : 1.05;
+          const byGrid = rowsCount * cols * (g.faces === 1 ? 1 : 2);
+          const total = g.faces === 4 ? Math.ceil(g.area / (useful * v.sheetW) * waste) : Math.ceil(byGrid * (g.faces === 4 ? 1 : 1));
+          main = total + ' ' + plural(total, 'лист', 'листа', 'листов');
+          rows.push(['Листы', g.faces === 4
+            ? total + ' шт по площади ' + fmt(g.area) + ' м² (+15% на подрезку вальм)'
+            : total + ' шт: ' + rowsCount + ' по скату × ' + cols + ' по длине' + (g.faces === 2 ? ' × 2 ската' : '')]);
+          rows.push(['Саморезы кровельные', '≈ ' + Math.ceil(g.area * 8) + ' шт (8 на м²)']);
+          unitCost = { label: 'Покрытие', amount: total, unit: plural(total, 'лист', 'листа', 'листов') };
+        } else if (m === 'soft') {
+          if (!pos(v.perM2)) return null;
+          const packs = Math.ceil(g.area * 1.1 / 3);
+          main = packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
+          rows.push(['Мягкая черепица', packs + ' упак. по 3 м² (площадь ' + fmt(g.area) + ' м² + 10% на подрезку)']);
+          rows.push(['Сплошная обрешётка', fmt(g.area * 1.05) + ' м² фанеры или ОСП']);
+          rows.push(['Подкладочный ковёр', fmt(g.area * 1.1) + ' м²']);
+          rows.push(['Гвозди', '≈ ' + Math.ceil(g.area * 20) + ' шт (20 на м²)']);
+          unitCost = { label: 'Черепица', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок') };
+        } else {
+          if (!pos(v.rollW) || !pos(v.rollL)) return null;
+          const eff = v.rollW - (v.rollOver || 0);
+          if (eff <= 0) return { error: 'Нахлёст больше ширины рулона — проверьте размеры.' };
+          const strips = Math.ceil(g.L / eff - 1e-9) * (g.faces === 1 ? 1 : 2);
+          const perRoll = Math.floor(v.rollL / g.slopeLen);
+          const rolls = perRoll > 0 ? Math.ceil(strips / perRoll) : Math.ceil(strips * g.slopeLen / v.rollL);
+          main = rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов');
+          rows.push(['Картины', strips + ' шт по ' + fmt(g.slopeLen) + ' м' + (perRoll > 0 ? ' (из рулона ' + perRoll + ')' : '')]);
+          unitCost = { label: 'Кровля', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов') };
+        }
+        rows.push(['Площадь скатов', fmt(g.area) + ' м², уклон ' + fmt(g.angle) + '°, длина ската ' + fmt(g.slopeLen) + ' м']);
+        // обрешётка и стропила
+        if (pos(v.battenStep) && m !== 'soft') {
+          const lines = Math.ceil(g.slopeLen / v.battenStep) + 1;
+          const battenLen = g.faces === 4 ? g.area / v.battenStep : lines * g.L * (g.faces === 1 ? 1 : 2);
+          rows.push(['Обрешётка', g.faces === 4
+            ? fmt(battenLen) + ' м (площадь ' + fmt(g.area) + ' м² ÷ шаг ' + fmt(v.battenStep) + ' м)'
+            : lines + ' рядов × ' + fmt(g.L) + ' м' + (g.faces === 2 ? ' × 2 ската' : '') + ' = ' + fmt(battenLen) + ' м']);
+          cost.push({ label: 'Обрешётка', amount: Math.ceil(battenLen), unit: 'м', priceId: 'batten' });
+        }
+        if (pos(v.rafterStep)) {
+          const pairs = Math.ceil(g.L / v.rafterStep) + 1;
+          const rafterLen = pairs * g.slopeLen * (g.faces === 1 ? 1 : 2);
+          rows.push(['Стропила', pairs + (g.faces === 1 ? ' шт' : ' пар') + ' по ' + fmt(g.slopeLen) + ' м = ' + fmt(rafterLen) + ' м']);
+          cost.push({ label: 'Стропила', amount: Math.ceil(rafterLen), unit: 'м', priceId: 'rafter' });
+        }
+        rows.push(['Конёк', fmt(g.ridge) + ' м' + (g.hips ? ', накосные рёбра ' + fmt(g.hips) + ' м' : '')]);
+        rows.push(['Карниз и водосток', fmt(g.eaves) + ' м желоба' + (g.faces === 2 ? ' (по двум скатам)' : '')]);
+        const films = g.area * 1.15;
+        rows.push(['Гидроизоляция', fmt(films) + ' м² (+15% на нахлёсты)']);
+        cost.push({ label: 'Плёнки', amount: Math.ceil(films), unit: 'м²', priceId: 'film' });
+        if (pos(v.insulation)) {
+          const vol = g.area * v.insulation / 100;
+          rows.push(['Утеплитель', fmt(v.insulation) + ' см × ' + fmt(g.area) + ' м² = ' + fmt(vol) + ' м³, пароизоляция ' + fmt(films) + ' м²']);
+          cost.push({ label: 'Утеплитель', amount: Math.ceil(vol * 10) / 10, unit: 'м³', priceId: 'insul' });
+        }
+        cost.unshift(Object.assign({ priceId: 'unit' }, unitCost));
+        return { main: { label: 'Нужно на кровлю', value: main + ' · ' + fmt(g.area) + ' м²' }, rows, cost,
+          note: 'Площадь считается по скатам со свесами, а не по площади дома: при уклоне ' + fmt(g.angle) + '° скат длиннее половины ширины. Металлочерепице и профнастилу нужен уклон от 12°, ондулину от 10°, мягкой черепице от 12°, фальцевой кровле от 3°. Стропила и сечение бруса под снеговую нагрузку считает проектировщик.' };
+      },
+    },
+
     /* --- Кладка стен: блоки или кирпич по плану дома, проёмы, перемычки, армирование --- */
     masonry: {
       modeLabel: 'Форма дома',

@@ -277,3 +277,5 @@
     50% { box-shadow: 0 0 0 8px var(--color-accent-subtle); }
   }
 }
+.viz-roof { fill: #8d5b4c; stroke: #46261f; stroke-width: 0.8; }
+.viz-roof--alt { fill: #a06a58; }

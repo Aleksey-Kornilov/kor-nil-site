@@ -248,5 +248,64 @@
     container.classList.add('viz-flat');
   }
 
-  window.CalcViz = { iso, rotatable, walls, shape, fence };
+  /* ---------- Кровля: скаты как наклонные многоугольники поверх коробки дома ----------
+     faces: [[x,y,z], …] — вершины ската в метрах; walls — призма стен (необязательно). */
+  function roof(container, faces, wallPrisms, dims, opts) {
+    opts = opts || {};
+    const yaw = opts.yaw == null ? -0.6 : opts.yaw;
+    const pitch = opts.pitch == null ? DEFAULT_PITCH : Math.max(0.12, Math.min(1.45, opts.pitch));
+    const zoom = opts.zoom == null ? 1 : Math.max(0.4, Math.min(4, opts.zoom));
+    const pr = (p) => project(p, yaw, pitch);
+    const allPts = faces.flat().concat((wallPrisms || []).flatMap((b) => b.poly.map((q) => [q[0], q[1], b.z])).concat((wallPrisms || []).flatMap((b) => b.poly.map((q) => [q[0], q[1], b.z + b.dz]))));
+    const xs = allPts.map((p) => p[0]), ys = allPts.map((p) => p[1]), zs = allPts.map((p) => p[2]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+    const rx = (Math.max(...xs) - Math.min(...xs)) / 2, ry = (Math.max(...ys) - Math.min(...ys)) / 2, rz = (Math.max(...zs) - Math.min(...zs)) / 2;
+    const radiusXY = Math.hypot(rx, ry) + 0.6;
+    const W = 640, H = 400, pad = 64;
+    const scale = Math.min((W - pad * 2) / (2 * radiusXY), (H - pad * 2) / (2 * (radiusXY + rz))) * zoom;
+    const c0 = pr([cx, cy, cz]);
+    const X = (q) => W / 2 + (q.sx - c0.sx) * scale, Y = (q) => H / 2 + (q.sy - c0.sy) * scale;
+    const poly = (pts) => pts.map((q) => X(q).toFixed(1) + ',' + Y(q).toFixed(1)).join(' ');
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'viz-svg', role: 'img', 'aria-label': opts.title || 'Схема кровли' });
+    const defs = el('defs');
+    const mk = el('marker', { id: 'viz-arr', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
+    mk.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead' })); defs.appendChild(mk); svg.appendChild(defs);
+    if (opts.ground) {
+      const m = Math.max(0.8, rx * 0.25);
+      const g = [[cx - rx - m, cy - ry - m, 0], [cx + rx + m, cy - ry - m, 0], [cx + rx + m, cy + ry + m, 0], [cx - rx - m, cy + ry + m, 0]].map(pr);
+      svg.appendChild(el('polygon', { points: poly(g), fill: '#7cb083', 'fill-opacity': '0.28', stroke: '#5f9466', 'stroke-opacity': '0.5' }));
+    }
+    // Стены рисуем первыми: они всегда под кровлей, иначе верх стены закрывает дальний скат.
+    (wallPrisms || []).forEach((b) => {
+      prismFaces(b).forEach((fc) => {
+        if (fc.shade === 'top') return; // верх стены всё равно под крышей
+        const p = fc.pts.map(pr); let area = 0;
+        for (let i = 0; i < p.length; i++) { const a = p[i], q = p[(i + 1) % p.length]; area += a.sx * q.sy - q.sx * a.sy; }
+        if (area <= 0) return;
+        svg.appendChild(el('polygon', { points: poly(p), fill: FILL[fc.shade], 'fill-opacity': '0.85', stroke: '#2b3440', 'stroke-width': '0.8', 'stroke-opacity': '0.5' }));
+      });
+    });
+    // Скаты — от дальних к ближним
+    faces.map((f, i) => {
+      const c = [f.reduce((s2, q) => s2 + q[0], 0) / f.length, f.reduce((s2, q) => s2 + q[1], 0) / f.length, f.reduce((s2, q) => s2 + q[2], 0) / f.length];
+      return { f, i, depth: pr(c).depth };
+    }).sort((a, b) => a.depth - b.depth).forEach((it) => {
+      svg.appendChild(el('polygon', { points: poly(it.f.map(pr)), class: 'viz-roof' + (it.i % 2 ? ' viz-roof--alt' : '') }));
+    });
+    (dims || []).forEach((d) => {
+      const a = pr(d.from), b = pr(d.to);
+      const ax = X(a), ay = Y(a), bx = X(b), by = Y(b), off = d.offset || 0;
+      let nx = -(by - ay), ny = bx - ax; const len = Math.hypot(nx, ny) || 1; nx = nx / len * off; ny = ny / len * off;
+      const x1 = ax + nx, y1 = ay + ny, x2 = bx + nx, y2 = by + ny;
+      if (off) { svg.appendChild(el('line', { x1: ax, y1: ay, x2: x1, y2: y1, class: 'viz-ext' })); svg.appendChild(el('line', { x1: bx, y1: by, x2: x2, y2: y2, class: 'viz-ext' })); }
+      svg.appendChild(el('line', { x1, y1, x2, y2, class: 'viz-dim', 'marker-start': 'url(#viz-arr)', 'marker-end': 'url(#viz-arr)' }));
+      svg.appendChild(el('text', { x: (x1 + x2) / 2, y: (y1 + y2) / 2 - 6, class: 'viz-label', 'text-anchor': 'middle' }, d.label));
+    });
+    if (opts.caption) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
+    const old2 = container.querySelector('svg'); if (old2) old2.remove();
+    container.insertBefore(svg, container.firstChild);
+    container.classList.remove('viz-flat');
+  }
+
+  window.CalcViz = { iso, rotatable, walls, shape, fence, roof };
 })();
