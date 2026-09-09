@@ -192,13 +192,16 @@
   /* ---------- Плоская фигура (участок, потолок) ----------
      pts: [[x,y],…] в метрах, dims: [{ from:[x,y], to:[x,y], label, offset }] */
   function shape(container, pts, dims, opts) {
+    // Подпись снизу живёт в своей полосе под чертежом: раньше она попадала ровно
+    // туда же, где стоит подпись нижнего размера, и они налезали друг на друга.
     const W = 640, H = 340, pad = 50;
+    const capH = (opts && opts.caption) ? 26 : 0;
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
     const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
     const scale = Math.min((W - pad * 2) / Math.max(maxX - minX, 0.01), (H - pad * 2) / Math.max(maxY - minY, 0.01));
     const X = (p) => pad + (p[0] - minX) * scale + ((W - pad * 2) - (maxX - minX) * scale) / 2;
     const Y = (p) => H - pad - (p[1] - minY) * scale - ((H - pad * 2) - (maxY - minY) * scale) / 2;
-    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'viz-svg', role: 'img', 'aria-label': (opts && opts.title) || 'Схема' });
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H + capH}`, class: 'viz-svg', role: 'img', 'aria-label': (opts && opts.title) || 'Схема' });
     if (opts && opts.circle) {
       const r = opts.circle.r * scale;
       svg.appendChild(el('circle', { cx: X([opts.circle.cx, opts.circle.cy]), cy: Y([opts.circle.cx, opts.circle.cy]), r, class: 'viz-area' }));
@@ -215,7 +218,7 @@
       svg.appendChild(el('text', { x: (ax + bx) / 2 + nx * 1.6, y: (ay + by) / 2 + ny * 1.6 + 4, class: 'viz-label', 'text-anchor': 'middle' }, d.label));
     });
     if (opts && opts.center) svg.appendChild(el('text', { x: W / 2, y: H / 2 + 5, class: 'viz-big', 'text-anchor': 'middle' }, opts.center));
-    if (opts && opts.caption) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
+    if (opts && opts.caption) svg.appendChild(el('text', { x: W / 2, y: H + capH - 8, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
     const old = container.querySelector('svg'); if (old) old.remove(); container.insertBefore(svg, container.firstChild);
     container.classList.add('viz-flat');
   }
