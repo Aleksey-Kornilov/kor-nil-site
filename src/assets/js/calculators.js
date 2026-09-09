@@ -490,6 +490,132 @@
       },
     },
 
+    /* --- Кладка стен: блоки или кирпич по плану дома, проёмы, перемычки, армирование --- */
+    masonry: {
+      modeLabel: 'Форма дома',
+      finishes: { wall: 'Кладка', none: 'Без кладки (уже есть, соседняя)' },
+      modes: [
+        { id: 'rect', label: 'Прямоугольный дом', room: true, fields: [
+          { id: 'len', label: 'Длина дома', unit: 'м', value: '9' },
+          { id: 'wid', label: 'Ширина дома', unit: 'м', value: '8' },
+          { id: 'hei', label: 'Высота стен', unit: 'м', value: '3' },
+        ] },
+        { id: 'plan', label: 'Дом по своему плану', room: true, plan: { simple: true }, fields: [
+          { id: 'hei', label: 'Высота стен', unit: 'м', value: '3' },
+        ] },
+      ],
+      common: [
+        { id: 'inner', label: 'Внутренние стены (перегородки)', unit: 'м, необязательно' },
+        { id: 'thick', label: 'Толщина стены', unit: 'мм', value: '400' },
+        { id: 'waste', label: 'Запас на бой и подрезку', unit: '%', value: '5' },
+        { id: 'mortar', label: 'Раствор или клей', unit: 'кг на м³ кладки (клей для блока ≈ 25, раствор для кирпича ≈ 75)', value: '25' },
+        { id: 'bagKg', label: 'Мешок раствора', unit: 'кг', value: '25' },
+        { id: 'meshStep', label: 'Армирование через каждые', unit: 'рядов, 0 = без сетки', value: '4' },
+      ],
+      presets: [{ label: 'Расход смеси', fieldId: 'mortar', unit: 'кг/м³', items: [['Клей для блоков', '25'], ['Раствор для кирпича', '75'], ['Раствор потолще', '100']] }],
+      selects: [{ id: 'unit', label: 'Из чего кладём', default: 'gas', choices: [
+        { id: 'gas', label: 'Газоблок 600×300×200', hint: 'кладка на клей, 27,8 шт в м³' },
+        { id: 'foam', label: 'Пеноблок 600×300×200', hint: 'то же, 27,8 шт в м³' },
+        { id: 'brick', label: 'Кирпич одинарный 250×120×65', hint: '512 шт в м³ с учётом швов' },
+        { id: 'brick15', label: 'Кирпич полуторный 250×120×88', hint: '378 шт в м³' },
+        { id: 'ceramo', label: 'Керамоблок 380×250×219', hint: '48 шт в м³' },
+      ] }],
+      prices: [
+        { id: 'unit', label: 'Блок или кирпич', unit: '₽ за штуку' },
+        { id: 'mortar', label: 'Раствор или клей', unit: '₽ за мешок' },
+        { id: 'mesh', label: 'Кладочная сетка', unit: '₽ за метр' },
+        { id: 'lintel', label: 'Перемычка', unit: '₽ за метр' },
+      ],
+      roomOpts: {
+        finishes: { wall: 'Кладка', none: 'Без кладки (уже есть, соседняя)' }, defaultFinish: 'wall', wallWord: 'Стена',
+        openingsTitle: 'Окна и двери на этой стене (нажмите на проём в развёртке, чтобы найти его):',
+        hint: 'Нажмите на стену, чтобы включить или выключить кладку. Окна и двери тяните по стене, можно перетащить на соседнюю.',
+      },
+      // Штук в кубометре кладки: по размеру изделия с учётом шва
+      perM3(id) {
+        return { gas: 27.8, foam: 27.8, brick: 512, brick15: 378, ceramo: 48 }[id] || 27.8;
+      },
+      lens(v, mode, extras) {
+        if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null;
+        const P = window.CalcPlan; if (!P || !extras.plan) return null;
+        const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+        return g.valid ? g.edges.map((e) => e.len) : null;
+      },
+      draw(v, mode, box, view, extras) {
+        const V = window.CalcViz; if (!V || !pos(v.hei) || !pos(v.thick)) return false;
+        let verts = null;
+        if (mode === 'rect') { if (pos(v.len) && pos(v.wid)) verts = [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]]; }
+        else { const P = window.CalcPlan; if (P && extras.plan) { const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 }); if (g.valid) verts = g.verts; } }
+        if (!verts) return false;
+        const R = window.CalcRoom;
+        const lens = verts.map((a, i) => { const b = verts[(i + 1) % verts.length]; return Math.hypot(b[0] - a[0], b[1] - a[1]); });
+        const m = R && extras.room ? R.measure(extras.room, lens, v.hei, this.finishes, 'wall') : null;
+        const t = v.thick / 1000;
+        // Каждая стена — своя призма толщиной t, внутрь от контура
+        const prisms = [];
+        verts.forEach((a, i) => {
+          if (m && m.walls[i] && m.walls[i].finish !== 'wall') return;
+          const b = verts[(i + 1) % verts.length];
+          const len = lens[i], dx = (b[0] - a[0]) / len, dy = (b[1] - a[1]) / len;
+          const nx = -dy * t, ny = dx * t;
+          prisms.push({ poly: [a, b, [b[0] + nx, b[1] + ny], [a[0] + nx, a[1] + ny]], z: 0, dz: v.hei });
+        });
+        if (!prisms.length) return false;
+        const dims = verts.length <= 8 ? verts.map((a, i) => { const b = verts[(i + 1) % verts.length]; return { from: [a[0], a[1], v.hei], to: [b[0], b[1], v.hei], label: (i + 1) + ': ' + fmt(lens[i]) + ' м', offset: -18 }; }) : [];
+        dims.push({ from: [verts[0][0], verts[0][1], 0], to: [verts[0][0], verts[0][1], v.hei], label: 'высота ' + fmt(v.hei) + ' м', offset: -28 });
+        V.iso(box, prisms, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, caption: 'Коробка стен, толщина ' + fmt(v.thick) + ' мм. Потяните, чтобы повернуть.' });
+        return true;
+      },
+      compute(v, mode, sel, extras) {
+        const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
+        if (mode === 'plan' && !lens && extras.plan) return { error: 'Контур дома пересекает сам себя — поправьте углы на плане.' };
+        if (!R || !extras.room || !lens || !pos(v.hei) || !pos(v.thick)) return null;
+        const m = R.measure(extras.room, lens, v.hei, this.finishes, 'wall');
+        const walls = m.by.wall;
+        if (!walls.n) return { error: 'У всех стен выбрано «без кладки» — отметьте на развёртке, какие стены кладём.' };
+        const t = v.thick / 1000;
+        const innerLen = v.inner || 0;
+        const areaOuter = walls.area;                     // за вычетом проёмов
+        const areaInner = innerLen * v.hei;
+        const area = areaOuter + areaInner;
+        const volume = area * t;
+        const per = this.perM3(sel.unit);
+        const waste = 1 + (v.waste || 0) / 100;
+        const units = Math.ceil(volume * per * waste);
+        const mortarKg = volume * (v.mortar || 0);
+        const bags = pos(v.bagKg) ? Math.ceil(mortarKg / v.bagKg) : null;
+        // Перемычки: по ширине проёмов + 250 мм опоры с каждой стороны
+        const ops = extras.room.openings.filter((o) => m.walls[o.wall] && m.walls[o.wall].finish === 'wall' && o.w > 0);
+        const lintel = ops.reduce((s2, o) => s2 + o.w + 0.5, 0);
+        // Армирование: ряды по высоте блока, сетка через каждые N рядов, длина = длина стен
+        const rowH = ({ gas: 0.2, foam: 0.2, brick: 0.065 + 0.012, brick15: 0.088 + 0.012, ceramo: 0.219 })[sel.unit] || 0.2;
+        const rowsTotal = Math.floor(v.hei / rowH);
+        const meshRows = pos(v.meshStep) ? Math.floor(rowsTotal / v.meshStep) : 0;
+        const meshLen = meshRows * (walls.len + innerLen);
+        const rows = [
+          ['Кладка', fmt(area) + ' м² × ' + fmt(t) + ' м = ' + fmt(volume) + ' м³' + (innerLen ? ' (включая перегородки ' + fmt(areaInner) + ' м²)' : '')],
+          ['В кубометре', fmt(per) + ' шт, запас ' + fmt(v.waste || 0) + '%'],
+          ['Рядов по высоте', rowsTotal + ' (высота ряда ' + fmt(rowH * 100) + ' см)'],
+        ];
+        const cost = [{ label: 'Блоки или кирпич', amount: units, unit: 'шт', priceId: 'unit' }];
+        if (mortarKg > 0) {
+          rows.push(['Раствор или клей', fmtInt(mortarKg) + ' кг' + (bags != null ? ' ≈ ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по ' + fmt(v.bagKg) + ' кг' : '')]);
+          if (bags != null) cost.push({ label: 'Раствор', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'mortar' });
+        }
+        if (meshLen > 0) {
+          rows.push(['Кладочная сетка', meshRows + ' ' + plural(meshRows, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(walls.len + innerLen) + ' м = ' + fmt(meshLen) + ' м']);
+          cost.push({ label: 'Сетка', amount: Math.ceil(meshLen), unit: 'м', priceId: 'mesh' });
+        }
+        if (lintel > 0) {
+          rows.push(['Перемычки', ops.length + ' ' + plural(ops.length, 'проём', 'проёма', 'проёмов') + ' → ' + fmt(lintel) + ' м (ширина + 25 см опоры с каждой стороны)']);
+          cost.push({ label: 'Перемычки', amount: Math.ceil(lintel), unit: 'м', priceId: 'lintel' });
+        }
+        m.walls.forEach((w) => rows.push(['Стена ' + (w.i + 1) + ' · ' + this.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
+        return { main: { label: 'Нужно', value: units + ' ' + plural(units, 'штука', 'штуки', 'штук') + ' · ' + fmt(volume) + ' м³ кладки' }, rows, cost,
+          note: 'Проёмы вычтены (' + fmt(m.openings) + ' м²). Объём = площадь стен × толщина, штуки по числу изделий в кубометре с учётом швов. Перемычки считаются по ширине проёма плюс опора 25 см с каждой стороны. Толщину стены и марку блока подбирает проектировщик под нагрузку и климат.' };
+      },
+    },
+
     /* --- Забор: по длине или по плану участка; типы забора и ворот --- */
     fence: {
       modeLabel: 'Как задаём забор',
