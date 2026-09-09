@@ -510,8 +510,9 @@
       selects: [
         { id: 'type', label: 'Из чего забор', default: 'proflist', choices: [
           { id: 'proflist', label: 'Профнастил', hint: 'листы по рабочей ширине, лаги, саморезы' },
-          { id: 'picket', label: 'Штакетник', hint: 'односторонний: штакетины с зазором' },
+          { id: 'picket', label: 'Штакетник (дерево или металл)', hint: 'односторонний: штакетины с зазором' },
           { id: 'picket2', label: 'Штакетник шахматный', hint: 'с двух сторон вразбежку — штакетин почти вдвое больше, зато просветов нет' },
+          { id: 'plank', label: 'Деревянный сплошной (доска)', hint: 'доска встык или с малым зазором, плюс пропитка' },
           { id: 'chainlink', label: 'Сетка-рабица', hint: 'рулоны по длине' },
           { id: 'block', label: 'Блоки / кирпич', hint: 'кладка: штук на м² и раствор' },
         ] },
@@ -527,17 +528,24 @@
         { id: 'gap', label: 'Зазор между штакетинами', unit: 'м', value: '0.05', group: 'picket' },
         { id: 'plankW2', label: 'Ширина штакетины', unit: 'м', value: '0.1', group: 'picket2' },
         { id: 'gap2', label: 'Шаг на одной стороне', unit: 'м (между соседними на одной стороне)', value: '0.1', group: 'picket2' },
+        { id: 'boardW', label: 'Ширина доски', unit: 'м', value: '0.15', group: 'plank' },
+        { id: 'boardGap', label: 'Зазор между досками', unit: 'м, 0 = встык', value: '0.02', group: 'plank' },
+        { id: 'stain', label: 'Пропитка (антисептик)', unit: 'л на м² одной стороны', value: '0.25', group: 'plank' },
         { id: 'rollL', label: 'Длина рулона сетки', unit: 'м', value: '10', group: 'chainlink' },
         { id: 'perM2', label: 'Блоков / кирпичей на м²', unit: 'шт (блок 390×190 ≈ 12,5; кирпич в полкирпича ≈ 51)', value: '12.5', group: 'block' },
         { id: 'mortar', label: 'Раствор', unit: 'кг/м² кладки', value: '30', group: 'block' },
         { id: 'postDepth', label: 'Столб в земле', unit: 'м', value: '1' },
         { id: 'lagRows', label: 'Рядов лаг (поперечин)', unit: 'шт', value: '2', group: 'lags' },
+        { id: 'screwsPer', label: 'Саморезов на лист', unit: 'шт (обычно 8–10)', value: '8', group: 'proflist' },
+        { id: 'screwPack', label: 'Саморезов в упаковке', unit: 'шт', value: '250', group: 'screws' },
       ],
       presets: [{ label: 'Кладка', fieldId: 'perM2', unit: 'шт/м²', group: 'block', items: [['Блок 390×190', '12.5'], ['Кирпич в полкирпича', '51'], ['Кирпич в кирпич', '102']] }],
       prices: [
-        { id: 'unit', label: 'Лист / штакетина / рулон / блок', unit: '₽ за штуку' },
+        { id: 'unit', label: 'Лист / штакетина / доска / рулон / блок', unit: '₽ за штуку' },
         { id: 'post', label: 'Столб', unit: '₽ за штуку' },
         { id: 'lag', label: 'Лага 6 м', unit: '₽ за штуку', group: 'lags' },
+        { id: 'screws', label: 'Саморезы', unit: '₽ за упаковку', group: 'screws' },
+        { id: 'stain', label: 'Пропитка', unit: '₽ за литр', group: 'plank' },
       ],
       roomOpts: {
         finishes: { fence: 'Забор', none: 'Без забора (сосед, дом)' }, defaultFinish: 'fence', fullHeight: true, wallWord: 'Сторона',
@@ -556,7 +564,8 @@
       },
       groups(v, mode, extras, sel) {
         const t = sel.type;
-        return { proflist: t === 'proflist', picket: t === 'picket', picket2: t === 'picket2', chainlink: t === 'chainlink', block: t === 'block', lags: t !== 'block' && t !== 'chainlink' };
+        const screws = t === 'proflist' || t === 'picket' || t === 'picket2' || t === 'plank';
+        return { proflist: t === 'proflist', picket: t === 'picket', picket2: t === 'picket2', plank: t === 'plank', chainlink: t === 'chainlink', block: t === 'block', lags: t !== 'block' && t !== 'chainlink', screws };
       },
       // Сводка по забору: полезная длина, пролёты, столбы, проёмы — для обоих режимов
       summary(v, mode, sel, extras) {
@@ -619,7 +628,8 @@
         const sm = this.summary(v, mode, sel, extras);
         if (!sm) return null; if (sm.error) return sm;
         const { net, sections, posts, gates, wickets, gateLen } = sm;
-        const rows = [], cost = []; let main, unitCost = null;
+        const rows = [], cost = []; let main, unitCost = null, screws = 0, screwNote = '';
+        const rowsL = v.lagRows == null ? 2 : v.lagRows;
         const postLen = v.hei + (v.postDepth || 1);
         const holes = posts * Math.PI * 0.1 * 0.1 * (v.postDepth || 1);
         const cementBags = Math.ceil(holes * 1.1 * 286 / 50);
@@ -630,7 +640,7 @@
           const sheets = Math.ceil(net / v.sheetW - 1e-9);
           main = P(sheets, 'лист', 'листа', 'листов') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
           rows.push(['Листы профнастила', sheets + ' шт высотой ' + fmt(v.hei) + ' м (рабочая ширина ' + fmt(v.sheetW) + ' м)']);
-          rows.push(['Саморезы', '≈ ' + sheets * 8 + ' шт (по 8 на лист)']);
+          screws = sheets * (pos(v.screwsPer) ? Math.round(v.screwsPer) : 8); screwNote = 'по ' + (pos(v.screwsPer) ? Math.round(v.screwsPer) : 8) + ' на лист';
           unitCost = { label: 'Профнастил', amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов') };
         } else if (t === 'picket' || t === 'picket2') {
           const pw = t === 'picket' ? v.plankW : v.plankW2, gp = t === 'picket' ? (v.gap || 0) : (v.gap2 || 0);
@@ -638,8 +648,17 @@
           const planks = Math.ceil(net / (pw + gp) - 1e-9) * (t === 'picket2' ? 2 : 1);
           main = P(planks, 'штакетина', 'штакетины', 'штакетин') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
           rows.push(['Штакетины', planks + ' шт × ' + fmt(v.hei) + ' м' + (t === 'picket2' ? ' (шахматка: с двух сторон вразбежку)' : ', шаг ' + fmt(pw + gp) + ' м')]);
-          rows.push(['Саморезы', '≈ ' + planks * (v.lagRows || 2) * 2 + ' шт (по 2 на ряд лаг)']);
+          screws = planks * rowsL * 2; screwNote = 'по 2 на каждый ряд лаг';
           unitCost = { label: 'Штакетник', amount: planks, unit: plural(planks, 'штакетина', 'штакетины', 'штакетин') };
+        } else if (t === 'plank') {
+          if (!pos(v.boardW)) return null;
+          const boards = Math.ceil(net / (v.boardW + (v.boardGap || 0)) - 1e-9);
+          const area = net * v.hei, liters = pos(v.stain) ? area * 2 * v.stain : 0;
+          main = P(boards, 'доска', 'доски', 'досок') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
+          rows.push(['Доски', boards + ' шт × ' + fmt(v.hei) + ' м, ширина ' + fmt(v.boardW) + ' м' + ((v.boardGap || 0) > 0 ? ', зазор ' + fmt(v.boardGap) + ' м' : ', встык')]);
+          if (liters > 0) { rows.push(['Пропитка', fmt(liters) + ' л (' + fmt(area) + ' м² × 2 стороны × ' + fmt(v.stain) + ' л/м²)']); cost.push({ label: 'Пропитка', amount: Math.ceil(liters), unit: 'л', priceId: 'stain' }); }
+          screws = boards * rowsL * 2; screwNote = 'по 2 на каждый ряд лаг';
+          unitCost = { label: 'Доска', amount: boards, unit: plural(boards, 'доска', 'доски', 'досок') };
         } else if (t === 'chainlink') {
           if (!pos(v.rollL)) return null;
           const rolls = Math.ceil(net / v.rollL - 1e-9);
@@ -665,9 +684,14 @@
           rows.push(['Проёмы', note]);
         }
         if (t !== 'block' && t !== 'chainlink') {
-          const rowsL = v.lagRows == null ? 2 : v.lagRows, lagPieces = Math.ceil(rowsL * net / 6 - 1e-9);
+          const lagPieces = Math.ceil(rowsL * net / 6 - 1e-9);
           rows.push(['Лаги', rowsL + ' ' + plural(rowsL, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м → ' + lagPieces + ' шт по 6 м']);
           cost.push({ label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' });
+        }
+        if (screws > 0) {
+          const pack = pos(v.screwPack) ? Math.round(v.screwPack) : 250, packs = Math.ceil(screws / pack);
+          rows.push(['Саморезы', '≈ ' + screws + ' шт (' + screwNote + ') → ' + packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' по ' + pack]);
+          cost.push({ label: 'Саморезы', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' по ' + pack, priceId: 'screws' });
         }
         rows.push(['Бетон под столбы', fmt(holes) + ' м³ (лунки ⌀20 см) ≈ ' + cementBags + ' ' + plural(cementBags, 'мешок', 'мешка', 'мешков') + ' цемента']);
         if (sm.sides) sm.sides.forEach((w) => rows.push(['Сторона ' + (w.i + 1), fmt(w.len) + ' м' + (w.opLen ? ', проёмы ' + fmt(w.opLen) + ' м' : '')]));
