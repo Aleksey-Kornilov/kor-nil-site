@@ -490,6 +490,131 @@
       },
     },
 
+    /* --- Пол: плитка, ламинат, линолеум по комнате (прямоугольник или свой план) --- */
+    floor: {
+      modeLabel: 'Форма помещения',
+      modes: [
+        { id: 'rect', label: 'Прямоугольная комната', fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+        ] },
+        { id: 'plan', label: 'Свой план (ниши, выступы)', plan: { simple: true, presetsKey: 'ROOM_PRESETS' }, fields: [] },
+      ],
+      common: [
+        { id: 'tileL', label: 'Длина плитки', unit: 'см', value: '60', group: 'tile' },
+        { id: 'tileW', label: 'Ширина плитки', unit: 'см', value: '60', group: 'tile' },
+        { id: 'seam', label: 'Шов', unit: 'мм', value: '2', group: 'tile' },
+        { id: 'glueRate', label: 'Расход клея', unit: 'кг/м² (гребёнка 8–10 мм ≈ 5)', value: '5', group: 'tile' },
+        { id: 'glueBag', label: 'Мешок клея', unit: 'кг', value: '25', group: 'tile' },
+        { id: 'groutRate', label: 'Расход затирки', unit: 'кг/м²', value: '0.5', group: 'tile' },
+        { id: 'boardL', label: 'Длина доски', unit: 'см', value: '138', group: 'board' },
+        { id: 'boardW', label: 'Ширина доски', unit: 'см', value: '19', group: 'board' },
+        { id: 'packM2', label: 'В упаковке', unit: 'м²', value: '2.1', group: 'board' },
+        { id: 'underlay', label: 'Подложка в рулоне', unit: 'м²', value: '10', group: 'board' },
+        { id: 'rollW2', label: 'Ширина рулона', unit: 'м', value: '3', group: 'roll' },
+        { id: 'skirting', label: 'Плинтус: длина планки', unit: 'м', value: '2.5' },
+        { id: 'doorways', label: 'Дверные проёмы (вычесть из плинтуса)', unit: 'шт', value: '1' },
+      ],
+      selects: [
+        { id: 'material', label: 'Покрытие', default: 'tile', choices: [
+          { id: 'tile', label: 'Плитка / керамогранит', hint: 'клей, затирка, крестики' },
+          { id: 'board', label: 'Ламинат / паркетная доска', hint: 'упаковки, подложка, зазор у стен' },
+          { id: 'roll', label: 'Линолеум / ковролин', hint: 'рулон одним куском, без швов' },
+        ] },
+        { id: 'layout', label: 'Раскладка', default: 'straight', choices: [
+          { id: 'straight', label: 'Прямая', hint: 'запас 5%' },
+          { id: 'offset', label: 'Со смещением (вразбежку)', hint: 'запас 10%' },
+          { id: 'diagonal', label: 'По диагонали', hint: 'запас 15%: много подрезки по углам' },
+        ] },
+      ],
+      prices: [
+        { id: 'unit', label: 'Плитка / упаковка / рулон', unit: '₽ за штуку' },
+        { id: 'glue', label: 'Клей', unit: '₽ за мешок', group: 'tile' },
+        { id: 'grout', label: 'Затирка', unit: '₽ за кг', group: 'tile' },
+        { id: 'underlay', label: 'Подложка', unit: '₽ за рулон', group: 'board' },
+        { id: 'skirt', label: 'Плинтус', unit: '₽ за планку' },
+      ],
+      groups(v, mode, extras, sel) {
+        const m = sel.material;
+        return { tile: m === 'tile', board: m === 'board', roll: m === 'roll' };
+      },
+      shape(v, mode, extras) {
+        if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? { area: v.len * v.wid, per: 2 * (v.len + v.wid), L: v.len, W: v.wid, pts: [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]] } : null;
+        const P = window.CalcPlan; if (!P || !extras.plan) return null;
+        const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+        if (!g.valid) return null;
+        const xs = g.verts.map((p) => p[0]), ys = g.verts.map((p) => p[1]);
+        return { area: g.outerArea, per: g.perimeter, L: Math.max(...xs) - Math.min(...xs), W: Math.max(...ys) - Math.min(...ys), pts: g.verts };
+      },
+      draw(v, mode, box, view, extras) {
+        const V = window.CalcViz; const sh = this.shape(v, mode, extras);
+        if (!V || !sh) return false;
+        const dims = mode === 'rect'
+          ? [{ from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 }]
+          : sh.pts.map((a, i) => { const b = sh.pts[(i + 1) % sh.pts.length]; return { from: a, to: b, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 20 }; });
+        V.shape(box, sh.pts, dims, { center: fmt(sh.area) + ' м²', title: 'Пол', caption: 'Площадь пола ' + fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м' });
+        return true;
+      },
+      compute(v, mode, sel, extras) {
+        const sh = this.shape(v, mode, extras);
+        if (mode === 'plan' && !sh && extras.plan) return { error: 'Контур помещения пересекает сам себя — поправьте углы на плане.' };
+        if (!sh) return null;
+        const waste = { straight: 1.05, offset: 1.10, diagonal: 1.15 }[sel.layout] || 1.05;
+        const wastePct = Math.round((waste - 1) * 100);
+        const rows = [], cost = []; let main, unitCost;
+        const m = sel.material;
+        if (m === 'tile') {
+          if (!pos(v.tileL) || !pos(v.tileW)) return null;
+          const seam = (v.seam || 0) / 1000;
+          const tileArea = (v.tileL / 100 + seam) * (v.tileW / 100 + seam);
+          const tiles = Math.ceil(sh.area * waste / tileArea);
+          const perM2 = 1 / tileArea;
+          const glueKg = sh.area * (v.glueRate || 0);
+          const bags = pos(v.glueBag) ? Math.ceil(glueKg / v.glueBag) : null;
+          const grout = sh.area * (v.groutRate || 0);
+          main = tiles + ' ' + plural(tiles, 'плитка', 'плитки', 'плиток');
+          rows.push(['Плитка', tiles + ' шт ' + fmt(v.tileL) + '×' + fmt(v.tileW) + ' см (' + fmt(perM2) + ' шт/м², запас ' + wastePct + '%)']);
+          if (glueKg > 0) rows.push(['Клей', fmtInt(glueKg) + ' кг' + (bags != null ? ' ≈ ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') : '')]);
+          if (grout > 0) rows.push(['Затирка', fmt(grout) + ' кг']);
+          rows.push(['Крестики', '≈ ' + Math.ceil(tiles * 2) + ' шт']);
+          unitCost = { label: 'Плитка', amount: tiles, unit: 'шт' };
+          if (bags != null) cost.push({ label: 'Клей', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'glue' });
+          if (grout > 0) cost.push({ label: 'Затирка', amount: Math.ceil(grout), unit: 'кг', priceId: 'grout' });
+        } else if (m === 'board') {
+          if (!pos(v.packM2)) return null;
+          const packs = Math.ceil(sh.area * waste / v.packM2);
+          const boards = (pos(v.boardL) && pos(v.boardW)) ? Math.ceil(sh.area * waste / (v.boardL / 100 * v.boardW / 100)) : null;
+          const rolls = pos(v.underlay) ? Math.ceil(sh.area / v.underlay) : null;
+          main = packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
+          rows.push(['Ламинат', packs + ' упак. по ' + fmt(v.packM2) + ' м² (площадь ' + fmt(sh.area) + ' м², запас ' + wastePct + '%)' + (boards ? ', это ≈ ' + boards + ' досок' : '')]);
+          if (rolls != null) { rows.push(['Подложка', rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.underlay) + ' м²']); cost.push({ label: 'Подложка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'underlay' }); }
+          rows.push(['Зазор у стен', '8–10 мм по всему периметру — под плинтус, ламинат должен «гулять»']);
+          unitCost = { label: 'Ламинат', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок') };
+        } else {
+          if (!pos(v.rollW2)) return null;
+          const across = Math.max(sh.L, sh.W), along = Math.min(sh.L, sh.W);
+          const strips = Math.ceil(along / v.rollW2 - 1e-9);
+          const len = strips * (across + 0.1);
+          main = fmt(len) + ' м рулона';
+          rows.push(['Линолеум', strips === 1 ? 'одним куском ' + fmt(across + 0.1) + ' м при ширине рулона ' + fmt(v.rollW2) + ' м' : strips + ' полосы по ' + fmt(across + 0.1) + ' м = ' + fmt(len) + ' м (шов посередине)']);
+          rows.push(['Площадь', fmt(len * v.rollW2) + ' м² при площади пола ' + fmt(sh.area) + ' м²']);
+          unitCost = { label: 'Покрытие', amount: Math.ceil(len * 10) / 10, unit: 'м' };
+        }
+        // Плинтус общий для всех
+        if (pos(v.skirting)) {
+          const doors = (v.doorways || 0) * 0.9;
+          const skirtLen = Math.max(0, sh.per - doors);
+          const planks = Math.ceil(skirtLen / v.skirting);
+          rows.push(['Плинтус', fmt(skirtLen) + ' м → ' + planks + ' ' + plural(planks, 'планка', 'планки', 'планок') + ' по ' + fmt(v.skirting) + ' м']);
+          cost.push({ label: 'Плинтус', amount: planks, unit: plural(planks, 'планка', 'планки', 'планок'), priceId: 'skirt' });
+        }
+        rows.push(['Площадь пола', fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м']);
+        cost.unshift(Object.assign({ priceId: 'unit' }, unitCost));
+        return { main: { label: 'Нужно на пол', value: main + ' · ' + fmt(sh.area) + ' м²' }, rows, cost,
+          note: 'Запас на подрезку: прямая раскладка 5%, вразбежку 10%, по диагонали 15%. Плитка считается с учётом шва: при шве 2 мм плитка 60×60 занимает 60,2×60,2. Ламинат кладут с зазором 8–10 мм у стен, он закрывается плинтусом.' };
+      },
+    },
+
     /* --- Кровля: одно-, двух- и четырёхскатная; листы, обрешётка, водосток, утеплитель --- */
     roof: {
       modeLabel: 'Форма крыши',
