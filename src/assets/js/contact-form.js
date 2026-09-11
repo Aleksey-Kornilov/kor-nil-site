@@ -43,6 +43,7 @@
       status.classList.add('is-success');
       status.textContent = MSG.ok;
       form.reset();
+      if (window.ymGoal) window.ymGoal('contact_sent');
     } catch (err) {
       status.classList.add('is-error');
       status.textContent = MSG.fail + (form.dataset.telegram || 'kornil');

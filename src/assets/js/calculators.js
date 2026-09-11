@@ -2530,6 +2530,7 @@
       // Поделиться: системное меню телефона (Telegram, WhatsApp, VK, MAX, СМС…), на компьютере — ссылки
       const share = h('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Поделиться' });
       share.addEventListener('click', async () => {
+        if (window.ymGoal) window.ymGoal('calc_share', { how: 'share' });
         const data = { title: document.title, text: shareText(), url: shareUrl() };
         if (navigator.share) { try { await navigator.share(data); } catch (e) { /* отменил */ } return; }
         const menu = actions.querySelector('.calc-share-menu');
@@ -2543,14 +2544,19 @@
         ]));
       });
       const copy = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Скопировать' });
-      copy.addEventListener('click', () => navigator.clipboard.writeText(shareText()).then(() => flash(copy, 'Скопировано ✓')));
+      copy.addEventListener('click', () => { if (window.ymGoal) window.ymGoal('calc_share', { how: 'copy' }); navigator.clipboard.writeText(shareText()).then(() => flash(copy, 'Скопировано ✓')); });
       const link = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Ссылка на расчёт' });
-      link.addEventListener('click', () => navigator.clipboard.writeText(shareUrl()).then(() => flash(link, 'Ссылка скопирована ✓')));
+      link.addEventListener('click', () => { if (window.ymGoal) window.ymGoal('calc_share', { how: 'link' }); navigator.clipboard.writeText(shareUrl()).then(() => flash(link, 'Ссылка скопирована ✓')); });
       const pdf = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Скачать PDF' });
-      pdf.addEventListener('click', () => { result.dataset.printDate = new Date().toLocaleDateString('ru-RU'); window.print(); });
+      pdf.addEventListener('click', () => { if (window.ymGoal) window.ymGoal('calc_share', { how: 'pdf' }); result.dataset.printDate = new Date().toLocaleDateString('ru-RU'); window.print(); });
       actions.appendChild(share); actions.appendChild(copy); actions.appendChild(link); actions.appendChild(pdf);
       // Первый готовый расчёт — мягко подсвечиваем, что делать дальше
-      if (!render.hadResult) { render.hadResult = true; share.classList.add('is-fresh'); setTimeout(() => share.classList.remove('is-fresh'), 7000); }
+      if (!render.hadResult) {
+        render.hadResult = true;
+        share.classList.add('is-fresh');
+        setTimeout(() => share.classList.remove('is-fresh'), 7000);
+        if (window.ymGoal) window.ymGoal('calc_result', { calc: key || 'unknown' });
+      }
       if (!vizBox.hidden && vizBox.querySelector('svg')) {
         const png = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Схема PNG' });
         png.addEventListener('click', () => svgToPng(vizBox.querySelector('svg'), (key || 'scheme') + '-schema.png').catch(() => flash(png, 'Не удалось')));
