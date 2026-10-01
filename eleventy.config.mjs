@@ -19,6 +19,24 @@ export default async function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy({ 'src/verify': '.' });
   eleventyConfig.ignores.add('src/verify/**');
 
+  // Демо-макет зоомагазина «Купи Слона» для показа клиенту (/slon/).
+  // Копируется как есть: это самостоятельная страница со своим CSS, JS и service worker,
+  // шаблонизатор её трогать не должен.
+  eleventyConfig.addPassthroughCopy('src/slon');
+  eleventyConfig.ignores.add('src/slon/**');
+  // Презентация к встрече (/slon-p/) — запасной вариант, если не будет ноутбука.
+  eleventyConfig.addPassthroughCopy('src/slon-p');
+  eleventyConfig.ignores.add('src/slon-p/**');
+  // Рабочая документация летней кухни (/kuhnya/) — пример работы для показа клиенту.
+  // Самостоятельная страница: трёхмерная модель, пять листов чертежей и смета в одном файле.
+  eleventyConfig.addPassthroughCopy('src/kuhnya');
+  eleventyConfig.ignores.add('src/kuhnya/**');
+  // Дизайн-проект каркасного дома (/dom/) — закрытый раздел для заказчика.
+  // Делает отдельная сессия (CC_PROJ/dom), содержимое целиком в src/dom/:
+  // трёхмерные модели, чертежи, электрика, фасад, сметы. Копируется как есть.
+  eleventyConfig.addPassthroughCopy('src/dom');
+  eleventyConfig.ignores.add('src/dom/**');
+
   // CSS: пересборка при правке любого css-файла в режиме --serve.
   eleventyConfig.addWatchTarget('src/assets/css/');
   eleventyConfig.on('eleventy.before', () => resetCssCache());

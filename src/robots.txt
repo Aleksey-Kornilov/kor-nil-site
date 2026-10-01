@@ -2,5 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /*.json$
+Disallow: /slon/
+Disallow: /slon-p/
 
 Sitemap: https://kor-nil.ru/sitemap.xml
