@@ -19,13 +19,12 @@ export default async function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy({ 'src/verify': '.' });
   eleventyConfig.ignores.add('src/verify/**');
 
-  // Демо-макет зоомагазина «Купи Слона» для показа клиенту (/slon/).
-  // Копируется как есть: это самостоятельная страница со своим CSS, JS и service worker,
-  // шаблонизатор её трогать не должен.
-  eleventyConfig.addPassthroughCopy('src/slon');
+  // Макет и презентация зоомагазина (src/slon, src/slon-p) НЕ собираются и в прод
+  // не идут: встречу 11.09.2026 они отработали, с 28.09 работает kupislona63.ru.
+  // В них настоящие цены Натальи и 158 её фотографий — в открытом вебе им места нет.
+  // Файлы оставлены в репозитории как архив; чтобы показать снова, вернуть две строки
+  // addPassthroughCopy/ignores по образцу ниже.
   eleventyConfig.ignores.add('src/slon/**');
-  // Презентация к встрече (/slon-p/) — запасной вариант, если не будет ноутбука.
-  eleventyConfig.addPassthroughCopy('src/slon-p');
   eleventyConfig.ignores.add('src/slon-p/**');
   // Рабочая документация летней кухни (/kuhnya/) — пример работы для показа клиенту.
   // Самостоятельная страница: трёхмерная модель, пять листов чертежей и смета в одном файле.

@@ -3,12 +3,58 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<meta name="description" content="Летняя кухня 6 x 5 м: трёхмерная модель, пять листов рабочих чертежей и смета.">
+
+<!-- Страница-витрина: показывает работу новым заказчикам, поиску открыта.
+     ВНИМАНИЕ: noindex снять только после того, как трёхмерная модель уедет
+     из этого файла в отдельный kuhnya/model.glb. Пока она лежит здесь в
+     base64, документ весит 2,8 МБ и не рисуется, пока не скачается весь —
+     пускать на такую страницу поиск бессмысленно. Делает dom-76.
+     nofollow убран намеренно: внизу страницы есть ссылки на сайт. -->
+<meta name="robots" content="noindex, follow">
+
+<title>Проект летней кухни 6 × 5 м: чертежи, 3D-модель и смета</title>
+<meta name="description" content="Рабочая документация летней кухни 6 × 5 м: трёхмерная модель, пять листов чертежей — план, разрезы, кровля, узлы — и смета материалов.">
+<link rel="canonical" href="https://kor-nil.ru/kuhnya/">
+<meta name="author" content="Алексей Корнилов">
+<meta name="format-detection" content="telephone=no">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="Проект летней кухни 6 × 5 м: чертежи, 3D-модель и смета">
+<meta property="og:description" content="Рабочая документация летней кухни 6 × 5 м: трёхмерная модель, пять листов чертежей — план, разрезы, кровля, узлы — и смета материалов.">
+<meta property="og:url" content="https://kor-nil.ru/kuhnya/">
+<meta property="og:image" content="https://kor-nil.ru/assets/images/og-default.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="kor-nil.ru">
+<meta property="og:locale" content="ru_RU">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Проект летней кухни 6 × 5 м: чертежи, 3D-модель и смета">
+<meta name="twitter:description" content="Рабочая документация летней кухни 6 × 5 м: трёхмерная модель, пять листов чертежей — план, разрезы, кровля, узлы — и смета материалов.">
+<meta name="twitter:image" content="https://kor-nil.ru/assets/images/og-default.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  "name": "Проект летней кухни 6 × 5 м",
+  "description": "Рабочая документация летней кухни 6 × 5 м: трёхмерная модель, пять листов чертежей — план, разрезы, кровля, узлы — и смета материалов.",
+  "url": "https://kor-nil.ru/kuhnya/",
+  "inLanguage": "ru",
+  "dateCreated": "2026-09-29",
+  "image": "https://kor-nil.ru/assets/images/og-default.png",
+  "author": {
+    "@type": "Person",
+    "name": "Алексей Корнилов",
+    "url": "https://kor-nil.ru/"
+  },
+  "about": "Рабочая документация: трёхмерная модель, чертежи, смета материалов"
+}
+</script>
+
 <style>:root{color-scheme:light dark}html,body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
-<title>Летняя кухня 6 × 5</title>
 <style>
 @font-face{font-family:'Golos Text';font-style:normal;font-weight:400;font-display:swap;src:url(vendor/fonts/golos-text-400-cyrillic-ext.woff2) format('woff2');unicode-range:U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F}
 @font-face{font-family:'Golos Text';font-style:normal;font-weight:400;font-display:swap;src:url(vendor/fonts/golos-text-400-cyrillic.woff2) format('woff2');unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116}
@@ -280,6 +326,17 @@
   table.sm .sum{font-weight:600}
   table.sm .prim{display:block; font-size:11.5px; color:var(--muted); margin-top:2px}
 
+  /* Подпись внизу: чья это работа и куда идти дальше. Страница самостоятельная,
+     навигации сайта у неё нет, поэтому ссылки нужны прямо здесь. */
+  .made{margin-top:28px; padding-top:18px; border-top:1px solid var(--line);
+    font-size:13px; line-height:1.55; color:var(--muted)}
+  .made p{margin:0 0 10px}
+  .made strong{color:var(--ink)}
+  .made-links{display:flex; flex-wrap:wrap; gap:8px 20px; margin:0}
+  .made-links a{color:var(--bar); text-decoration:none;
+    border-bottom:1px solid transparent; padding-bottom:1px}
+  .made-links a:hover,.made-links a:focus-visible{border-bottom-color:currentColor}
+
   @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
 </style>
 
@@ -404,6 +461,15 @@
   высоты, проходы, а также профиль металлочерепицы и снегозадержатели. Нажмите «Снять крышу»,
   чтобы кровля, обрешётка и стропила исчезли и стало видно всю расстановку сверху.
   Это рабочая модель для проверки расположения, а не картинка для журнала.</p>
+
+  <footer class="made">
+    <p><strong>Проект, чертежи и смета:</strong> Алексей Корнилов, Самара.
+    Модель, пять листов и расчёт количеств собраны вручную из одной геометрии.</p>
+    <p class="made-links">
+      <a href="/">Другие мои проекты — kor-nil.ru</a>
+      <a href="/contact/">Написать мне</a>
+    </p>
+  </footer>
 </div>
 
 <script src="vendor/three.min.js"></script>

@@ -102,7 +102,9 @@ eleventyNavigation:
 <section class="section container">
   <h2 class="section-title">Проекты</h2>
 
-  <div class="grid grid-3">
+  {#- Четыре карточки: в сетке на три колонки четвёртая оставалась одна
+      на второй строке, поэтому здесь grid-2 — ровно 2 × 2. -#}
+  <div class="grid grid-2">
     <div class="card">
       <div class="card-icon card-icon--app"><img src="/assets/images/chatyadro-icon-128.webp" width="48" height="48" alt="ЧатЯдро" loading="lazy"></div>
       <h3 class="card-title">ЧатЯдро</h3>
@@ -144,6 +146,24 @@ eleventyNavigation:
       </p>
       <div class="card-footer">
         <a href="/seo/">Смотреть все кейсы →</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21h18"></path>
+          <path d="M5 21V8l7-5 7 5v13"></path>
+          <path d="M9 21v-6h6v6"></path>
+        </svg>
+      </div>
+      <h3 class="card-title">Летняя кухня 6 × 5 м</h3>
+      <p class="card-description">
+        Рабочая документация: трёхмерная модель, пять листов чертежей —
+        план, разрезы, кровля, узлы — и смета материалов.
+      </p>
+      <div class="card-footer">
+        <a href="/kuhnya/">Смотреть проект →</a>
       </div>
     </div>
   </div>
