@@ -60,13 +60,13 @@ block = """    # --- Заголовки безопасности (см. /etc/ngi
     # нужны (инициализация темы, загрузчик Метрики, JSON-LD) — поэтому unsafe-inline.
     include /etc/nginx/snippets/kor-nil-security.conf;
 
-    # --- Кэш статики: css с хешем — год, картинки/видео/pdf — 30 дней, js — час ---
+    # --- Кэш статики: css с хешем — год, картинки/видео/pdf/модели — 30 дней, js — час ---
     location ~* ^/assets/css/site\\.[a-f0-9]+\\.css$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
         include /etc/nginx/snippets/kor-nil-security.conf;
     }
-    location ~* \\.(webp|png|jpg|jpeg|svg|ico|mp4|pdf|woff2)$ {
+    location ~* \\.(webp|png|jpg|jpeg|svg|ico|mp4|pdf|woff2|glb)$ {
         expires 30d;
         add_header Cache-Control "public";
         include /etc/nginx/snippets/kor-nil-security.conf;
