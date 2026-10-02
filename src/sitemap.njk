@@ -22,4 +22,12 @@ eleventyExcludeFromCollections: true
   </url>
 {%- endif %}
 {%- endfor %}
+{#- Витрина проекта летней кухни: самостоятельная страница (passthrough),
+    в collections.all её нет, поэтому запись руками. Дата — последняя правка. -#}
+  <url>
+    <loc>{{ site.url }}/kuhnya/</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>
