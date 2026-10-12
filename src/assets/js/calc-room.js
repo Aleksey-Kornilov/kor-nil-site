@@ -14,17 +14,35 @@
   const FINISH = { paint: 'Краска', paper: 'Обои', none: 'Без отделки' };
   const wallName = (i) => 'Стена ' + (i + 1);
 
+  // Площадь объединения прямоугольников [x0, x1] × [y0, y1]: наложенные проёмы не вычитаются дважды
+  function unionArea(rs) {
+    const xs = [...new Set(rs.flatMap((r) => [r[0], r[1]]))].sort((a, b) => a - b);
+    const ys = [...new Set(rs.flatMap((r) => [r[2], r[3]]))].sort((a, b) => a - b);
+    let s = 0;
+    for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < ys.length - 1; j++) {
+      const cx = (xs[i] + xs[i + 1]) / 2, cy = (ys[j] + ys[j + 1]) / 2;
+      if (rs.some((r) => cx > r[0] && cx < r[1] && cy > r[2] && cy < r[3])) s += (xs[i + 1] - xs[i]) * (ys[j + 1] - ys[j]);
+    }
+    return s;
+  }
+
   // Площади по стенам с учётом проёмов на них. lens — длины стен по порядку, H — высота.
   // finishes — допустимые отделки {id: label}, defaultFinish — если у стены не задана.
+  // Проём, оказавшийся за краем стены (стену укоротили), сдвигается обратно на стену.
   function measure(room, lens, H, finishes, defaultFinish, opts_fullHeight) {
     finishes = finishes || FINISH; defaultFinish = defaultFinish || Object.keys(finishes)[0];
     const walls = lens.map((len, i) => {
       const ops = room.openings.filter((o) => o.wall === i && o.w > 0 && o.h > 0);
       if (opts_fullHeight) ops.forEach((o) => { o.h = H; o.y = 0; });
-      const opArea = ops.reduce((s, o) => s + Math.min(o.w, len) * Math.min(o.h, H), 0);
+      ops.forEach((o) => {
+        o.x = Math.max(0, Math.min(o.x || 0, len - Math.min(o.w, len)));
+        o.y = Math.max(0, Math.min(o.y || 0, H - Math.min(o.h, H)));
+      });
+      const rects = ops.map((o) => [o.x, Math.min(len, o.x + o.w), o.y, Math.min(H, o.y + o.h)]);
+      const opArea = unionArea(rects);
       const f = room.walls[i] && room.walls[i].finish;
       const finish = f && finishes[f] ? f : defaultFinish;
-      const opLen = ops.reduce((s, o) => s + Math.min(o.w, len), 0);
+      const opLen = unionArea(rects.map((r) => [r[0], r[1], 0, 1]));
       return { i, len, finish, gross: len * H, openings: opArea, net: Math.max(0, len * H - opArea), count: ops.length, opLen, netLen: Math.max(0, len - opLen), ops };
     });
     const sum = (arr, k) => arr.reduce((s, w) => s + w[k], 0);
@@ -195,8 +213,12 @@
       const adders = document.createElement('div'); adders.className = 'calc-presets';
       OPENING_PRESETS.forEach((p) => adders.appendChild(btn(`${p.label} ${p.w}×${p.h}`, 'calc-preset', () => {
         const len = geom.walls[sel].len;
-        const used = room.openings.filter((o) => o.wall === sel).reduce((s, o) => Math.max(s, o.x + o.w), 0);
-        room.openings.push({ kind: p.kind, w: p.w, h: opts.fullHeight ? geom.H : p.h, wall: sel, x: snap(Math.min(Math.max(0, len - p.w), used + 0.3)), y: opts.fullHeight ? 0 : Math.min(p.y, Math.max(0, geom.H - p.h)) });
+        // Первое свободное место на стене с отступом 30 см; если места нет — к правому краю
+        const busy = room.openings.filter((o) => o.wall === sel).map((o) => [o.x, o.x + o.w]).sort((a, b) => a[0] - b[0]);
+        let x = 0.3;
+        for (const [a, b] of busy) { if (x + p.w + 0.3 <= a + 1e-9) break; x = Math.max(x, b + 0.3); }
+        if (x + p.w > len) x = Math.max(0, len - p.w);
+        room.openings.push({ kind: p.kind, w: p.w, h: opts.fullHeight ? geom.H : p.h, wall: sel, x: snap(x), y: opts.fullHeight ? 0 : Math.min(p.y, Math.max(0, geom.H - p.h)) });
         selOpening = room.openings.length - 1;
         redraw(); onChange();
       })));
