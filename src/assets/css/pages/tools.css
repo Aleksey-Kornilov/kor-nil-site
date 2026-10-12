@@ -154,6 +154,7 @@
 .room-opening { cursor: grab; }
 .room-opening:active { cursor: grabbing; }
 .calc-empty--error { color: var(--color-danger); }
+.calc-field--bad input { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
 .room-opening.is-selected rect { stroke: var(--color-accent); stroke-width: 3; }
 .calc-opening.is-selected { outline: 2px solid var(--color-accent); outline-offset: 4px; border-radius: var(--radius-sm); }
 .calc-opening-del--text { width: auto; padding-inline: var(--space-3); font-size: var(--fs-small); }

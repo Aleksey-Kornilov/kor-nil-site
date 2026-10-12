@@ -16,14 +16,7 @@
   }
 
   // Хвостовые нули режем только когда есть точка — иначе «94 500» превратится в «945».
-  function fmt(v, maxDecimals) {
-    if (maxDecimals === undefined) maxDecimals = 2;
-    if (!Number.isFinite(v)) return '—';
-    let s = v.toFixed(maxDecimals);
-    if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, '');
-    return s.replace('.', ',');
-  }
-
+  // Разряды — неразрывным пробелом, чтобы «16 085» не рвалось на две строки.
   function formatNumber(v, maxDecimals) {
     if (maxDecimals === undefined) maxDecimals = 6;
     if (!Number.isFinite(v)) return '—';
@@ -35,15 +28,18 @@
     const digits = parts[0];
     let out = '';
     for (let i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 === 0) out += ' ';
+      if (i > 0 && (digits.length - i) % 3 === 0) out += '\u00a0';
       out += digits[i];
     }
     if (parts.length > 1) out += ',' + parts[1];
     return neg ? '-' + out : out;
   }
 
+  const fmt = (v, maxDecimals) => formatNumber(v, maxDecimals === undefined ? 2 : maxDecimals);
   const fmtInt = (v) => formatNumber(v, 0);
   const money = (v) => formatNumber(Math.round(v), 0) + ' ₽';
+  // Стяжка тоньше 30 мм бывает только наливной — при переходе на пескобетон или ЦПС возвращаем обычные 50
+  const screedThick = (vals) => ((parseNum(vals.thick) || 0) < 30 ? { thick: '50' } : {});
 
   function plural(n, one, few, many) {
     const abs = Math.abs(n), last = abs % 10, tens = abs % 100;
@@ -75,13 +71,14 @@
 
   // Насыпная плотность, т/м³ (bulk_calculator.dart).
   const MATERIALS = {
-    sand: { name: 'Песок', density: 1.55, hint: 'карьерный сухой; влажный тяжелее на 10–15%' },
-    gravel: { name: 'Щебень', density: 1.35, hint: 'гранитный, фракция 20–40' },
-    pgs: { name: 'ПГС', density: 1.65, hint: 'песчано-гравийная смесь' },
-    screening: { name: 'Отсев', density: 1.40, hint: 'гранитный отсев' },
-    soil: { name: 'Земля, чернозём', density: 1.30, hint: 'рыхлый грунт' },
-    peat: { name: 'Торф', density: 0.50, hint: 'верховой, влажность средняя' },
-    expandedClay: { name: 'Керамзит', density: 0.40, hint: 'фракция 10–20' },
+    // compact — во сколько раз рыхлого материала больше, чем выйдет слоя после трамбовки (усадки)
+    sand: { name: 'Песок', density: 1.55, compact: 1.15, hint: 'карьерный сухой; влажный тяжелее на 10–15%' },
+    gravel: { name: 'Щебень', density: 1.35, compact: 1.3, hint: 'гранитный, фракция 20–40' },
+    pgs: { name: 'ПГС', density: 1.65, compact: 1.2, hint: 'песчано-гравийная смесь' },
+    screening: { name: 'Отсев', density: 1.40, compact: 1.2, hint: 'гранитный отсев' },
+    soil: { name: 'Земля, чернозём', density: 1.30, compact: 1.2, hint: 'рыхлый грунт' },
+    peat: { name: 'Торф', density: 0.50, compact: 1.25, hint: 'верховой, влажность средняя' },
+    expandedClay: { name: 'Керамзит', density: 0.40, compact: 1.1, hint: 'фракция 10–20' },
   };
   // Чем возят: грузоподъёмность — что реально берут, а не по паспорту.
   const TRUCKS = [
@@ -122,7 +119,7 @@
         { id: 'columns', label: 'Столбы / колонны', fields: [
           { id: 'cSide', label: 'Сечение (сторона квадрата)', unit: 'см' },
           { id: 'cHei', label: 'Высота столба', unit: 'м' },
-          { id: 'cCount', label: 'Количество столбов', unit: 'шт', value: '1' },
+          { id: 'cCount', label: 'Количество столбов', unit: 'шт', value: '1', int: true },
         ] },
       ],
       selects: [{ id: 'grade', label: 'Марка бетона', default: 'm200',
@@ -200,7 +197,7 @@
           V.iso(box, boxes, [
             { from: [0, 0, 0], to: [0, 0, hgt], label: 'высота ' + fmt(hgt) + ' м', offset: -26 },
             { from: [0, s, hgt], to: [s, s, hgt], label: 'сечение ' + fmt(v.cSide) + ' см', offset: 18 },
-          ], { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, ground: true, caption: n + ' ' + plural(n, 'столб', 'столба', 'столбов') + '. Потяните, чтобы повернуть.' });
+          ], { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, ground: true, caption: fmtInt(n) + ' ' + plural(n, 'столб', 'столба', 'столбов') + '. Потяните, чтобы повернуть.' });
           return true;
         }
         return false;
@@ -242,7 +239,7 @@
           main: { label: 'Нужно бетона (с запасом 10%)', value: fmt(withReserve) + ' м³' },
           rows: [
             ['Чистый объём', fmt(volume) + ' м³'],
-            ['Цемент М400', fmtInt(cementKg) + ' кг (≈ ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по 50 кг)'],
+            ['Цемент М400', fmtInt(cementKg) + ' кг (≈ ' + fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по 50 кг)'],
             ['Песок', fmtInt(sandKg) + ' кг'],
             ['Щебень', fmtInt(gravelKg) + ' кг'],
             ['Вода', '≈ ' + fmtInt(waterL) + ' л'],
@@ -270,15 +267,15 @@
           { id: 'hei', label: 'Высота потолка', unit: 'м', value: '2.7' },
         ] },
         { id: 'ceiling', label: 'Потолок (краска)', fields: [
-          { id: 'len', label: 'Длина комнаты', unit: 'м' },
-          { id: 'wid', label: 'Ширина комнаты', unit: 'м' },
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
         ] },
         { id: 'custom', label: 'Своя площадь (краска)', fields: [
-          { id: 'area', label: 'Площадь поверхности', unit: 'м²' },
+          { id: 'area', label: 'Площадь поверхности', unit: 'м²', value: '20' },
         ] },
       ],
       common: [
-        { id: 'coats', label: 'Слоёв краски', unit: '', value: '2', group: 'paint' },
+        { id: 'coats', label: 'Слоёв краски', unit: '', value: '2', group: 'paint', int: true },
         { id: 'rate', label: 'Расход краски (м² на 1 литр)', unit: 'на банке', value: '10', group: 'paint' },
         { id: 'can', label: 'Объём банки краски', unit: 'л', value: '2.7', group: 'paint' },
         { id: 'rollW', label: 'Ширина рулона обоев', unit: 'м', value: '1.06', group: 'paper' },
@@ -338,7 +335,7 @@
           const p = paintCalc(area);
           if (!p) return null;
           const rows = [['Без запаса', fmt(p.liters) + ' л'], ['Площадь окраски', fmt(area) + ' м² × ' + fmt(coats) + ' сл.']];
-          if (p.cans != null) rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + p.cans + ' шт']);
+          if (p.cans != null) rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + fmtInt(p.cans) + ' шт']);
           return { main: { label: 'Нужно краски (с запасом 10%)', value: fmt(p.reserve) + ' л' }, rows,
             note: 'Расход указан на банке (обычно 8–12 м²/л). Для тёмного по светлому может понадобиться больше слоёв.',
             cost: p.cans != null ? [{ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }] : [] };
@@ -362,11 +359,11 @@
             {
               const rolls = Math.ceil(strips / perRoll);
               const glue = pos(v.glue) ? Math.ceil(m.paper.area / v.glue) : null;
-              mains.push('обои ' + rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов'));
-              rows.push(['Обои: стен', m.paper.n + ' ' + plural(m.paper.n, 'стена', 'стены', 'стен') + ', ' + fmt(m.paper.area) + ' м² (с проёмами ' + fmt(m.paper.len * v.hei) + ')']);
+              mains.push('обои ' + fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов'));
+              rows.push(['Обои: стен', fmtInt(m.paper.n) + ' ' + plural(m.paper.n, 'стена', 'стены', 'стен') + ', ' + fmt(m.paper.area) + ' м² (с проёмами ' + fmt(m.paper.len * v.hei) + ')']);
               rows.push(['Полос', strips + ' по ' + fmt(stripLen) + ' м' + (pos(v.rapport) ? ' (с подгонкой рисунка)' : '')]);
               rows.push(['Полос из рулона', String(perRoll)]);
-              if (glue != null) rows.push(['Клей', glue + ' ' + plural(glue, 'пачка', 'пачки', 'пачек') + ' (на ' + fmt(m.paper.area) + ' м²)']);
+              if (glue != null) rows.push(['Клей', fmtInt(glue) + ' ' + plural(glue, 'пачка', 'пачки', 'пачек') + ' (на ' + fmt(m.paper.area) + ' м²)']);
               cost.push({ label: 'Обои', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'roll' });
               if (glue != null) cost.push({ label: 'Клей', amount: glue, unit: plural(glue, 'пачка', 'пачки', 'пачек'), priceId: 'glue' });
               note += 'Полосы считаются по ширине каждой стены с округлением вверх; проёмы из полос не вычитаются — остатки уходят над окнами и дверями. ';
@@ -378,9 +375,9 @@
           const p = paintCalc(m.paint.area);
           if (p) {
             mains.push('краска ' + fmt(p.reserve) + ' л');
-            rows.push(['Краска: стен', m.paint.n + ' ' + plural(m.paint.n, 'стена', 'стены', 'стен') + ', ' + fmt(m.paint.area) + ' м² × ' + fmt(coats) + ' сл.']);
+            rows.push(['Краска: стен', fmtInt(m.paint.n) + ' ' + plural(m.paint.n, 'стена', 'стены', 'стен') + ', ' + fmt(m.paint.area) + ' м² × ' + fmt(coats) + ' сл.']);
             rows.push(['Без запаса', fmt(p.liters) + ' л']);
-            if (p.cans != null) { rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + p.cans + ' шт']); cost.push({ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }); }
+            if (p.cans != null) { rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + fmtInt(p.cans) + ' шт']); cost.push({ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }); }
           }
         }
         if (!mains.length) return null;
@@ -404,15 +401,15 @@
         ] },
       ],
       common: [
-        { id: 'gables', label: 'Фронтонов (треугольники под крышей)', unit: 'шт', value: '2', group: 'gable' },
-        { id: 'gableW', label: 'Ширина фронтона', unit: 'м', value: '6', group: 'gable' },
+        { id: 'gables', label: 'Фронтонов (треугольники под крышей)', unit: 'шт', value: '2', group: 'gable', int: true },
+        { id: 'gableW', label: 'Ширина фронтона', unit: 'м, пусто — по короткой стороне дома', group: 'gable' },
         { id: 'gableH', label: 'Высота фронтона', unit: 'м', value: '2', group: 'gable' },
         { id: 'panelL', label: 'Длина панели сайдинга', unit: 'м', value: '3.66', group: 'siding' },
         { id: 'panelW', label: 'Рабочая ширина панели', unit: 'м', value: '0.23', group: 'siding' },
         { id: 'sidingWaste', label: 'Запас на подрезку', unit: '%', value: '10', group: 'siding' },
         { id: 'plasterRate', label: 'Расход штукатурки', unit: 'кг/м² при вашей толщине', value: '15', group: 'plaster' },
         { id: 'plasterBag', label: 'Мешок штукатурки', unit: 'кг', value: '25', group: 'plaster' },
-        { id: 'coats', label: 'Слоёв краски', unit: '', value: '2', group: 'paint' },
+        { id: 'coats', label: 'Слоёв краски', unit: '', value: '2', group: 'paint', int: true },
         { id: 'rate', label: 'Расход краски (м² на 1 литр)', unit: 'на банке', value: '8', group: 'paint' },
         { id: 'can', label: 'Объём банки', unit: 'л', value: '9', group: 'paint' },
       ],
@@ -453,7 +450,13 @@
         if (mode === 'plan' && !lens && extras.plan) return { error: 'Контур дома пересекает сам себя — поправьте углы на плане.' };
         if (!R || !extras.room || !lens || !pos(v.hei)) return null;
         const m = R.measure(extras.room, lens, v.hei, this.finishes, extras.room.defaultFinish || 'siding');
-        const gableArea = (pos(v.gables) && pos(v.gableW) && pos(v.gableH)) ? v.gables * v.gableW * v.gableH / 2 : 0;
+        let verts = null;
+        if (mode === 'rect') verts = [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]];
+        else { const g = window.CalcPlan.geometry(extras.plan, { w: 1, depth: 1, above: 0 }); if (g.valid) verts = g.verts; }
+        // Фронтон обычно на торцах, по короткой стороне дома — если ширину не ввели, берём её
+        const xs = verts ? verts.map((p) => p[0]) : [], ys = verts ? verts.map((p) => p[1]) : [];
+        const gableW = pos(v.gableW) ? v.gableW : verts ? Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) : null;
+        const gableArea = (pos(v.gables) && pos(gableW) && pos(v.gableH)) ? v.gables * gableW * v.gableH / 2 : 0;
         const area = { siding: m.by.siding.area, plaster: m.by.plaster.area, paint: m.by.paint.area };
         if (gableArea > 0 && area[sel.gableFinish] != null) area[sel.gableFinish] += gableArea;
         const rows = [], cost = [], mains = [];
@@ -462,16 +465,30 @@
           const panels = Math.ceil(need / (v.panelL * v.panelW));
           const start = m.by.siding.len;
           const jLen = extras.room.openings.filter((o) => m.walls[o.wall] && m.walls[o.wall].finish === 'siding').reduce((s2, o) => s2 + 2 * (o.w + o.h), 0);
-          mains.push('сайдинг ' + panels + ' ' + plural(panels, 'панель', 'панели', 'панелей'));
+          mains.push('сайдинг ' + fmtInt(panels) + ' ' + plural(panels, 'панель', 'панели', 'панелей'));
           rows.push(['Сайдинг: площадь', fmt(area.siding) + ' м² (+' + fmt(v.sidingWaste || 0) + '% подрезка = ' + fmt(need) + ')']);
           rows.push(['Стартовая планка', fmt(start) + ' м']);
-          rows.push(['Угловой профиль', m.by.siding.n + ' ' + plural(m.by.siding.n, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(m.by.siding.n * v.hei) + ' м']);
+          // Углы, где сходятся стены с сайдингом: наружный угол — наружный профиль, внутренний (Г-образный дом) — свой
+          let outer = 0, inner = 0;
+          if (verts && verts.length === m.walls.length) {
+            const n = verts.length;
+            const sgn = Math.sign(verts.reduce((s2, a, i) => { const b = verts[(i + 1) % n]; return s2 + a[0] * b[1] - b[0] * a[1]; }, 0));
+            for (let i = 0; i < n; i++) {
+              const prev = (i - 1 + n) % n;
+              if (m.walls[i].finish !== 'siding' && m.walls[prev].finish !== 'siding') continue;
+              const a = verts[prev], b = verts[i], c = verts[(i + 1) % n];
+              const cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+              if (Math.sign(cross) === sgn) outer++; else inner++;
+            }
+          }
+          rows.push(['Наружный угол', fmtInt(outer) + ' ' + plural(outer, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(outer * v.hei) + ' м']);
+          if (inner) rows.push(['Внутренний угол', fmtInt(inner) + ' ' + plural(inner, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(inner * v.hei) + ' м']);
           if (jLen > 0) rows.push(['J-профиль вокруг проёмов', fmt(jLen) + ' м']);
           cost.push({ label: 'Сайдинг', amount: panels, unit: plural(panels, 'панель', 'панели', 'панелей'), priceId: 'panel' });
         }
         if (area.plaster > 0 && pos(v.plasterRate) && pos(v.plasterBag)) {
           const kg = area.plaster * v.plasterRate, bags = Math.ceil(kg / v.plasterBag);
-          mains.push('штукатурка ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков'));
+          mains.push('штукатурка ' + fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков'));
           rows.push(['Штукатурка', fmt(area.plaster) + ' м² × ' + fmt(v.plasterRate) + ' кг = ' + fmtInt(kg) + ' кг']);
           cost.push({ label: 'Штукатурка', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'plaster' });
         }
@@ -479,14 +496,14 @@
           const coats = v.coats == null ? 1 : v.coats, liters = area.paint * coats / v.rate * 1.1;
           const cans = pos(v.can) ? Math.ceil(liters / v.can) : null;
           mains.push('краска ' + fmt(liters) + ' л');
-          rows.push(['Краска', fmt(area.paint) + ' м² × ' + fmt(coats) + ' сл., с запасом 10%' + (cans != null ? ', ' + cans + ' ' + plural(cans, 'банка', 'банки', 'банок') : '')]);
+          rows.push(['Краска', fmt(area.paint) + ' м² × ' + fmt(coats) + ' сл., с запасом 10%' + (cans != null ? ', ' + fmtInt(cans) + ' ' + plural(cans, 'банка', 'банки', 'банок') : '')]);
           if (cans != null) cost.push({ label: 'Краска', amount: cans, unit: plural(cans, 'банка', 'банки', 'банок'), priceId: 'can' });
         }
         if (!mains.length) return { error: 'У всех стен выбрано «без отделки» — отметьте на развёртке, чем отделываем.' };
-        if (gableArea > 0) rows.push(['Фронтоны', v.gables + ' × ' + fmt(v.gableW) + '×' + fmt(v.gableH) + ' / 2 = ' + fmt(gableArea) + ' м² → ' + this.finishes[sel.gableFinish]]);
+        if (gableArea > 0) rows.push(['Фронтоны', fmtInt(v.gables) + ' × ' + fmt(gableW) + '×' + fmt(v.gableH) + ' / 2 = ' + fmt(gableArea) + ' м² → ' + this.finishes[sel.gableFinish] + (pos(v.gableW) ? '' : ' (ширина по короткой стороне дома)')]);
         m.walls.forEach((w) => rows.push(['Стена ' + (w.i + 1) + ' · ' + this.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
         return { main: { label: 'Нужно на фасад', value: mains.join(' · ') }, rows,
-          note: 'Проёмы вычтены (' + fmt(m.openings) + ' м²). Сайдинг: панели по площади с запасом, стартовая планка по длине стен, угловой профиль по числу стен, J-профиль по периметру проёмов. Расход штукатурки указан на мешке для вашей толщины слоя.', cost };
+          note: 'Проёмы вычтены (' + fmt(m.openings) + ' м²). Сайдинг: панели по площади с запасом, стартовая планка по длине стен, угловой профиль по углам — наружный и внутренний отдельно, J-профиль по периметру проёмов. Расход штукатурки указан на мешке для вашей толщины слоя.', cost };
       },
     },
 
@@ -505,7 +522,7 @@
           { id: 'riser', label: 'Желаемая высота ступени', unit: 'см', value: '17' },
           { id: 'tread', label: 'Глубина ступени', unit: 'см', value: '28' },
           { id: 'width', label: 'Ширина марша', unit: 'м', value: '0.9' },
-          { id: 'split', label: 'Ступеней в нижнем марше', unit: 'шт, до площадки', value: '8' },
+          { id: 'split', label: 'Ступеней в нижнем марше', unit: 'шт, до площадки', value: '8', int: true },
         ] },
       ],
       common: [
@@ -572,12 +589,12 @@
         const treads = turn ? c.steps - 1 : c.steps;   // с поворотом одну ступень заменяет площадка
         const W = v.width || 0.9;
         rows.push(['Подъёмов', c.n + ' по ' + fmt(c.riser) + ' см (задавали ' + fmt(v.riser) + ')']);
-        rows.push(['Ступеней', treads + ' шт' + (turn ? ' и площадка' : '') + ': верхняя ступень — это пол второго этажа']);
+        rows.push(['Ступеней', fmtInt(treads) + ' шт' + (turn ? ' и площадка' : '') + ': верхняя ступень — это пол второго этажа']);
         rows.push(['Уклон', fmt(c.angle) + '° ' + (c.angle > 42 ? '— круто, для дома лучше до 40°' : c.angle < 25 ? '— полого, займёт много места' : '— в норме для дома')]);
         rows.push(['Формула удобства', '2 × ' + fmt(c.riser) + ' + ' + fmt(v.tread) + ' = ' + fmt(c.comfort) + ' см ' + (c.comfort >= 60 && c.comfort <= 65 ? '(в норме 60–65)' : '(норма 60–65: подберите глубину ступени)')]);
         if (mode === 'straight') rows.push(['Займёт по полу', fmt(c.run) + ' м при ширине марша ' + fmt(v.width || 0.9) + ' м']);
         else {
-          const split = c.split, stW = (k) => k + ' ' + plural(k, 'ступень', 'ступени', 'ступеней');
+          const split = c.split, stW = (k) => fmtInt(k) + ' ' + plural(k, 'ступень', 'ступени', 'ступеней');
           const asked = pos(v.split) && Math.round(v.split) !== split ? ' (задали ' + fmt(v.split) + ', при ' + c.steps + ' ступенях больше ' + (c.steps - 2) + ' не получится)' : '';
           rows.push(['Нижний марш', stW(split) + ', ' + fmt(split * v.tread / 100) + ' м' + asked]);
           rows.push(['Площадка', fmt(W) + ' × ' + fmt(W) + ' м на высоте ' + fmt((split + 1) * c.riser / 100) + ' м']);
@@ -586,12 +603,12 @@
         }
         if (pos(v.thick) && pos(v.width)) {
           const vol = (treads * (v.tread / 100) * v.width + (turn ? W * W : 0)) * (v.thick / 1000);
-          rows.push(['Материал ступеней', treads + ' шт ' + fmt(v.tread) + '×' + fmt(W * 100) + ' см' + (turn ? ' и площадка ' + fmt(W) + '×' + fmt(W) + ' м' : '') + ', толщина ' + fmt(v.thick) + ' мм = ' + fmt(vol) + ' м³']);
+          rows.push(['Материал ступеней', fmtInt(treads) + ' шт ' + fmt(v.tread) + '×' + fmt(W * 100) + ' см' + (turn ? ' и площадка ' + fmt(W) + '×' + fmt(W) + ' м' : '') + ', толщина ' + fmt(v.thick || 40) + ' мм = ' + fmt(vol) + ' м³']);
         }
         const railLen = mode === 'straight' ? Math.hypot(c.run, v.height) : Math.hypot(c.run, v.height) + (v.width || 0.9);
         if (pos(v.balusterStep)) {
           const bal = Math.ceil(railLen / v.balusterStep) + 1;
-          rows.push(['Ограждение', 'поручень ' + fmt(railLen) + ' м, балясины ' + bal + ' шт с шагом ' + fmt(v.balusterStep) + ' м']);
+          rows.push(['Ограждение', 'поручень ' + fmt(railLen) + ' м, балясины ' + fmtInt(bal) + ' шт с шагом ' + fmt(v.balusterStep) + ' м']);
           cost.push({ label: 'Балясины', amount: bal, unit: 'шт', priceId: 'baluster' });
           cost.push({ label: 'Поручень', amount: Math.ceil(railLen * 10) / 10, unit: 'м', priceId: 'rail' });
         }
@@ -617,7 +634,7 @@
           rows.push(['Проём в перекрытии', txt + ' (просвет ' + fmt(v.headroom) + ' м, перекрытие ' + fmt(v.slab || 0) + ' м)']);
         }
         cost.unshift({ label: 'Ступени', amount: treads, unit: 'шт', priceId: 'step' });
-        return { main: { label: 'Лестница', value: treads + ' ' + plural(treads, 'ступень', 'ступени', 'ступеней') + (turn ? ' и площадка' : '') + ' по ' + fmt(c.riser) + ' см' }, rows, cost,
+        return { main: { label: 'Лестница', value: fmtInt(treads) + ' ' + plural(treads, 'ступень', 'ступени', 'ступеней') + (turn ? ' и площадка' : '') + ' по ' + fmt(c.riser) + ' см' }, rows, cost,
           note: 'Число подъёмов = высота этажа ÷ желаемую высоту ступени с округлением, дальше высота выравнивается: все ступени должны быть одинаковыми. Формула удобного шага: два подъёма плюс проступь = 60–65 см. Для дома уклон до 40°, ширина марша от 90 см.' };
       },
     },
@@ -627,13 +644,13 @@
       modeLabel: 'Что считаем',
       modes: [
         { id: 'septic', label: 'Септик', sets: { perDay: '200', days: '3' }, fields: [
-          { id: 'people', label: 'Человек в доме', unit: '', value: '4' },
+          { id: 'people', label: 'Человек в доме', unit: '', value: '4', int: true },
           { id: 'perDay', label: 'Расход воды на человека', unit: 'л/сутки', value: '200' },
           { id: 'days', label: 'Запас по времени', unit: 'суток (норма 3)', value: '3' },
-          { id: 'guests', label: 'Гости по выходным', unit: 'человек, необязательно' },
+          { id: 'guests', label: 'Гости по выходным', unit: 'человек, необязательно', int: true },
         ] },
         { id: 'tank', label: 'Бак для воды / накопитель', sets: { perDay: '100', days: '2' }, fields: [
-          { id: 'people', label: 'Человек', unit: '', value: '4' },
+          { id: 'people', label: 'Человек', unit: '', value: '4', int: true },
           { id: 'perDay', label: 'Расход на человека', unit: 'л/сутки', value: '100' },
           { id: 'days', label: 'На сколько суток запас', unit: '', value: '2' },
           { id: 'garden', label: 'Полив', unit: 'л/сутки, необязательно', value: '200' },
@@ -652,54 +669,64 @@
         const V = window.CalcViz; if (!V || !pos(v.ringD) || !pos(v.ringH)) return false;
         const r = v.ringD / 2;
         const need = this.volume(v, mode); if (!need) return false;
-        const ringVol = Math.PI * r * r * v.ringH;
-        const rings = Math.max(1, Math.ceil(need / 1000 / ringVol));
+        const rings = this.rings(v, mode, need / 1000).total;
         const poly = []; for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2; poly.push([r + r * Math.cos(a), r + r * Math.sin(a)]); }
         const prisms = [];
         for (let i = 0; i < rings; i++) prisms.push({ poly, z: -(i + 1) * v.ringH, dz: v.ringH * 0.94 });
         V.iso(box, prisms, [
           { from: [0, r, 0], to: [v.ringD, r, 0], label: '⌀ ' + fmt(v.ringD) + ' м', offset: 0 },
           { from: [r, 0, -rings * v.ringH], to: [r, 0, 0], label: 'глубина ' + fmt(rings * v.ringH) + ' м', offset: 40 },
-        ], { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, caption: rings + ' ' + plural(rings, 'кольцо', 'кольца', 'колец') + ' по ' + fmt(v.ringH) + ' м. Потяните, чтобы повернуть.' });
+        ], { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, caption: fmtInt(rings) + ' ' + plural(rings, 'кольцо', 'кольца', 'колец') + ' по ' + fmt(v.ringH) + ' м. Потяните, чтобы повернуть.' });
         return true;
       },
+      // Гости считаются на пике: септик должен разом принять выходные с гостями, а не их среднее за неделю
       volume(v, mode) {
         if (!pos(v.people) || !pos(v.perDay) || !pos(v.days)) return null;
-        const base = v.people * v.perDay;
-        const extra = mode === 'septic' ? (v.guests || 0) * v.perDay * 2 / 7 : (v.garden || 0);
-        return (base + extra) * v.days;   // литры
+        const base = v.people * v.perDay * v.days;
+        const extra = mode === 'septic' ? (v.guests || 0) * v.perDay * Math.min(2, v.days) : (v.garden || 0) * v.days;
+        return base + extra;   // литры
+      },
+      // У септика рабочий объём — до перелива: труба заходит ниже промерзания, кольцо над ней стоков не держит
+      rings(v, mode, m3) {
+        const r = v.ringD / 2, ringVol = Math.PI * r * r * v.ringH;
+        const work = Math.max(1, Math.ceil(m3 / ringVol - 1e-9));
+        const top = mode === 'septic' ? 1 : 0;
+        return { work, top, total: work + top, ringVol };
       },
       compute(v, mode, sel) {
         const need = this.volume(v, mode);
         if (!need) return null;
         const m3 = need / 1000;
         const rows = [], cost = [];
-        rows.push(['Суточный расход', fmtInt(need / v.days) + ' л' + (mode === 'septic' && pos(v.guests) ? ' (с учётом гостей по выходным)' : mode === 'tank' && pos(v.garden) ? ' (с учётом полива)' : '')]);
+        const daily = v.people * v.perDay + (mode === 'tank' ? (v.garden || 0) : 0);
+        rows.push(['Суточный расход', fmtInt(daily) + ' л' + (mode === 'tank' && pos(v.garden) ? ' (с учётом полива)' : '')]);
         rows.push(['Запас', fmt(v.days) + ' ' + plural(Math.round(v.days), 'сутки', 'суток', 'суток')]);
+        if (mode === 'septic' && pos(v.guests)) rows.push(['Гости', fmtInt(v.guests) + ' чел. × ' + fmt(v.perDay) + ' л × ' + fmt(Math.min(2, v.days)) + ' ' + plural(Math.min(2, v.days), 'день', 'дня', 'дней') + ' выходных = ' + fmtInt(v.guests * v.perDay * Math.min(2, v.days)) + ' л сверху']);
         if (pos(v.ringD) && pos(v.ringH)) {
-          const r = v.ringD / 2, ringVol = Math.PI * r * r * v.ringH;
-          const rings = Math.ceil(m3 / ringVol);
-          rows.push(['Кольца', rings + ' шт ⌀' + fmt(v.ringD) + ' м по ' + fmt(v.ringH) + ' м = ' + fmt(rings * ringVol) + ' м³, глубина ' + fmt(rings * v.ringH) + ' м']);
+          const R = this.rings(v, mode, m3), rings = R.total;
+          rows.push(['Кольца', fmtInt(rings) + ' шт ⌀' + fmt(v.ringD) + ' м по ' + fmt(v.ringH) + ' м, глубина ' + fmt(rings * v.ringH) + ' м'
+            + (R.top ? ': ' + fmtInt(R.work) + ' под стоки (' + fmt(R.work * R.ringVol) + ' м³) и 1 сверху — над входом трубы' : ' = ' + fmt(rings * R.ringVol) + ' м³')]);
           rows.push(['Плюс сверху', 'плита перекрытия с люком и днище или подушка из щебня']);
           cost.push({ label: 'Кольца', amount: rings, unit: 'шт', priceId: 'ring' });
         }
         if (mode === 'septic') {
-          rows.push(['Откачка', 'ассенизатор берёт обычно 3,6 м³ за вызов: ' + Math.max(1, Math.ceil(m3 / 3.6)) + ' ' + plural(Math.max(1, Math.ceil(m3 / 3.6)), 'вызов', 'вызова', 'вызовов') + ' на полный объём']);
+          rows.push(['Откачка', 'ассенизатор берёт обычно 3,6 м³ за вызов: ' + fmtInt(Math.max(1, Math.ceil(m3 / 3.6))) + ' ' + plural(Math.max(1, Math.ceil(m3 / 3.6)), 'вызов', 'вызова', 'вызовов') + ' на полный объём']);
           cost.push({ label: 'Откачка', amount: Math.max(1, Math.ceil(m3 / 3.6)), unit: 'вызов', priceId: 'pump' });
-          rows.push(['Расстояния по нормам', 'от дома от 5 м, от колодца и скважины от 30 м, от границы участка от 2 м']);
+          rows.push(['Расстояния по нормам', 'от дома от 5 м, от границы участка от 2 м; колодец — не ближе 50 м и выше по потоку грунтовых вод']);
         } else {
           const std = [200, 500, 750, 1000, 1500, 2000, 3000, 5000].find((x) => x >= need);
-          rows.push(['Если бак пластиковый', std ? 'ближайший стандартный объём: ' + fmtInt(std) + ' л' : 'больше 5 000 л в один бак не войдёт: ' + Math.ceil(need / 5000) + ' ' + plural(Math.ceil(need / 5000), 'бак', 'бака', 'баков') + ' по 5 000 л, соединённых трубой, или подземная ёмкость']);
+          rows.push(['Если бак пластиковый', std ? 'ближайший стандартный объём: ' + fmtInt(std) + ' л' : 'больше 5 000 л в один бак не войдёт: ' + fmtInt(Math.ceil(need / 5000)) + ' ' + plural(Math.ceil(need / 5000), 'бак', 'бака', 'баков') + ' по 5 000 л, соединённых трубой, или подземная ёмкость']);
         }
         return { main: { label: 'Нужен объём', value: fmt(m3) + ' м³ (' + fmtInt(need) + ' л)' }, rows, cost,
           note: mode === 'septic'
-            ? 'Норма: трёхсуточный запас при расходе 200 л на человека в сутки. Гости по выходным считаются как два дня из семи. Расстояния до дома, колодца и границы участка — по санитарным нормам, уточняйте для своего участка.'
+            ? 'Норма: трёхсуточный запас при расходе 200 л на человека в сутки. Гости считаются на пике: септик должен принять выходные с ними целиком. Верхнее кольцо стоит над входом трубы, стоки в нём не держатся, поэтому в объём не входит. Расстояния до дома, колодца и границы участка — по санитарным нормам, уточняйте для своего участка.'
             : 'Объём = расход на человека × людей × суток, плюс полив. Для питьевой воды бак нужен из пищевого пластика и с защитой от света, иначе зацветёт.' };
       },
     },
 
     /* --- Проценты: доля, прибавить/вычесть, разница, НДС, скидка, наценка --- */
     percent: {
+      signed: true,
       modeLabel: 'Что считаем',
       modes: [
         { id: 'of', label: 'Сколько процентов от числа', fields: [
@@ -727,7 +754,7 @@
           { id: 'scP', label: 'Скидка', unit: '%', value: '30' },
         ] },
       ],
-      selects: [{ id: 'vatMode', label: 'НДС считаем', default: 'add', choices: [
+      selects: [{ id: 'vatMode', label: 'НДС считаем', default: 'add', group: 'vat', choices: [
         { id: 'add', label: 'Начислить сверху', hint: 'сумма без НДС → с НДС' },
         { id: 'extract', label: 'Выделить из суммы', hint: 'сумма уже с НДС → сколько в ней налога' },
       ] }],
@@ -829,7 +856,7 @@
         { id: 'lvtUnderlay', label: 'Подложка в рулоне', unit: 'м², 0 = без подложки', value: '10', group: 'lvtClick' },
         { id: 'rollW2', label: 'Ширина рулона', unit: 'м', value: '3', group: 'roll' },
         { id: 'skirting', label: 'Плинтус: длина планки', unit: 'м', value: '2.5', group: 'skirt' },
-        { id: 'doorways', label: 'Дверные проёмы (вычесть из плинтуса)', unit: 'шт', value: '1', group: 'skirt' },
+        { id: 'doorways', label: 'Дверные проёмы (вычесть из плинтуса)', unit: 'шт', value: '1', group: 'skirt', int: true },
       ],
       roomOpts: {
         finishes: { tile: 'Плитка', none: 'Без плитки' }, defaultFinish: 'tile', wallWord: 'Стена',
@@ -915,16 +942,16 @@
           const bags = pos(v.glueBag) ? Math.ceil(glueKg / v.glueBag) : null;
           // Затирка, кг/м² = (A + B) / (A × B) × толщина × шов × 1,6 (плотность), A и B в мм; +10% запас
           const grout = (v.seam > 0 && v.tileT > 0) ? totalArea * (v.tileL * 10 + v.tileW * 10) / (v.tileL * 10 * v.tileW * 10) * v.tileT * v.seam * 1.6 * 1.1 : 0;
-          main = tiles + ' ' + plural(tiles, 'плитка', 'плитки', 'плиток');
-          rows.push(['Плитка', tiles + ' шт ' + fmt(v.tileL) + '×' + fmt(v.tileW) + ' см (' + fmt(perM2) + ' шт/м², запас ' + wastePct + '%)']);
+          main = fmtInt(tiles) + ' ' + plural(tiles, 'плитка', 'плитки', 'плиток');
+          rows.push(['Плитка', fmtInt(tiles) + ' шт ' + fmt(v.tileL) + '×' + fmt(v.tileW) + ' см (' + fmt(perM2) + ' шт/м², запас ' + wastePct + '%)']);
           if (wa) {
             rows.push(['Пол', fmt(sh.area) + ' м²']);
-            rows.push(['Стены', fmt(wa.area) + ' м²: ' + wa.n + ' ' + plural(wa.n, 'стена', 'стены', 'стен') + ' до ' + fmt(v.hei) + ' м' + (wa.openings ? ', проёмы ' + fmt(wa.openings) + ' м² вычтены' : '')]);
+            rows.push(['Стены', fmt(wa.area) + ' м²: ' + fmtInt(wa.n) + ' ' + plural(wa.n, 'стена', 'стены', 'стен') + ' до ' + fmt(v.hei) + ' м' + (wa.openings ? ', проёмы ' + fmt(wa.openings) + ' м² вычтены' : '')]);
             rows.push(['Всего под плитку', fmt(totalArea) + ' м²']);
           }
-          if (glueKg > 0) rows.push(['Клей', fmtInt(glueKg) + ' кг' + (bags != null ? ' ≈ ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') : '')]);
+          if (glueKg > 0) rows.push(['Клей', fmtInt(glueKg) + ' кг' + (bags != null ? ' ≈ ' + fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') : '')]);
           if (grout > 0) rows.push(['Затирка', fmt(grout) + ' кг (' + fmt(grout / totalArea) + ' кг/м² при шве ' + fmt(v.seam) + ' мм)']);
-          rows.push(['Крестики', '≈ ' + Math.ceil(tiles * 2) + ' шт']);
+          rows.push(['Крестики', '≈ ' + fmtInt(Math.ceil(tiles * 2)) + ' шт']);
           unitCost = { label: 'Плитка', amount: tiles, unit: 'шт' };
           if (bags != null) cost.push({ label: 'Клей', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'glue' });
           if (grout > 0) cost.push({ label: 'Затирка', amount: Math.ceil(grout), unit: 'кг', priceId: 'grout' });
@@ -932,13 +959,13 @@
           if (!pos(v.lvtPack)) return null;
           const packs = Math.ceil(totalArea * waste / v.lvtPack);
           const planks = (pos(v.lvtL) && pos(v.lvtW)) ? Math.ceil(totalArea * waste / (v.lvtL / 100 * v.lvtW / 100)) : null;
-          main = packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
+          main = fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
           rows.push(['Кварцвинил', packs + ' упак. по ' + fmt(v.lvtPack) + ' м² (площадь ' + fmt(totalArea) + ' м², запас ' + wastePct + '%)' + (planks ? ', это ≈ ' + planks + ' планок' : '')]);
           if (m === 'lvtGlue') {
             const glueKg = totalArea * (v.lvtGlueRate || 0);
             const buckets = pos(v.lvtGlueBucket) ? Math.ceil(glueKg / v.lvtGlueBucket) : null;
             if (glueKg > 0) {
-              rows.push(['Клей', fmt(glueKg) + ' кг' + (buckets != null ? ' ≈ ' + buckets + ' ' + plural(buckets, 'ведро', 'ведра', 'вёдер') + ' по ' + fmt(v.lvtGlueBucket) + ' кг' : '')]);
+              rows.push(['Клей', fmt(glueKg) + ' кг' + (buckets != null ? ' ≈ ' + fmtInt(buckets) + ' ' + plural(buckets, 'ведро', 'ведра', 'вёдер') + ' по ' + fmt(v.lvtGlueBucket) + ' кг' : '')]);
               if (buckets != null) cost.push({ label: 'Клей', amount: buckets, unit: plural(buckets, 'ведро', 'ведра', 'вёдер'), priceId: 'lvtGlue' });
             }
             rows.push(['Основание', 'клеевой кварцвинил кладут на ровное основание: перепад не больше 2 мм на 2 м, иначе нужна наливная смесь']);
@@ -946,7 +973,7 @@
           } else {
             const rolls = pos(v.lvtUnderlay) ? Math.ceil(totalArea / v.lvtUnderlay) : null;
             if (rolls != null) {
-              rows.push(['Подложка', rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.lvtUnderlay) + ' м², только тонкая 1–1,5 мм под кварцвинил']);
+              rows.push(['Подложка', fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.lvtUnderlay) + ' м², только тонкая 1–1,5 мм под кварцвинил']);
               cost.push({ label: 'Подложка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'lvtUnderlay' });
             }
             rows.push(['Зазор у стен', '5–8 мм по периметру: замковый кварцвинил плавающий']);
@@ -957,9 +984,9 @@
           const packs = Math.ceil(sh.area * waste / v.packM2);
           const boards = (pos(v.boardL) && pos(v.boardW)) ? Math.ceil(sh.area * waste / (v.boardL / 100 * v.boardW / 100)) : null;
           const rolls = pos(v.underlay) ? Math.ceil(sh.area / v.underlay) : null;
-          main = packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
-          rows.push(['Ламинат', packs + ' упак. по ' + fmt(v.packM2) + ' м² (площадь ' + fmt(sh.area) + ' м², запас ' + wastePct + '%)' + (boards ? ', это ≈ ' + boards + ' досок' : '')]);
-          if (rolls != null) { rows.push(['Подложка', rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.underlay) + ' м²']); cost.push({ label: 'Подложка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'underlay' }); }
+          main = fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
+          rows.push(['Ламинат', fmtInt(packs) + ' упак. по ' + fmt(v.packM2) + ' м² (площадь ' + fmt(sh.area) + ' м², запас ' + wastePct + '%)' + (boards ? ', это ≈ ' + fmtInt(boards) + ' ' + plural(boards, 'доска', 'доски', 'досок') : '')]);
+          if (rolls != null) { rows.push(['Подложка', fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.underlay) + ' м²']); cost.push({ label: 'Подложка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'underlay' }); }
           rows.push(['Зазор у стен', '8–10 мм по всему периметру — под плинтус, ламинат должен «гулять»']);
           unitCost = { label: 'Ламинат', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок') };
         } else {
@@ -972,7 +999,7 @@
           main = fmt(len) + ' м рулона';
           rows.push(['Линолеум', strips === 1
             ? 'одним куском ' + fmt(piece) + ' м при ширине рулона ' + fmt(v.rollW2) + ' м'
-            : strips + ' ' + plural(strips, 'полоса', 'полосы', 'полос') + ' по ' + fmt(piece) + ' м = ' + fmt(len) + ' м (' + (strips === 2 ? 'шов посередине' : (strips - 1) + ' ' + plural(strips - 1, 'шов', 'шва', 'швов')) + ')']);
+            : fmtInt(strips) + ' ' + plural(strips, 'полоса', 'полосы', 'полос') + ' по ' + fmt(piece) + ' м = ' + fmt(len) + ' м (' + (strips === 2 ? 'шов посередине' : (strips - 1) + ' ' + plural(strips - 1, 'шов', 'шва', 'швов')) + ')']);
           rows.push(['Площадь', fmt(len * v.rollW2) + ' м² при площади пола ' + fmt(sh.area) + ' м²']);
           unitCost = { label: 'Линолеум', amount: Math.ceil(len * 10) / 10, unit: 'м', priceId: 'rollM' };
         }
@@ -990,7 +1017,7 @@
           const doors = (v.doorways || 0) * 0.9;
           const skirtLen = Math.max(0, sh.per - doors);
           const planks = Math.ceil(skirtLen / v.skirting);
-          rows.push(['Плинтус', fmt(skirtLen) + ' м → ' + planks + ' ' + plural(planks, 'планка', 'планки', 'планок') + ' по ' + fmt(v.skirting) + ' м']);
+          rows.push(['Плинтус', fmt(skirtLen) + ' м → ' + fmtInt(planks) + ' ' + plural(planks, 'планка', 'планки', 'планок') + ' по ' + fmt(v.skirting) + ' м']);
           cost.push({ label: 'Плинтус', amount: planks, unit: plural(planks, 'планка', 'планки', 'планок'), priceId: 'skirt' });
         }
         rows.push(['Площадь пола', fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м']);
@@ -1012,14 +1039,14 @@
           { id: 'over', label: 'Свес по краям', unit: 'м', value: '0.5' },
         ] },
         { id: 'shed', label: 'Односкатная', fields: [
-          { id: 'len', label: 'Длина дома', unit: 'м', value: '6' },
-          { id: 'wid', label: 'Ширина (по уклону)', unit: 'м', value: '4' },
+          { id: 'len', label: 'Длина дома', unit: 'м', value: '9' },
+          { id: 'wid', label: 'Ширина (по уклону)', unit: 'м', value: '8' },
           { id: 'angle', label: 'Угол наклона', unit: '°', value: '20' },
           { id: 'ridgeH', label: 'Перепад высоты', unit: 'м, вместо угла' },
-          { id: 'over', label: 'Свес по краям', unit: 'м', value: '0.4' },
+          { id: 'over', label: 'Свес по краям', unit: 'м', value: '0.5' },
         ] },
         { id: 'hip', label: 'Четырёхскатная (вальмовая)', fields: [
-          { id: 'len', label: 'Длина дома', unit: 'м', value: '10' },
+          { id: 'len', label: 'Длина дома', unit: 'м', value: '9' },
           { id: 'wid', label: 'Ширина дома', unit: 'м', value: '8' },
           { id: 'angle', label: 'Угол наклона', unit: '°', value: '30' },
           { id: 'ridgeH', label: 'Высота конька над стенами', unit: 'м, вместо угла' },
@@ -1151,20 +1178,20 @@
           const cols = Math.ceil(g.L / v.sheetW - 1e-9);
           const byGrid = rowsCount * cols * (g.faces === 1 ? 1 : 2);
           const total = g.faces === 4 ? Math.ceil(g.area / (useful * v.sheetW) * 1.15) : Math.ceil(byGrid * 1.05);
-          main = total + ' ' + plural(total, 'лист', 'листа', 'листов');
+          main = fmtInt(total) + ' ' + plural(total, 'лист', 'листа', 'листов');
           rows.push(['Листы', g.faces === 4
-            ? total + ' шт по площади ' + fmt(g.area) + ' м² (+15% на подрезку вальм)'
-            : total + ' шт: ' + rowsCount + ' по скату × ' + cols + ' по длине' + (g.faces === 2 ? ' × 2 ската' : '') + ' = ' + byGrid + ' + 5% запас']);
-          rows.push(['Саморезы кровельные', '≈ ' + Math.ceil(g.area * 8) + ' шт (8 на м²)']);
+            ? fmtInt(total) + ' шт по площади ' + fmt(g.area) + ' м² (+15% на подрезку вальм)'
+            : fmtInt(total) + ' шт: ' + rowsCount + ' по скату × ' + cols + ' по длине' + (g.faces === 2 ? ' × 2 ската' : '') + ' = ' + byGrid + ' + 5% запас']);
+          rows.push(['Саморезы кровельные', '≈ ' + fmtInt(Math.ceil(g.area * 8)) + ' шт (8 на м²)']);
           unitCost = { label: 'Покрытие', amount: total, unit: plural(total, 'лист', 'листа', 'листов') };
         } else if (m === 'soft') {
           if (!pos(v.packM2)) return null;
           const packs = Math.ceil(g.area * 1.1 / v.packM2);
-          main = packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
+          main = fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
           rows.push(['Мягкая черепица', packs + ' упак. по ' + fmt(v.packM2) + ' м² (площадь ' + fmt(g.area) + ' м² + 10% на подрезку)']);
           rows.push(['Сплошная обрешётка', fmt(g.area * 1.05) + ' м² фанеры или ОСП']);
           rows.push(['Подкладочный ковёр', fmt(g.area * 1.1) + ' м²']);
-          rows.push(['Гвозди', '≈ ' + Math.ceil(g.area * 20) + ' шт (20 на м²)']);
+          rows.push(['Гвозди', '≈ ' + fmtInt(Math.ceil(g.area * 20)) + ' шт (20 на м²)']);
           unitCost = { label: 'Черепица', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок') };
         } else {
           if (!pos(v.rollW) || !pos(v.rollL)) return null;
@@ -1173,8 +1200,8 @@
           const strips = Math.ceil(g.L / eff - 1e-9) * (g.faces === 1 ? 1 : 2);
           const perRoll = Math.floor(v.rollL / g.slopeLen);
           const rolls = perRoll > 0 ? Math.ceil(strips / perRoll) : Math.ceil(strips * g.slopeLen / v.rollL);
-          main = rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов');
-          rows.push(['Картины', strips + ' шт по ' + fmt(g.slopeLen) + ' м' + (perRoll > 0 ? ' (из рулона ' + perRoll + ')' : '')]);
+          main = fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов');
+          rows.push(['Картины', fmtInt(strips) + ' шт по ' + fmt(g.slopeLen) + ' м' + (perRoll > 0 ? ' (из рулона ' + perRoll + ')' : '')]);
           unitCost = { label: 'Кровля', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов') };
         }
         rows.push(['Площадь скатов', fmt(g.area) + ' м², уклон ' + fmt(g.angle) + '°, длина ската ' + fmt(g.slopeLen) + ' м']);
@@ -1184,7 +1211,7 @@
           const battenLen = g.faces === 4 ? g.area / v.battenStep : lines * g.L * (g.faces === 1 ? 1 : 2);
           rows.push(['Обрешётка', g.faces === 4
             ? fmt(battenLen) + ' м (площадь ' + fmt(g.area) + ' м² ÷ шаг ' + fmt(v.battenStep) + ' м)'
-            : lines + ' рядов × ' + fmt(g.L) + ' м' + (g.faces === 2 ? ' × 2 ската' : '') + ' = ' + fmt(battenLen) + ' м']);
+            : fmtInt(lines) + ' ' + plural(lines, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(g.L) + ' м' + (g.faces === 2 ? ' × 2 ската' : '') + ' = ' + fmt(battenLen) + ' м']);
           cost.push({ label: 'Обрешётка', amount: Math.ceil(battenLen), unit: 'м', priceId: 'batten' });
         }
         if (pos(v.rafterStep)) {
@@ -1225,20 +1252,21 @@
         ] },
       ],
       common: [
+        { id: 'thick', label: 'Толщина наружной стены', unit: 'мм', value: '400' },
         { id: 'inner', label: 'Внутренние стены (перегородки)', unit: 'м, необязательно' },
-        { id: 'thick', label: 'Толщина стены', unit: 'мм', value: '400' },
+        { id: 'innerThick', label: 'Толщина перегородок', unit: 'мм', value: '150' },
         { id: 'waste', label: 'Запас на бой и подрезку', unit: '%', value: '5' },
         { id: 'mortar', label: 'Раствор или клей', unit: 'кг сухой смеси на м³ кладки (клей для блока ≈ 25, раствор для кирпича ≈ 400)', value: '25' },
         { id: 'bagKg', label: 'Мешок раствора', unit: 'кг', value: '25' },
-        { id: 'meshStep', label: 'Армирование через каждые', unit: 'рядов, 0 = без сетки', value: '4' },
+        { id: 'meshStep', label: 'Армирование через каждые', unit: 'рядов, 0 = без сетки', value: '4', int: true },
       ],
       presets: [{ label: 'Расход смеси', fieldId: 'mortar', unit: 'кг/м³', items: [['Клей для блоков', '25'], ['Кирпич полуторный', '330'], ['Кирпич одинарный', '400']] }],
       selects: [{ id: 'unit', label: 'Из чего кладём', default: 'gas', choices: [
-        { id: 'gas', label: 'Газоблок 600×300×200', hint: 'кладка на клей, 27,8 шт в м³', sets: { mortar: '25' } },
-        { id: 'foam', label: 'Пеноблок 600×300×200', hint: 'то же, 27,8 шт в м³', sets: { mortar: '25' } },
-        { id: 'brick', label: 'Кирпич одинарный 250×120×65', hint: '394 шт в м³ со швом 10 мм, раствора ≈ 0,23 м³', sets: { mortar: '400' } },
-        { id: 'brick15', label: 'Кирпич полуторный 250×120×88', hint: '302 шт в м³ со швом 10 мм, раствора ≈ 0,19 м³', sets: { mortar: '330' } },
-        { id: 'ceramo', label: 'Керамоблок 380×250×219', hint: '48 шт в м³, вертикальные швы на пазах', sets: { mortar: '100' } },
+        { id: 'gas', label: 'Газоблок 600×300×200', hint: 'кладка на клей, 27,8 шт в м³', sets: { mortar: '25', innerThick: '150' } },
+        { id: 'foam', label: 'Пеноблок 600×300×200', hint: 'то же, 27,8 шт в м³', sets: { mortar: '25', innerThick: '150' } },
+        { id: 'brick', label: 'Кирпич одинарный 250×120×65', hint: '394 шт в м³ со швом 10 мм, раствора ≈ 0,23 м³', sets: { mortar: '400', innerThick: '120' } },
+        { id: 'brick15', label: 'Кирпич полуторный 250×120×88', hint: '302 шт в м³ со швом 10 мм, раствора ≈ 0,19 м³', sets: { mortar: '330', innerThick: '120' } },
+        { id: 'ceramo', label: 'Керамоблок 380×250×219', hint: '48 шт в м³, вертикальные швы на пазах', sets: { mortar: '100', innerThick: '120' } },
       ] }],
       prices: [
         { id: 'unit', label: 'Блок или кирпич', unit: '₽ за штуку' },
@@ -1297,6 +1325,7 @@
         const t = v.thick / 1000;
         const innerLen = v.inner || 0;
         const areaInner = innerLen * v.hei;
+        const ti = pos(v.innerThick) ? v.innerThick / 1000 : t;
         // Стены меряются по наружному контуру: на внешнем углу кусок t×t посчитан у обеих стен,
         // на внутреннем (Г-образный дом) его нет ни у одной. Поправка по каждому углу,
         // где кладём обе соседние стены.
@@ -1317,7 +1346,7 @@
         }
         const areaOuter = Math.max(0, walls.area - corners * t * v.hei); // за вычетом проёмов и двойных углов
         const area = areaOuter + areaInner;
-        const volume = area * t;
+        const volume = areaOuter * t + areaInner * ti;
         const per = this.perM3(sel.unit);
         const waste = 1 + (v.waste || 0) / 100;
         const units = Math.ceil(volume * per * waste);
@@ -1332,25 +1361,27 @@
         const meshRows = pos(v.meshStep) ? Math.floor(rowsTotal / v.meshStep) : 0;
         const meshLen = meshRows * (walls.len + innerLen);
         const rows = [
-          ['Кладка', fmt(area) + ' м² × ' + fmt(t) + ' м = ' + fmt(volume) + ' м³' + (innerLen ? ' (включая перегородки ' + fmt(areaInner) + ' м²)' : '') + (corners ? ', углы не задвоены' : '')],
+          ['Кладка', (innerLen
+            ? 'наружные ' + fmt(areaOuter) + ' м² × ' + fmt(t) + ' м + перегородки ' + fmt(areaInner) + ' м² × ' + fmt(ti) + ' м = ' + fmt(volume) + ' м³'
+            : fmt(area) + ' м² × ' + fmt(t) + ' м = ' + fmt(volume) + ' м³') + (corners ? ', углы не задвоены' : '')],
           ['В кубометре', fmt(per) + ' шт, запас ' + fmt(v.waste || 0) + '%'],
-          ['Рядов по высоте', rowsTotal + ' (высота ряда ' + fmt(rowH * 100) + ' см)'],
+          ['Рядов по высоте', fmtInt(rowsTotal) + ' (высота ряда ' + fmt(rowH * 100) + ' см)'],
         ];
         const cost = [{ label: 'Блоки или кирпич', amount: units, unit: 'шт', priceId: 'unit' }];
         if (mortarKg > 0) {
-          rows.push(['Раствор или клей', fmtInt(mortarKg) + ' кг' + (bags != null ? ' ≈ ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по ' + fmt(v.bagKg) + ' кг' : '')]);
+          rows.push(['Раствор или клей', fmtInt(mortarKg) + ' кг' + (bags != null ? ' ≈ ' + fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по ' + fmt(v.bagKg) + ' кг' : '')]);
           if (bags != null) cost.push({ label: 'Раствор', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'mortar' });
         }
         if (meshLen > 0) {
-          rows.push(['Кладочная сетка', meshRows + ' ' + plural(meshRows, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(walls.len + innerLen) + ' м = ' + fmt(meshLen) + ' м']);
+          rows.push(['Кладочная сетка', fmtInt(meshRows) + ' ' + plural(meshRows, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(walls.len + innerLen) + ' м = ' + fmt(meshLen) + ' м']);
           cost.push({ label: 'Сетка', amount: Math.ceil(meshLen), unit: 'м', priceId: 'mesh' });
         }
         if (lintel > 0) {
-          rows.push(['Перемычки', ops.length + ' ' + plural(ops.length, 'проём', 'проёма', 'проёмов') + ' → ' + fmt(lintel) + ' м (ширина + 25 см опоры с каждой стороны)']);
+          rows.push(['Перемычки', fmtInt(ops.length) + ' ' + plural(ops.length, 'проём', 'проёма', 'проёмов') + ' → ' + fmt(lintel) + ' м (ширина + 25 см опоры с каждой стороны)']);
           cost.push({ label: 'Перемычки', amount: Math.ceil(lintel), unit: 'м', priceId: 'lintel' });
         }
         m.walls.forEach((w) => rows.push(['Стена ' + (w.i + 1) + ' · ' + this.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
-        return { main: { label: 'Нужно', value: units + ' ' + plural(units, 'штука', 'штуки', 'штук') + ' · ' + fmt(volume) + ' м³ кладки' }, rows, cost,
+        return { main: { label: 'Нужно', value: fmtInt(units) + ' ' + plural(units, 'штука', 'штуки', 'штук') + ' · ' + fmt(volume) + ' м³ кладки' }, rows, cost,
           note: 'Проёмы вычтены (' + fmt(m.openings) + ' м²). Объём = площадь стен × толщина, штуки по числу изделий в кубометре с учётом швов. Перемычки считаются по ширине проёма плюс опора 25 см с каждой стороны. Толщину стены и марку блока подбирает проектировщик под нагрузку и климат.' };
       },
     },
@@ -1392,7 +1423,7 @@
         { id: 'plankW', label: 'Ширина штакетины', unit: 'м', value: '0.1', group: 'picket' },
         { id: 'gap', label: 'Зазор между штакетинами', unit: 'м', value: '0.05', group: 'picket' },
         { id: 'plankW2', label: 'Ширина штакетины', unit: 'м', value: '0.1', group: 'picket2' },
-        { id: 'gap2', label: 'Шаг на одной стороне', unit: 'м (между соседними на одной стороне)', value: '0.1', group: 'picket2' },
+        { id: 'gap2', label: 'Зазор на одной стороне', unit: 'м, между соседними штакетинами одной стороны', value: '0.08', group: 'picket2' },
         { id: 'boardW', label: 'Ширина доски', unit: 'м', value: '0.15', group: 'plank' },
         { id: 'boardGap', label: 'Зазор между досками', unit: 'м, 0 = встык', value: '0.02', group: 'plank' },
         { id: 'stain', label: 'Пропитка (антисептик)', unit: 'л на м² одной стороны', value: '0.25', group: 'plank' },
@@ -1400,7 +1431,7 @@
         { id: 'perM2', label: 'Блоков / кирпичей на м²', unit: 'шт (блок 390×190 ≈ 12,5; кирпич в полкирпича ≈ 51)', value: '12.5', group: 'block' },
         { id: 'mortar', label: 'Раствор', unit: 'кг/м² кладки', value: '30', group: 'block' },
         { id: 'postDepth', label: 'Столб в земле', unit: 'м', value: '1' },
-        { id: 'lagRows', label: 'Рядов лаг (поперечин)', unit: 'шт', value: '2', group: 'lags' },
+        { id: 'lagRows', label: 'Рядов лаг (поперечин)', unit: 'шт', value: '2', group: 'lags', int: true },
         { id: 'screwsPer', label: 'Саморезов на лист', unit: 'шт (обычно 8–10)', value: '8', group: 'proflist' },
         { id: 'screwPack', label: 'Саморезов в упаковке', unit: 'шт', value: '250', group: 'screws' },
       ],
@@ -1498,13 +1529,13 @@
         const postLen = v.hei + (v.postDepth || 1);
         const holes = posts * Math.PI * 0.1 * 0.1 * (v.postDepth || 1);
         const cementBags = Math.ceil(holes * 1.1 * 286 / 50);
-        const P = (n, a, b, c) => n + ' ' + plural(n, a, b, c);
+        const P = (n, a, b, c) => fmtInt(n) + ' ' + plural(n, a, b, c);
         const t = sel.type;
         if (t === 'proflist') {
           if (!pos(v.sheetW)) return null;
           const sheets = Math.ceil(net / v.sheetW - 1e-9);
           main = P(sheets, 'лист', 'листа', 'листов') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
-          rows.push(['Листы профнастила', sheets + ' шт высотой ' + fmt(v.hei) + ' м (рабочая ширина ' + fmt(v.sheetW) + ' м)']);
+          rows.push(['Листы профнастила', fmtInt(sheets) + ' шт высотой ' + fmt(v.hei) + ' м (рабочая ширина ' + fmt(v.sheetW) + ' м)']);
           screws = sheets * (pos(v.screwsPer) ? Math.round(v.screwsPer) : 8); screwNote = 'по ' + (pos(v.screwsPer) ? Math.round(v.screwsPer) : 8) + ' на лист';
           unitCost = { label: 'Профнастил', amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов') };
         } else if (t === 'picket' || t === 'picket2') {
@@ -1512,7 +1543,8 @@
           if (!pos(pw)) return null;
           const planks = Math.ceil(net / (pw + gp) - 1e-9) * (t === 'picket2' ? 2 : 1);
           main = P(planks, 'штакетина', 'штакетины', 'штакетин') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
-          rows.push(['Штакетины', planks + ' шт × ' + fmt(v.hei) + ' м' + (t === 'picket2' ? ' (шахматка: с двух сторон вразбежку)' : ', шаг ' + fmt(pw + gp) + ' м')]);
+          rows.push(['Штакетины', fmtInt(planks) + ' шт × ' + fmt(v.hei) + ' м' + (t === 'picket2' ? ' (шахматка: с двух сторон вразбежку, на каждой шаг ' + fmt(pw + gp) + ' м)' : ', шаг ' + fmt(pw + gp) + ' м')]);
+          if (t === 'picket2' && gp >= pw) rows.push(['Просветы', 'зазор ' + fmt(gp) + ' м не меньше ширины штакетины ' + fmt(pw) + ' м — вторая сторона его не закроет, забор будет просвечивать']);
           screws = planks * rowsL * 2; screwNote = 'по 2 на каждый ряд лаг';
           unitCost = { label: 'Штакетник', amount: planks, unit: plural(planks, 'штакетина', 'штакетины', 'штакетин') };
         } else if (t === 'plank') {
@@ -1520,7 +1552,7 @@
           const boards = Math.ceil(net / (v.boardW + (v.boardGap || 0)) - 1e-9);
           const area = net * v.hei, liters = pos(v.stain) ? area * 2 * v.stain : 0;
           main = P(boards, 'доска', 'доски', 'досок') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
-          rows.push(['Доски', boards + ' шт × ' + fmt(v.hei) + ' м, ширина ' + fmt(v.boardW) + ' м' + ((v.boardGap || 0) > 0 ? ', зазор ' + fmt(v.boardGap) + ' м' : ', встык')]);
+          rows.push(['Доски', fmtInt(boards) + ' шт × ' + fmt(v.hei) + ' м, ширина ' + fmt(v.boardW) + ' м' + ((v.boardGap || 0) > 0 ? ', зазор ' + fmt(v.boardGap) + ' м' : ', встык')]);
           if (liters > 0) { rows.push(['Пропитка', fmt(liters) + ' л (' + fmt(area) + ' м² × 2 стороны × ' + fmt(v.stain) + ' л/м²)']); cost.push({ label: 'Пропитка', amount: Math.ceil(liters), unit: 'л', priceId: 'stain' }); }
           screws = boards * rowsL * 2; screwNote = 'по 2 на каждый ряд лаг';
           unitCost = { label: 'Доска', amount: boards, unit: plural(boards, 'доска', 'доски', 'досок') };
@@ -1528,18 +1560,18 @@
           if (!pos(v.rollL)) return null;
           const rolls = Math.ceil(net / v.rollL - 1e-9);
           main = P(rolls, 'рулон', 'рулона', 'рулонов') + ' сетки · ' + P(posts, 'столб', 'столба', 'столбов');
-          rows.push(['Сетка-рабица', rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.rollL) + ' м, высота ' + fmt(v.hei) + ' м']);
+          rows.push(['Сетка-рабица', fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.rollL) + ' м, высота ' + fmt(v.hei) + ' м']);
           unitCost = { label: 'Сетка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов') };
         } else {
           if (!pos(v.perM2)) return null;
           const area = net * v.hei, blocks = Math.ceil(area * v.perM2 * 1.05), mortarKg = area * (v.mortar || 0), bags = Math.ceil(mortarKg / 25);
           main = P(blocks, 'блок', 'блока', 'блоков') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
-          rows.push(['Кладка', fmt(area) + ' м² × ' + fmt(v.perM2) + ' шт/м² + 5% бой = ' + blocks + ' шт']);
-          if (mortarKg > 0) rows.push(['Раствор', fmtInt(mortarKg) + ' кг ≈ ' + bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по 25 кг']);
+          rows.push(['Кладка', fmt(area) + ' м² × ' + fmt(v.perM2) + ' шт/м² + 5% бой = ' + fmtInt(blocks) + ' шт']);
+          if (mortarKg > 0) rows.push(['Раствор', fmtInt(mortarKg) + ' кг ≈ ' + fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по 25 кг']);
           unitCost = { label: 'Блоки / кирпич', amount: blocks, unit: 'шт' };
         }
         rows.push(['Пролётов', sections + ' по ' + fmt(v.step) + ' м (полезная длина ' + fmt(net) + ' м)']);
-        rows.push(['Столбы', posts + ' шт длиной ' + fmt(postLen) + ' м (' + fmt(v.postDepth || 1) + ' м в земле)' + (sm.corners ? ', угловые общие' : '')]);
+        rows.push(['Столбы', fmtInt(posts) + ' шт длиной ' + fmt(postLen) + ' м (' + fmt(v.postDepth || 1) + ' м в земле)' + (sm.corners ? ', угловые общие' : '')]);
         if (gates || wickets) {
           const gt = { swing: 'распашные', sliding: 'откатные', lift: 'подъёмные' }[sel.gateType];
           let note = gates ? P(gates, 'ворота', 'ворот', 'ворот') + ' ' + gt : '';
@@ -1550,15 +1582,15 @@
         }
         if (t !== 'block' && t !== 'chainlink') {
           const lagPieces = Math.ceil(rowsL * net / 6 - 1e-9);
-          rows.push(['Лаги', rowsL + ' ' + plural(rowsL, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м → ' + lagPieces + ' шт по 6 м']);
+          rows.push(['Лаги', fmtInt(rowsL) + ' ' + plural(rowsL, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м → ' + fmtInt(lagPieces) + ' шт по 6 м']);
           cost.push({ label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' });
         }
         if (screws > 0) {
           const pack = pos(v.screwPack) ? Math.round(v.screwPack) : 250, packs = Math.ceil(screws / pack);
-          rows.push(['Саморезы', '≈ ' + screws + ' шт (' + screwNote + ') → ' + packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' по ' + pack]);
+          rows.push(['Саморезы', '≈ ' + fmtInt(screws) + ' шт (' + screwNote + ') → ' + fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' по ' + pack]);
           cost.push({ label: 'Саморезы', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' по ' + pack, priceId: 'screws' });
         }
-        rows.push(['Бетон под столбы', fmt(holes) + ' м³ (лунки ⌀20 см) ≈ ' + cementBags + ' ' + plural(cementBags, 'мешок', 'мешка', 'мешков') + ' цемента']);
+        rows.push(['Бетон под столбы', fmt(holes) + ' м³ (лунки ⌀20 см) ≈ ' + fmtInt(cementBags) + ' ' + plural(cementBags, 'мешок', 'мешка', 'мешков') + ' цемента']);
         if (sm.sides) sm.sides.forEach((w) => rows.push(['Сторона ' + (w.i + 1), fmt(w.len) + ' м' + (w.opLen ? ', проёмы ' + fmt(w.opLen) + ' м' : '')]));
         cost.unshift(Object.assign({ priceId: 'unit' }, unitCost), { label: 'Столбы', amount: posts, unit: plural(posts, 'столб', 'столба', 'столбов'), priceId: 'post' });
         return { main: { label: 'Нужно', value: main }, rows, cost,
@@ -1579,7 +1611,12 @@
         { id: 'weight', label: 'Вес в тоннах', fields: [{ id: 'weight', label: 'Вес', unit: 'т' }] },
       ],
       selects: [{ id: 'material', label: 'Материал', default: 'sand',
-        choices: Object.keys(MATERIALS).map((k) => ({ id: k, label: MATERIALS[k].name, hint: MATERIALS[k].density + ' т/м³ — ' + MATERIALS[k].hint })) }],
+        choices: Object.keys(MATERIALS).map((k) => ({ id: k, label: MATERIALS[k].name, hint: fmt(MATERIALS[k].density) + ' т/м³ — ' + MATERIALS[k].hint })) },
+        { id: 'compact', label: 'Слой', default: 'yes', group: 'layer', choices: [
+          { id: 'yes', label: 'Утрамбуем', hint: 'толщина — после трамбовки: рыхлого материала нужно больше' },
+          { id: 'no', label: 'Насыпаем как есть', hint: 'грядка, отсыпка без трамбовки' },
+        ] }],
+      groups(v, mode) { return { layer: mode === 'area' }; },
       prices: [
         { id: 'perTon', label: 'Цена материала', unit: '₽ за тонну' },
         { id: 'delivery', label: 'Доставка', unit: '₽ за рейс, необязательно' },
@@ -1601,16 +1638,21 @@
         else if (mode === 'area') { if (pos(v.len) && pos(v.wid) && pos(v.thick)) cubes = v.len * v.wid * (v.thick / 100); }
         else cubes = pos(v.weight) ? v.weight / m.density : null;
         if (cubes == null) return null;
-        const tons = cubes * m.density;
         const rows = [['Насыпная плотность', fmt(m.density) + ' т/м³']];
+        if (mode === 'area' && sel.compact === 'yes') {
+          rows.push(['Уплотнение', fmt(cubes) + ' м³ готового слоя × ' + fmt(m.compact) + ' = ' + fmt(cubes * m.compact) + ' м³ рыхлого']);
+          cubes *= m.compact;
+        }
+        const tons = cubes * m.density;
         TRUCKS.forEach((t) => {
           const n = Math.ceil(tons / t.tons);
-          if (n > 0 && n <= 12) rows.push([t.name, n === 1 ? 'один рейс' : n + ' ' + plural(n, 'рейс', 'рейса', 'рейсов')]);
+          if (n > 0 && n <= 12) rows.push([t.name, n === 1 ? 'один рейс' : fmtInt(n) + ' ' + plural(n, 'рейс', 'рейса', 'рейсов')]);
         });
         return {
           main: { label: 'Нужно: ' + m.name.toLowerCase(), value: fmt(cubes) + ' м³ · ' + fmt(tons) + ' т' },
           rows,
-          note: 'Плотность усреднённая: ' + m.hint + '. Продавцы считают тоннами, поэтому берите объём с запасом 5–10% — часть уйдёт в утруску и просыпь.',
+          note: 'Плотность усреднённая: ' + m.hint + '. Продавцы считают тоннами, поэтому берите объём с запасом 5–10% — часть уйдёт в просыпь'
+            + (mode === 'area' && sel.compact === 'yes' ? '. Усадка при трамбовке уже учтена.' : mode === 'area' ? '.' : ', а если слой будут трамбовать — добавьте ещё 15–30% на усадку.'),
           cost: [
             { label: m.name, amount: tons, unit: 'т', priceId: 'perTon' },
             { label: 'Доставка', amount: bestTrips(tons), unit: plural(bestTrips(tons), 'рейс', 'рейса', 'рейсов'), priceId: 'delivery', optional: true },
@@ -1848,8 +1890,13 @@
           // Маяки: по каждой стене свой ряд, крайние по углам
           if (sel.beacons === 'yes' && pos(v.beaconStep)) {
             const count = m.by.plaster.walls.reduce((s, w) => s + Math.ceil(w.len / v.beaconStep - 1e-9) + 1, 0);
-            const perBeacon = pos(v.beaconLen) ? Math.ceil(v.hei / v.beaconLen - 1e-9) : 1;
-            beacons = { count, profiles: count * perBeacon };
+            // Маяк выше профиля стыкуют из целого и добора; доборы режут из одного профиля на несколько маяков
+            let profiles = count;
+            if (pos(v.beaconLen)) {
+              const L = v.beaconLen, full = Math.floor(v.hei / L + 1e-9), rest = v.hei - full * L;
+              profiles = count * full + (rest > 0.01 ? Math.ceil(count / Math.max(1, Math.floor(L / rest + 1e-9))) : 0);
+            }
+            beacons = { count, profiles };
           }
           wallRows = m.walls.map((w) => ['Стена ' + (w.i + 1) + ' · ' + this.roomOpts.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]);
         }
@@ -1865,17 +1912,17 @@
         ];
         const cost = [];
         if (bags != null) {
-          rows.push(['Мешков по ' + fmt(v.bag) + ' кг', bags + ' шт (запас 10%)']);
+          rows.push(['Мешков по ' + fmt(v.bag) + ' кг', fmtInt(bags) + ' шт (запас 10%)']);
           cost.push({ label: 'Смесь', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'bag' });
         }
         if (sel.primer === 'yes' && pos(v.primerRate)) {
           const liters = area * v.primerRate * 2;  // до штукатурки и под финиш
           const cans = pos(v.primerCan) ? Math.ceil(liters / v.primerCan) : null;
-          rows.push(['Грунтовка', fmt(liters) + ' л на два прохода' + (cans != null ? ' ≈ ' + cans + ' ' + plural(cans, 'канистра', 'канистры', 'канистр') : '')]);
+          rows.push(['Грунтовка', fmt(liters) + ' л на два прохода' + (cans != null ? ' ≈ ' + fmtInt(cans) + ' ' + plural(cans, 'канистра', 'канистры', 'канистр') : '')]);
           if (cans != null) cost.push({ label: 'Грунтовка', amount: cans, unit: plural(cans, 'канистра', 'канистры', 'канистр'), priceId: 'primer' });
         }
         if (beacons) {
-          rows.push(['Маяки', beacons.count + ' шт с шагом ' + fmt(v.beaconStep) + ' м → ' + beacons.profiles + ' ' + plural(beacons.profiles, 'профиль', 'профиля', 'профилей') + ' по ' + fmt(v.beaconLen) + ' м']);
+          rows.push(['Маяки', fmtInt(beacons.count) + ' шт с шагом ' + fmt(v.beaconStep) + ' м → ' + fmtInt(beacons.profiles) + ' ' + plural(beacons.profiles, 'профиль', 'профиля', 'профилей') + ' по ' + fmt(v.beaconLen) + ' м']);
           cost.push({ label: 'Маяки', amount: beacons.profiles, unit: plural(beacons.profiles, 'профиль', 'профиля', 'профилей'), priceId: 'beacon' });
         }
         wallRows.forEach((r) => rows.push(r));
@@ -1887,7 +1934,7 @@
         note += 'Толщину считают по средней: замерьте перепад стены правилом и возьмите половину плюс минимальный слой 5 мм.';
 
         return {
-          main: { label: 'Нужно штукатурки', value: bags != null ? bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' (' + fmtInt(kg * 1.1) + ' кг)' : fmtInt(kg) + ' кг' },
+          main: { label: 'Нужно штукатурки', value: bags != null ? fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' (' + fmtInt(kg * 1.1) + ' кг)' : fmtInt(kg) + ' кг' },
           rows, note, cost,
         };
       },
@@ -1922,11 +1969,11 @@
       ],
       selects: [
         { id: 'mix', label: 'Из чего', default: 'ready', choices: [
-          { id: 'ready', label: 'Готовая смесь (пескобетон М300)', hint: 'мешки, ≈20 кг/м² на каждый сантиметр' },
-          { id: 'cps', label: 'Цемент и песок 1:3', hint: 'мешки цемента и тонны песка' },
-          { id: 'self', label: 'Наливной пол', hint: 'самовыравнивающийся, слой от 5 мм' },
+          { id: 'ready', label: 'Готовая смесь (пескобетон М300)', hint: 'мешки, ≈20 кг/м² на каждый сантиметр', sets: screedThick },
+          { id: 'cps', label: 'Цемент и песок 1:3', hint: 'мешки цемента и тонны песка', sets: screedThick },
+          { id: 'self', label: 'Наливной пол', hint: 'самовыравнивающийся, слой от 5 мм', sets: { thick: '10' } },
         ] },
-        { id: 'reinf', label: 'Армирование', default: 'fiber', choices: [
+        { id: 'reinf', label: 'Армирование', default: 'fiber', group: 'reinf', choices: [
           { id: 'fiber', label: 'Фиброволокно', hint: 'мешается в раствор, держит от усадочных трещин' },
           { id: 'mesh', label: 'Сетка', hint: 'карты внахлёст, считаем с запасом 10%' },
           { id: 'none', label: 'Без армирования', hint: '' },
@@ -1947,7 +1994,7 @@
       ],
       groups(v, mode, extras, sel) {
         return { ready: sel.mix === 'ready', cps: sel.mix === 'cps', self: sel.mix === 'self',
-          fiber: sel.reinf === 'fiber' && sel.mix !== 'self', mesh: sel.reinf === 'mesh' && sel.mix !== 'self' };
+          fiber: sel.reinf === 'fiber' && sel.mix !== 'self', mesh: sel.reinf === 'mesh' && sel.mix !== 'self', reinf: sel.mix !== 'self' };
       },
       shape(v, mode, extras) {
         if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? { area: v.len * v.wid, per: 2 * (v.len + v.wid), pts: [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]] } : null;
@@ -1984,8 +2031,8 @@
           rows.push(['Расход при ' + fmt(v.thick) + ' мм', fmt(perM2) + ' кг/м²']);
           rows.push(['Смеси', fmtInt(kg) + ' кг без запаса']);
           if (bags != null) {
-            rows.push(['Мешков по ' + fmt(v.readyBag) + ' кг', bags + ' шт (запас 5%)']);
-            main = bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' пескобетона';
+            rows.push(['Мешков по ' + fmt(v.readyBag) + ' кг', fmtInt(bags) + ' шт (запас 5%)']);
+            main = fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' пескобетона';
             cost.push({ label: 'Пескобетон', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'readyBag' });
           } else main = fmtInt(kg) + ' кг смеси';
         } else if (sel.mix === 'cps') {
@@ -1993,10 +2040,10 @@
           const cem = vol * v.cemPerM3, sand = vol * v.sandPerM3;
           const cemBags = pos(v.cemBag) ? Math.ceil(cem * 1.05 / v.cemBag) : null;
           const sandT = sand * 1.05 / 1000;
-          rows.push(['Цемент М400', fmtInt(cem) + ' кг' + (cemBags != null ? ' ≈ ' + cemBags + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' по ' + fmt(v.cemBag) + ' кг' : '')]);
+          rows.push(['Цемент М400', fmtInt(cem) + ' кг' + (cemBags != null ? ' ≈ ' + fmtInt(cemBags) + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' по ' + fmt(v.cemBag) + ' кг' : '')]);
           rows.push(['Песок', fmt(sandT) + ' т (' + fmtInt(sand) + ' кг, ≈ ' + fmt(sand / 1550) + ' м³)']);
           rows.push(['Вода', '≈ ' + fmtInt(cem * 0.45) + ' л, доливать по консистенции']);
-          main = (cemBags != null ? cemBags + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' цемента' : fmtInt(cem) + ' кг цемента') + ' · ' + fmt(sandT) + ' т песка';
+          main = (cemBags != null ? fmtInt(cemBags) + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' цемента' : fmtInt(cem) + ' кг цемента') + ' · ' + fmt(sandT) + ' т песка';
           if (cemBags != null) cost.push({ label: 'Цемент', amount: cemBags, unit: plural(cemBags, 'мешок', 'мешка', 'мешков'), priceId: 'cem' });
           cost.push({ label: 'Песок', amount: sandT, unit: 'т', priceId: 'sand' });
         } else {
@@ -2006,8 +2053,8 @@
           rows.push(['Расход при ' + fmt(v.thick) + ' мм', fmt(perM2) + ' кг/м²']);
           rows.push(['Смеси', fmtInt(kg) + ' кг без запаса']);
           if (bags != null) {
-            rows.push(['Мешков по ' + fmt(v.selfBag) + ' кг', bags + ' шт (запас 5%)']);
-            main = bags + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' наливного пола';
+            rows.push(['Мешков по ' + fmt(v.selfBag) + ' кг', fmtInt(bags) + ' шт (запас 5%)']);
+            main = fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' наливного пола';
             cost.push({ label: 'Наливной пол', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'selfBag' });
           } else main = fmtInt(kg) + ' кг смеси';
         }
@@ -2015,24 +2062,30 @@
         if (sel.mix !== 'self' && sel.reinf === 'fiber' && pos(v.fiberRate)) {
           const kg = vol * v.fiberRate;
           const packs = pos(v.fiberPack) ? Math.ceil(kg / v.fiberPack) : null;
-          rows.push(['Фиброволокно', fmt(kg) + ' кг' + (packs != null ? ' ≈ ' + packs + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок') : '')]);
+          rows.push(['Фиброволокно', fmt(kg) + ' кг' + (packs != null ? ' ≈ ' + fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок') : '')]);
           if (packs != null) cost.push({ label: 'Фиброволокно', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок'), priceId: 'fiber' });
         }
         if (sel.mix !== 'self' && sel.reinf === 'mesh' && pos(v.meshSheet)) {
           const sheets = Math.ceil(area * 1.1 / v.meshSheet);
-          rows.push(['Сетка', sheets + ' ' + plural(sheets, 'карта', 'карты', 'карт') + ' по ' + fmt(v.meshSheet) + ' м² (нахлёст 10%)']);
+          rows.push(['Сетка', fmtInt(sheets) + ' ' + plural(sheets, 'карта', 'карты', 'карт') + ' по ' + fmt(v.meshSheet) + ' м² (нахлёст 10%)']);
           cost.push({ label: 'Сетка', amount: sheets, unit: plural(sheets, 'карта', 'карты', 'карт'), priceId: 'mesh' });
         }
         if (sh.per && pos(v.damperRoll)) {
           const rolls = Math.ceil(sh.per / v.damperRoll);
-          rows.push(['Демпферная лента', fmt(sh.per) + ' м по периметру → ' + rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов')]);
+          rows.push(['Демпферная лента', fmt(sh.per) + ' м по периметру → ' + fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов')]);
           cost.push({ label: 'Демпферная лента', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'damper' });
         }
-        rows.push(['Вес на перекрытие', fmtInt(v.thick / 1000 * 2000) + ' кг/м² (всего ' + fmtInt(vol * 2000) + ' кг)']);
+        const self = sel.mix === 'self';
+        const density = self && pos(v.selfRate) ? v.selfRate * 1000 : 2000;
+        rows.push(['Вес на перекрытие', fmtInt(v.thick / 1000 * density) + ' кг/м² (всего ' + fmtInt(vol * density) + ' кг)']);
+        if (self && v.thick < 5) rows.push(['Тонкий слой', 'тоньше 5 мм обычный наливной пол не льют: нужен финишный, от 2–3 мм — проверьте на мешке, на какой слой он рассчитан']);
 
-        let note = 'Вес считаем по плотности 2000 кг/м³. ';
+        let note = 'Вес считаем по плотности ' + fmtInt(density) + ' кг/м³. ';
         if (v.thick >= 70) note += 'Слой от 70 мм — это заметная нагрузка на перекрытие: в квартире её стоит проверить. ';
-        note += 'Демпферная лента по периметру обязательна: без неё стяжка упирается в стены и трескается. Ходить можно через сутки, класть покрытие — когда высохнет, примерно неделя на каждый сантиметр слоя.';
+        note += 'Демпферная лента по периметру обязательна: без неё стяжка упирается в стены и трескается. ';
+        note += self
+          ? 'По наливному полу ходят через 4–6 часов, а покрытие кладут, когда он высохнет: срок написан на мешке, обычно от 3 дней под плитку до 1–2 недель под ламинат.'
+          : 'Ходить можно через 2–3 дня, класть покрытие — когда высохнет: примерно неделя на каждый сантиметр первых 4 см, толще — ещё дольше. Под ламинат и паркет стяжку сушат дольше, чем под плитку.';
 
         return { main: { label: 'Нужно на стяжку', value: main }, rows, note, cost };
       },
@@ -2055,7 +2108,7 @@
         { id: 'partition', label: 'Перегородка', fields: [
           { id: 'plen', label: 'Длина перегородки', unit: 'м', value: '4' },
           { id: 'phei', label: 'Высота перегородки', unit: 'м', value: '2.7' },
-          { id: 'pdoor', label: 'Дверных проёмов', unit: 'шт', value: '1' },
+          { id: 'pdoor', label: 'Дверных проёмов', unit: 'шт', value: '1', int: true },
           { id: 'pdoorW', label: 'Ширина проёма', unit: 'м', value: '0.9' },
           { id: 'pdoorH', label: 'Высота проёма', unit: 'м', value: '2.1' },
         ] },
@@ -2072,10 +2125,10 @@
         { id: 'sheetL', label: 'Длина листа', unit: 'см', value: '250' },
         { id: 'sheetW', label: 'Ширина листа', unit: 'см', value: '120' },
         { id: 'waste', label: 'Запас на подрезку', unit: '%', value: '10' },
-        { id: 'studStep', label: 'Шаг несущего профиля', unit: 'мм', value: '600' },
+        { id: 'studStep', label: 'Шаг стоек (на потолке — поперечных профилей)', unit: 'мм', value: '600' },
         { id: 'profileLen', label: 'Длина профиля', unit: 'м', value: '3' },
-        { id: 'hangerStep', label: 'Шаг подвесов вдоль профиля', unit: 'м', value: '0.6', group: 'ceil' },
-        { id: 'crabRate', label: 'Соединителей (крабов)', unit: 'шт на 1 м²', value: '1.7', group: 'ceil' },
+        { id: 'mainStep', label: 'Шаг основных профилей', unit: 'м, на подвесах', value: '1', group: 'ceil' },
+        { id: 'hangerStep', label: 'Шаг подвесов вдоль основного профиля', unit: 'м', value: '0.8', group: 'ceil' },
         { id: 'screwRate', label: 'Саморезов по гипсокартону', unit: 'шт на 1 м² обшивки', value: '23' },
         { id: 'tapeRate', label: 'Ленты для швов', unit: 'м на 1 м²', value: '1.1' },
         { id: 'tapeRoll', label: 'Лента в рулоне', unit: 'м', value: '20' },
@@ -2097,7 +2150,8 @@
         { id: 'stud', label: 'Цена несущего профиля', unit: '₽ за штуку' },
         { id: 'track', label: 'Цена направляющего профиля', unit: '₽ за штуку' },
         { id: 'hanger', label: 'Цена подвеса', unit: '₽ за штуку', group: 'ceil' },
-        { id: 'crab', label: 'Цена соединителя', unit: '₽ за штуку', group: 'ceil' },
+        { id: 'crab', label: 'Цена краба', unit: '₽ за штуку', group: 'ceil' },
+        { id: 'ext', label: 'Цена удлинителя профиля', unit: '₽ за штуку', group: 'ceil' },
         { id: 'tape', label: 'Цена ленты', unit: '₽ за рулон' },
         { id: 'putty', label: 'Цена шпаклёвки', unit: '₽ за килограмм' },
       ],
@@ -2112,7 +2166,7 @@
           V.shape(box, [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]], [
             { from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 },
             { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 },
-          ], { center: fmt(v.len * v.wid) + ' м²', title: 'Потолок', caption: 'Несущие профили вдоль длинной стороны с шагом ' + fmt(step) + ' м' });
+          ], { center: fmt(v.len * v.wid) + ' м²', title: 'Потолок', caption: 'Основные профили вдоль длинной стороны через ' + fmt(v.mainStep || 1) + ' м, поперечные через ' + fmt(step) + ' м' });
           return true;
         }
         return false;
@@ -2124,7 +2178,7 @@
         const sheetArea = v.sheetL / 100 * (v.sheetW / 100);
 
         // Площадь обшивки и каркас считаются по-разному для стен, потолка и перегородки
-        let area = null, per = null, studs = null, trackLen = null, hangers = null, crabs = null, note = '';
+        let area = null, per = null, studs = null, trackLen = null, hangers = null, crabs = null, exts = null, note = '';
         const rows = [], cost = [], extra = [];
 
         if (mode === 'wall') {
@@ -2138,21 +2192,30 @@
           const studCount = m.by.gkl.walls.reduce((s, w) => s + Math.ceil(w.len / step - 1e-9) + 1, 0);
           studs = studCount * Math.ceil(v.hei / (v.profileLen || 3) - 1e-9);
           trackLen = runLen * 2;                          // по полу и по потолку
-          extra.push(['Обшиваем', m.by.gkl.n + ' ' + plural(m.by.gkl.n, 'стена', 'стены', 'стен') + ', ' + fmt(runLen) + ' погонных метров' + (m.openings ? ', проёмы ' + fmt(m.openings) + ' м² вычтены' : '')]);
+          extra.push(['Обшиваем', fmtInt(m.by.gkl.n) + ' ' + plural(m.by.gkl.n, 'стена', 'стены', 'стен') + ', ' + fmt(runLen) + ' погонных метров' + (m.openings ? ', проёмы ' + fmt(m.openings) + ' м² вычтены' : '')]);
           m.walls.forEach((w) => extra.push(['Стена ' + (w.i + 1) + ' · ' + this.roomOpts.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
         } else if (mode === 'ceiling') {
           if (!pos(v.len) || !pos(v.wid) || !pos(step)) return null;
           area = v.len * v.wid; per = 2 * (v.len + v.wid);
-          const long = Math.max(v.len, v.wid), short = Math.min(v.len, v.wid);
-          const runs = Math.ceil(short / step - 1e-9) + 1;                    // несущие вдоль длинной стороны
-          studs = runs * Math.ceil(long / (v.profileLen || 3) - 1e-9);
+          // Одноуровневый каркас: основные профили вдоль длинной стороны висят на подвесах,
+          // поперечные между ними через шаг стоек, на каждом пересечении краб. Края лежат в направляющем.
+          if (!pos(v.mainStep)) return null;
+          const long = Math.max(v.len, v.wid), short = Math.min(v.len, v.wid), pl = v.profileLen || 3;
+          const mains = Math.max(1, Math.ceil(short / v.mainStep - 1e-9) - 1);
+          const cross = Math.max(1, Math.ceil(long / step - 1e-9) - 1);
+          const perMain = Math.ceil(long / pl - 1e-9);
+          studs = mains * perMain + Math.ceil(cross * short / pl - 1e-9);
+          exts = mains * (perMain - 1);
           trackLen = per;                                                     // направляющий по периметру
-          if (pos(v.hangerStep)) hangers = runs * (Math.ceil(long / v.hangerStep - 1e-9) + 1);
-          if (pos(v.crabRate)) crabs = Math.ceil(area * v.crabRate);
-          extra.push(['Несущих профилей', runs + ' ряда(ов) по ' + fmt(long) + ' м с шагом ' + fmt(step) + ' м']);
+          if (pos(v.hangerStep)) hangers = mains * Math.max(1, Math.ceil(long / v.hangerStep - 1e-9) - 1);
+          crabs = mains * cross;
+          extra.push(['Основные профили', fmtInt(mains) + ' ' + plural(mains, 'ряд', 'ряда', 'рядов') + ' по ' + fmt(long) + ' м через ' + fmt(v.mainStep) + ' м']);
+          extra.push(['Поперечные профили', fmtInt(cross) + ' ' + plural(cross, 'ряд', 'ряда', 'рядов') + ' по ' + fmt(short) + ' м через ' + fmt(step) + ' м']);
         } else if (mode === 'partition') {
           if (!pos(v.plen) || !pos(v.phei) || !pos(step)) return null;
           const doors = Math.max(0, Math.round(v.pdoor || 0));
+          if (doors && doors * (v.pdoorW || 0) > v.plen - 0.2) return { error: 'Проёмы шире перегородки: ' + fmtInt(doors) + ' × ' + fmt(v.pdoorW) + ' м не помещаются в ' + fmt(v.plen) + ' м вместе со стойками. Проверьте ширину и число проёмов.' };
+          if (doors && (v.pdoorH || 0) >= v.phei) return { error: 'Проём выше перегородки — проверьте высоту проёма.' };
           const doorArea = doors * (v.pdoorW || 0) * (v.pdoorH || 0);
           const oneSide = v.plen * v.phei - doorArea;
           if (oneSide <= 0) return { error: 'Проёмы занимают всю перегородку — проверьте размеры.' };
@@ -2162,7 +2225,7 @@
           studs = studCount * Math.ceil(v.phei / (v.profileLen || 3) - 1e-9);
           trackLen = v.plen * 2;
           extra.push(['Обшивка', fmt(oneSide) + ' м² × 2 стороны = ' + fmt(area) + ' м²' + (doorArea ? ' (проёмы ' + fmt(doorArea) + ' м² вычтены)' : '')]);
-          extra.push(['Стойки', studCount + ' шт: по шагу ' + fmt(step) + ' м плюс по две на каждый проём']);
+          extra.push(['Стойки', fmtInt(studCount) + ' шт: по шагу ' + fmt(step) + ' м плюс по две на каждый проём']);
           note += 'Каркас перегородки один, а обшивка с двух сторон — это уже учтено. ';
         } else {
           area = pos(v.area) ? v.area : null;
@@ -2174,31 +2237,35 @@
         const covered = area * layers;
         const sheets = Math.ceil(covered * (1 + (v.waste || 0) / 100) / sheetArea);
         rows.push(['Площадь обшивки', fmt(area) + ' м²' + (layers > 1 ? ' × 2 слоя = ' + fmt(covered) + ' м²' : '')]);
-        rows.push(['Листы ' + fmt(v.sheetL) + '×' + fmt(v.sheetW) + ' см', sheets + ' шт по ' + fmt(sheetArea) + ' м² (запас ' + fmt(v.waste || 0) + '%)']);
+        rows.push(['Листы ' + fmt(v.sheetL) + '×' + fmt(v.sheetW) + ' см', fmtInt(sheets) + ' шт по ' + fmt(sheetArea) + ' м² (запас ' + fmt(v.waste || 0) + '%)']);
         cost.push({ label: 'Гипсокартон', amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов'), priceId: 'sheet' });
 
         if (studs != null) {
-          rows.push(['Несущий профиль', studs + ' ' + plural(studs, 'штука', 'штуки', 'штук') + ' по ' + fmt(v.profileLen) + ' м']);
+          rows.push(['Несущий профиль', fmtInt(studs) + ' ' + plural(studs, 'штука', 'штуки', 'штук') + ' по ' + fmt(v.profileLen || 3) + ' м']);
           cost.push({ label: 'Несущий профиль', amount: studs, unit: plural(studs, 'штука', 'штуки', 'штук'), priceId: 'stud' });
         }
         if (trackLen != null && pos(v.profileLen)) {
           const tracks = Math.ceil(trackLen / v.profileLen);
-          rows.push(['Направляющий профиль', fmt(trackLen) + ' м → ' + tracks + ' ' + plural(tracks, 'штука', 'штуки', 'штук') + ' по ' + fmt(v.profileLen) + ' м']);
+          rows.push(['Направляющий профиль', fmt(trackLen) + ' м → ' + fmtInt(tracks) + ' ' + plural(tracks, 'штука', 'штуки', 'штук') + ' по ' + fmt(v.profileLen) + ' м']);
           cost.push({ label: 'Направляющий профиль', amount: tracks, unit: plural(tracks, 'штука', 'штуки', 'штук'), priceId: 'track' });
         }
+        if (exts) {
+          rows.push(['Удлинители профиля', fmtInt(exts) + ' шт: основной профиль длиннее ' + fmt(v.profileLen || 3) + ' м наращивают']);
+          cost.push({ label: 'Удлинители', amount: exts, unit: 'шт', priceId: 'ext' });
+        }
         if (hangers != null) {
-          rows.push(['Подвесы', hangers + ' шт с шагом ' + fmt(v.hangerStep) + ' м']);
+          rows.push(['Подвесы', fmtInt(hangers) + ' шт с шагом ' + fmt(v.hangerStep) + ' м (' + fmt(hangers / area, 1) + ' на м²)']);
           cost.push({ label: 'Подвесы', amount: hangers, unit: 'шт', priceId: 'hanger' });
         }
         if (crabs != null) {
-          rows.push(['Соединители (крабы)', crabs + ' шт']);
+          rows.push(['Соединители (крабы)', fmtInt(crabs) + ' шт, по одному на пересечение основного и поперечного']);
           cost.push({ label: 'Соединители', amount: crabs, unit: 'шт', priceId: 'crab' });
         }
-        if (pos(v.screwRate)) rows.push(['Саморезы по гипсокартону', Math.ceil(covered * v.screwRate) + ' шт']);
+        if (pos(v.screwRate)) rows.push(['Саморезы по гипсокартону', fmtInt(Math.ceil(covered * v.screwRate)) + ' шт']);
         if (pos(v.tapeRate)) {
           const tapeM = area * v.tapeRate;
           const rolls = pos(v.tapeRoll) ? Math.ceil(tapeM / v.tapeRoll) : null;
-          rows.push(['Лента для швов', fmt(tapeM) + ' м' + (rolls != null ? ' → ' + rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') : '')]);
+          rows.push(['Лента для швов', fmt(tapeM) + ' м' + (rolls != null ? ' → ' + fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') : '')]);
           if (rolls != null) cost.push({ label: 'Лента', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'tape' });
         }
         if (pos(v.puttyRate)) {
@@ -2208,11 +2275,13 @@
         }
         if (pos(v.primerRate)) rows.push(['Грунтовка', fmt(area * v.primerRate) + ' л']);
         extra.forEach((r) => rows.push(r));
+        const tall = mode === 'wall' ? v.hei : mode === 'partition' ? v.phei : 0;
+        if (pos(v.profileLen) && tall > v.profileLen && tall <= 4) rows.push(['Длина профиля', 'стена ' + fmt(tall) + ' м выше профиля ' + fmt(v.profileLen) + ' м — каждую стойку пришлось бы наращивать, поэтому их посчитано вдвое. Есть профиль 4 м: поставьте 4 в поле «Длина профиля»']);
 
-        note += 'Саморезы, лента, шпаклёвка и крабы считаются по нормам расхода — их можно поменять под систему вашего производителя. ';
+        note += 'Саморезы, лента и шпаклёвка считаются по нормам расхода — их можно поменять под систему вашего производителя. ';
         note += 'Под плитку и в местах, где будет висеть тяжёлое, шаг профиля уменьшают до 400 мм и ставят закладные.';
 
-        return { main: { label: 'Нужно материалов', value: sheets + ' ' + plural(sheets, 'лист', 'листа', 'листов') + (studs != null ? ' · ' + studs + ' ' + plural(studs, 'профиль', 'профиля', 'профилей') : '') }, rows, note, cost };
+        return { main: { label: 'Нужно материалов', value: fmtInt(sheets) + ' ' + plural(sheets, 'лист', 'листа', 'листов') + (studs != null ? ' · ' + fmtInt(studs) + ' ' + plural(studs, 'профиль', 'профиля', 'профилей') : '') }, rows, note, cost };
       },
     },
 
@@ -2249,7 +2318,7 @@
           { id: 'cable', label: 'Электрический кабель', hint: 'секция кабеля в стяжку, шаг укладки' },
           { id: 'mat', label: 'Электрический мат', hint: 'под плитку в слой клея, считаем квадратные метры' },
         ] },
-        { id: 'layout', label: 'Схема укладки', default: 'snail', choices: [
+        { id: 'layout', label: 'Схема укладки трубы', default: 'snail', group: 'water', choices: [
           { id: 'snail', label: 'Улитка', hint: 'подача и обратка рядом, пол греет равномернее' },
           { id: 'snake', label: 'Змейка', hint: 'проще уложить, но у дальней стены прохладнее' },
         ] },
@@ -2334,14 +2403,18 @@
           const pipe = field + supply * loops;
           const perLoop = pipe / loops;
           if (pos(v.loopMax) && perLoop > v.loopMax) return { error: 'Не получается уложиться в длину контура — увеличьте шаг укладки или поставьте коллектор ближе.' };
-          const coils = pos(v.coil) ? Math.ceil(pipe / v.coil) : null;
+          // Контур кладут одним куском — сращивать трубу в стяжке нельзя, поэтому бухты считаем
+          // по целым контурам: сколько контуров влезает в одну бухту, а не метры ÷ длина бухты
+          const perCoil = pos(v.coil) ? Math.floor(v.coil / Math.ceil(perLoop)) : 0;
+          const coils = perCoil > 0 ? Math.ceil(loops / perCoil) : null;
           const heat = this.HEAT.reduce((best, [s, w]) => Math.abs(s - v.step) < Math.abs(best[0] - v.step) ? [s, w] : best, this.HEAT[0])[1];
-          main = fmtInt(pipe) + ' м трубы · ' + loops + ' ' + plural(loops, 'контур', 'контура', 'контуров');
+          main = fmtInt(pipe) + ' м трубы · ' + fmtInt(loops) + ' ' + plural(loops, 'контур', 'контура', 'контуров');
           rows.push(['Длина трубы', fmt(H) + ' м² ÷ ' + fmt(step) + ' м = ' + fmtInt(field) + ' м в полу + подводка ' + fmtInt(supply * loops) + ' м = ' + fmtInt(pipe) + ' м']);
-          rows.push(['Контуров', loops + ' по ' + fmtInt(perLoop) + ' м (предел ' + fmt(v.loopMax) + ' м)']);
-          rows.push(['Коллектор', 'на ' + loops + ' ' + plural(loops, 'выход', 'выхода', 'выходов')]);
-          if (coils != null) rows.push(['Бухты по ' + fmt(v.coil) + ' м', coils + ' шт']);
-          if (pos(v.clips)) rows.push(['Клипсы крепления', Math.ceil(pipe * v.clips) + ' шт']);
+          rows.push(['Контуров', fmtInt(loops) + ' по ' + fmtInt(perLoop) + ' м (предел ' + fmt(v.loopMax) + ' м)']);
+          rows.push(['Коллектор', 'на ' + fmtInt(loops) + ' ' + plural(loops, 'выход', 'выхода', 'выходов')]);
+          if (coils != null) rows.push(['Бухты по ' + fmt(v.coil) + ' м', fmtInt(coils) + ' шт' + (loops > 1 ? ' (из одной бухты ' + fmtInt(perCoil) + ' ' + plural(perCoil, 'контур', 'контура', 'контуров') + ' целиком, без сращивания)' : '')]);
+          else if (pos(v.coil)) rows.push(['⚠ Бухта', 'контур ' + fmtInt(perLoop) + ' м длиннее бухты ' + fmt(v.coil) + ' м: возьмите бухту длиннее — трубу в стяжке не сращивают']);
+          if (pos(v.clips)) rows.push(['Клипсы крепления', fmtInt(Math.ceil(pipe * v.clips)) + ' шт']);
           rows.push(['Ориентир теплоотдачи', '≈ ' + heat + ' Вт/м², всего ≈ ' + fmtInt(H * heat) + ' Вт']);
           cost.push({ label: 'Труба', amount: Math.ceil(pipe), unit: 'м', priceId: 'pipe' });
           if (pos(v.clips)) cost.push({ label: 'Клипсы', amount: Math.ceil(pipe * v.clips), unit: 'шт', priceId: 'clip' });
@@ -2355,6 +2428,7 @@
           rows.push(['Длина кабеля', fmtInt(watts) + ' Вт ÷ ' + fmt(v.cableW) + ' Вт/м = ' + fmtInt(cable) + ' м']);
           rows.push(['Шаг укладки', '≈ ' + fmtInt(step) + ' мм']);
           if (pos(v.volt)) rows.push(['Ток', '≈ ' + fmt(watts / v.volt) + ' А при ' + fmt(v.volt) + ' В']);
+          if (pos(v.volt) && watts / v.volt > 16) rows.push(['⚠ Больше 16 А', 'на одну линию с автоматом 16 А и один терморегулятор столько не вешают: разделите пол на две зоны со своими регуляторами']);
           cost.push({ label: 'Кабель', amount: Math.ceil(cable), unit: 'м', priceId: 'cable' });
           if (step < 80) rows.push(['⚠ Проверьте', 'шаг меньше 80 мм — возьмите кабель мощнее']);
         } else {
@@ -2364,6 +2438,7 @@
           rows.push(['Мат', fmt(H) + ' м² по ' + fmt(v.matW) + ' Вт/м²']);
           rows.push(['Мощность', fmtInt(watts) + ' Вт (' + fmt(watts / 1000) + ' кВт)']);
           if (pos(v.volt)) rows.push(['Ток', '≈ ' + fmt(watts / v.volt) + ' А при ' + fmt(v.volt) + ' В']);
+          if (pos(v.volt) && watts / v.volt > 16) rows.push(['⚠ Больше 16 А', 'на одну линию с автоматом 16 А и один терморегулятор столько не вешают: разделите пол на две зоны со своими регуляторами']);
           rows.push(['Терморегулятор', '1 шт на комнату, датчик в гофре между витками']);
           cost.push({ label: 'Мат', amount: H, unit: 'м²', priceId: 'mat' });
         }
@@ -2372,14 +2447,15 @@
         rows.push(['Теплоизоляция под пол', fmt(sh.area) + ' м²']);
         if (sh.per && pos(v.damperRoll)) {
           const rolls = Math.ceil(sh.per / v.damperRoll);
-          rows.push(['Демпферная лента', fmt(sh.per) + ' м по периметру → ' + rolls + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов')]);
+          rows.push(['Демпферная лента', fmt(sh.per) + ' м по периметру → ' + fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов')]);
           cost.push({ label: 'Демпферная лента', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'damper' });
         }
 
-        let note = sel.layout === 'snail'
-          ? 'Улитка: труба идёт к центру и обратно, горячая подача чередуется с обраткой, поэтому пол греет ровнее. '
-          : 'Змейка: проще укладывать, но к дальней стене вода приходит остывшей. Её обычно пускают вдоль холодной стены. ';
+        let note = '';
         if (sel.type === 'water') {
+          note += sel.layout === 'snail'
+            ? 'Улитка: труба идёт к центру и обратно, горячая подача чередуется с обраткой, поэтому пол греет ровнее. '
+            : 'Змейка: проще укладывать, но к дальней стене вода приходит остывшей. Её обычно пускают вдоль холодной стены. ';
           note += 'Контуры делают примерно одинаковой длины: иначе короткий заберёт весь поток, а длинный останется холодным. ';
           note += 'Теплоотдача — ориентир для плитки при подаче 40–45 °C; под ламинатом и ковром она заметно ниже.';
         } else {
@@ -2556,7 +2632,17 @@
     function render() {
       const v = {};
       const mode = def.modes.find((m) => m.id === state.mode);
-      mode.fields.concat(def.common || []).forEach((f) => { v[f.id] = parseNum(state.values[f.id]); });
+      // Отрицательное там, где оно не имеет смысла, и астрономические числа не берём в расчёт, а подсвечиваем;
+      // штуки (столбы, проёмы, ряды) округляем до целых
+      const bad = [];
+      mode.fields.concat(def.common || []).forEach((f) => {
+        let x = parseNum(state.values[f.id]);
+        const wrong = x != null && (Math.abs(x) > 1e9 || (x < 0 && !(f.signed || def.signed)));
+        if (wrong) { x = null; bad.push(f.label); } else if (x != null && f.int) x = Math.round(x);
+        v[f.id] = x;
+        const inp = fieldsBox.querySelector('[name="' + f.id + '"]');
+        if (inp) { inp.closest('.calc-field').classList.toggle('calc-field--bad', wrong); inp.setAttribute('aria-invalid', wrong ? 'true' : 'false'); }
+      });
       const extras = { openings: state.extras.openings.map((o) => ({ kind: o.kind, w: parseNum(o.w), h: parseNum(o.h), count: Math.max(1, Math.round(parseNum(o.count) || 1)) })), plan: state.extras.plan, room: state.extras.room };
       if (planEditor) planEditor.redraw();
       if (roomEditor) roomEditor.redraw();
@@ -2570,9 +2656,11 @@
       applyGroups();
       render.after = applyGroups;
       lastViz = { v, extras };
-      drawViz();
       def._sel = state.sel;
-      const r = def.compute(v, state.mode, state.sel, extras);
+      drawViz();
+      let r = def.compute(v, state.mode, state.sel, extras);
+      if (!r && bad.length) r = { error: bad.map((l) => '«' + l + '»').join(', ') + ': ' + (bad.length > 1 ? 'нужны положительные числа' : 'нужно положительное число') + ' — исправьте, и результат появится.' };
+      if (r && !r.error && bad.length) r.rows.unshift(['⚠ Не учтено', bad.map((l) => '«' + l + '»').join(', ') + ': ' + (bad.length > 1 ? 'нужны положительные числа' : 'нужно положительное число')]);
       result.innerHTML = '';
       costBox.hidden = !r || !!r.error || !(def.prices && def.prices.length);
       if (!r || r.error) {
@@ -2722,19 +2810,26 @@
     })();
 
     // Режим или вариант с sets: {поле: значение} подставляет свои значения при переключении,
-    // иначе поле с тем же id тащит число из прошлого режима (клей 25 кг в кирпич и т.п.)
-    const applySets = (o) => { if (o && o.sets) Object.keys(o.sets).forEach((f) => { state.values[f] = o.sets[f]; }); };
+    // иначе поле с тем же id тащит число из прошлого режима (клей 25 кг в кирпич и т.п.).
+    // sets функцией — когда подстановка зависит от того, что уже введено.
+    const applySets = (o) => {
+      const sets = o && o.sets && (typeof o.sets === 'function' ? o.sets(state.values) : o.sets);
+      if (sets) Object.keys(sets).forEach((f) => { state.values[f] = sets[f]; });
+      return sets || {};
+    };
     form.appendChild(chips(key + '-mode', def.modeLabel, def.modes, state.mode, (id) => { state.mode = id; applySets(def.modes.find((md) => md.id === id)); renderFields(); render(); }));
     (def.selects || []).forEach((s) => {
-      const hint = h('p', { class: 'calc-hint' });
+      const hint = h('p', { class: 'calc-hint', 'data-group': s.group || '' });
       const update = () => { const c = s.choices.find((x) => x.id === state.sel[s.id]); hint.textContent = c.hint ? c.label + ' — ' + c.hint : c.label; };
-      selectsBox.appendChild(chips(key + '-' + s.id, s.label, s.choices, state.sel[s.id], (id) => {
+      const box = chips(key + '-' + s.id, s.label, s.choices, state.sel[s.id], (id) => {
         state.sel[s.id] = id;
         const c = s.choices.find((x) => x.id === id);
-        applySets(c);
-        if (c && c.sets) Object.keys(c.sets).forEach((f) => { const input = fieldsBox.querySelector('[name="' + f + '"]'); if (input) input.value = c.sets[f]; });
+        const sets = applySets(c);
+        Object.keys(sets).forEach((f) => { const input = fieldsBox.querySelector('[name="' + f + '"]'); if (input) input.value = sets[f]; });
         update(); render();
-      }));
+      });
+      box.dataset.group = s.group || '';
+      selectsBox.appendChild(box);
       selectsBox.appendChild(hint);
       update();
     });
@@ -2749,7 +2844,7 @@
     form.appendChild(costBox);
     root.innerHTML = '';
     if (!root.previousElementSibling || !root.previousElementSibling.classList.contains('calc-topline')) {
-      root.parentNode.insertBefore(h('p', { class: 'calc-topline', html: '<img src="/assets/images/chatyadro-icon-64.webp" width="22" height="22" alt="" class="calc-topline-icon"> Тот же калькулятор есть в приложении <a href="/projects/chatyadro/">ЧатЯдро</a>: там расчёт сохраняется и уходит соседям в чат. ' + (restored ? '<strong>Открыт расчёт по ссылке.</strong>' : '') }), root);
+      root.parentNode.insertBefore(h('p', { class: 'calc-topline', html: '<img src="/assets/images/chatyadro-icon-64.webp" width="22" height="22" alt="" class="calc-topline-icon"><span>Тот же калькулятор есть в приложении <a href="/projects/chatyadro/">ЧатЯдро</a>: там расчёт сохраняется и уходит соседям в чат. ' + (restored ? '<strong>Открыт расчёт по ссылке.</strong>' : '') + '</span>' }), root);
     }
     root.appendChild(form);
     renderFields();

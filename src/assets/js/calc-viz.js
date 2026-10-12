@@ -120,7 +120,49 @@
     const old = container.querySelector('svg'); if (old) old.remove();
     container.insertBefore(svg, container.firstChild);
     container.classList.remove('viz-flat');
+    declutter(svg, W, H);
     return svg;
+  }
+
+  // На телефоне шрифт подписей крупнее (иначе не прочесть), и они наезжают друг на друга.
+  // После вставки меряем настоящие рамки: подпись, которая легла на уже поставленную,
+  // сдвигаем вверх-вниз на высоту строки, вылезшую за край — внутрь; длинную подпись внизу
+  // переносим на две строки. Если схема скрыта (рамки нулевые) — ничего не трогаем.
+  function declutter(svg, W, H, again) {
+    // Первый рисунок делается, пока блок схемы ещё скрыт: рамок нет — повторяем на следующем кадре
+    const first = svg.querySelector('text.viz-label, text.viz-small, text.viz-caption');
+    let shown = false; try { shown = !!(first && first.getBBox().width); } catch (e) { /* не в документе */ }
+    if (first && !shown) { if (!again) requestAnimationFrame(() => { if (svg.isConnected) declutter(svg, W, H, true); }); return; }
+    const placed = [];
+    svg.querySelectorAll('text.viz-big').forEach((t) => { try { const bb = t.getBBox(); if (bb.width) placed.push(bb); } catch (e) { /* скрыта */ } });
+    const hit = (a) => placed.some((b) => a.x < b.x + b.width + 2 && b.x < a.x + a.width + 2 && a.y < b.y + b.height && b.y < a.y + a.height);
+    svg.querySelectorAll('text.viz-label, text.viz-small').forEach((t) => {
+      let bb; try { bb = t.getBBox(); } catch (e) { return; }
+      if (!bb.width) return;
+      const shiftX = bb.x < 2 ? 2 - bb.x : bb.x + bb.width > W - 2 ? W - 2 - bb.x - bb.width : 0;
+      if (shiftX) t.setAttribute('x', +t.getAttribute('x') + shiftX);
+      const box = { x: bb.x + shiftX, y: bb.y, width: bb.width, height: bb.height };
+      const step = bb.height * 0.9;
+      for (const k of [0, -1, 1, -2, 2, -3, 3]) {
+        const cand = { x: box.x, y: box.y + k * step, width: box.width, height: box.height };
+        if (cand.y < 0 || cand.y + cand.height > H) continue;
+        if (!hit(cand)) { if (k) t.setAttribute('y', +t.getAttribute('y') + k * step); placed.push(cand); return; }
+      }
+      placed.push(box);
+    });
+    const cap = svg.querySelector('text.viz-caption');
+    if (cap && cap.textContent.indexOf(' ') > 0) {
+      let len = 0; try { len = cap.getComputedTextLength(); } catch (e) { /* скрыта */ }
+      if (len > W - 16) {
+        const txt = cap.textContent, mid = txt.length / 2;
+        let cut = -1;
+        for (let i = 0; i < txt.length; i++) if (txt[i] === ' ' && (cut < 0 || Math.abs(i - mid) < Math.abs(cut - mid))) cut = i;
+        const lh = parseFloat(getComputedStyle(cap).fontSize) || 16, y = +cap.getAttribute('y');
+        cap.textContent = '';
+        cap.appendChild(el('tspan', { x: W / 2, y: y - lh * 1.15 }, txt.slice(0, cut)));
+        cap.appendChild(el('tspan', { x: W / 2, y }, txt.slice(cut + 1)));
+      }
+    }
   }
 
   // Вращение и масштаб: тянем — поворот (влево-вправо) и наклон (вверх-вниз), колесо или щипок — масштаб,
@@ -183,7 +225,7 @@
       x += wpx + gap;
     });
     svg.appendChild(el('text', { x: pad - 6, y: top + hpx / 2, class: 'viz-label', 'text-anchor': 'end', transform: `rotate(-90 ${pad - 6} ${top + hpx / 2})` }, `${f1(height)} м`));
-    if (placed < items.length) svg.appendChild(el('text', { x: W / 2, y: H - 8, class: 'viz-caption', 'text-anchor': 'middle' }, `Не поместилось на схеме: ${items.length - placed} проём(а). В расчёте учтены все.`));
+    if (placed < items.length) svg.appendChild(el('text', { x: W / 2, y: H - 8, class: 'viz-caption', 'text-anchor': 'middle' }, `Не поместилось на схеме проёмов: ${items.length - placed}. В расчёте учтены все.`));
     else if (opts && opts.caption) svg.appendChild(el('text', { x: W / 2, y: H - 8, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
     const old = container.querySelector('svg'); if (old) old.remove(); container.insertBefore(svg, container.firstChild);
     container.classList.add('viz-flat');
@@ -221,6 +263,7 @@
     if (opts && opts.caption) svg.appendChild(el('text', { x: W / 2, y: H + capH - 8, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
     const old = container.querySelector('svg'); if (old) old.remove(); container.insertBefore(svg, container.firstChild);
     container.classList.add('viz-flat');
+    declutter(svg, W, H + capH);
   }
 
   /* ---------- Забор: вид сбоку со столбами, воротами и калиткой ---------- */
@@ -308,6 +351,7 @@
     const old2 = container.querySelector('svg'); if (old2) old2.remove();
     container.insertBefore(svg, container.firstChild);
     container.classList.remove('viz-flat');
+    declutter(svg, W, H);
   }
 
   window.CalcViz = { iso, rotatable, walls, shape, fence, roof };

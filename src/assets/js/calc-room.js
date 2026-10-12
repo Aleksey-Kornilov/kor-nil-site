@@ -209,7 +209,7 @@
         panel.appendChild(row);
       });
       const others = room.openings.length - ops.length;
-      if (others > 0) { const p2 = document.createElement('p'); p2.className = 'calc-note'; p2.textContent = 'Ещё ' + others + ' проём(а) на других стенах: нажмите на стену или на сам проём.'; panel.appendChild(p2); }
+      if (others > 0) { const p2 = document.createElement('p'); p2.className = 'calc-note'; p2.textContent = 'Ещё ' + others + ' ' + (others % 10 === 1 && others % 100 !== 11 ? 'проём' : [2, 3, 4].includes(others % 10) && ![12, 13, 14].includes(others % 100) ? 'проёма' : 'проёмов') + ' на других стенах: нажмите на стену или на сам проём.'; panel.appendChild(p2); }
       const adders = document.createElement('div'); adders.className = 'calc-presets';
       OPENING_PRESETS.forEach((p) => adders.appendChild(btn(`${p.label} ${p.w}×${p.h}`, 'calc-preset', () => {
         const len = geom.walls[sel].len;
