@@ -122,13 +122,78 @@
           { id: 'cCount', label: 'Количество столбов', unit: 'шт', value: '1', int: true },
         ] },
       ],
-      selects: [{ id: 'grade', label: 'Марка бетона', default: 'm200',
-        choices: Object.keys(GRADES).map((k) => ({ id: k, label: GRADES[k].name, hint: GRADES[k].use })) }],
-      prices: [
-        { id: 'cement', label: 'Цемент М400', unit: '₽ за мешок 50 кг' },
-        { id: 'sand', label: 'Песок', unit: '₽ за тонну' },
-        { id: 'gravel', label: 'Щебень', unit: '₽ за тонну' },
+      common: [
+        { id: 'rebarD', label: 'Арматура основная, диаметр', unit: 'мм', value: '12', group: 'rebar' },
+        { id: 'gridStep', label: 'Шаг сетки', unit: 'см', value: '20', group: 'rebarSlab' },
+        { id: 'rods', label: 'Продольных прутков в сечении', unit: 'шт', value: '4', int: true, group: 'rebarRods' },
+        { id: 'clampD', label: 'Хомуты, диаметр прутка', unit: 'мм', value: '8', group: 'rebarRods' },
+        { id: 'clampStep', label: 'Шаг хомутов', unit: 'см', value: '40', group: 'rebarRods' },
       ],
+      selects: [
+        { id: 'grade', label: 'Марка бетона', default: 'm200',
+          choices: Object.keys(GRADES).map((k) => ({ id: k, label: GRADES[k].name, hint: GRADES[k].use })) },
+        { id: 'source', label: 'Откуда бетон', default: 'mix', choices: [
+          { id: 'mix', label: 'Мешаю сам', hint: 'цемент, песок и щебень в бетономешалке' },
+          { id: 'ready', label: 'Готовый с завода', hint: 'миксер привозит нужную марку, заказ кратно 0,5 м³' },
+        ] },
+        { id: 'rebar', label: 'Арматура', default: 'no', choices: [
+          { id: 'no', label: 'Не считать', hint: 'только бетон' },
+          { id: 'yes', label: 'Посчитать', hint: 'плита — сетки, лента и столбы — каркас из прутков и хомутов' },
+        ] },
+      ],
+      prices: [
+        { id: 'cement', label: 'Цемент М400', unit: '₽ за мешок 50 кг', group: 'mix' },
+        { id: 'sand', label: 'Песок', unit: '₽ за тонну', group: 'mix' },
+        { id: 'gravel', label: 'Щебень', unit: '₽ за тонну', group: 'mix' },
+        { id: 'ready', label: 'Готовый бетон', unit: '₽ за м³', group: 'ready' },
+        { id: 'rebar', label: 'Арматура', unit: '₽ за тонну', group: 'rebar' },
+        { id: 'wire', label: 'Вязальная проволока', unit: '₽ за кг', group: 'rebar' },
+      ],
+      groups(v, mode, extras, sel) {
+        const rb = sel.rebar === 'yes';
+        return { mix: sel.source !== 'ready', ready: sel.source === 'ready', rebar: rb,
+          rebarSlab: rb && mode === 'slab', rebarRods: rb && mode !== 'slab' };
+      },
+      // Арматура обычной схемой: плита — сетки (две при толщине от 15 см), лента и столбы —
+      // продольные прутки и хомуты с защитным слоем 5 см. Метры с запасом 10% на нахлёсты и обрезки.
+      rebarCalc(v, mode, extras) {
+        const kgm = (d) => 0.00617 * d * d;
+        const cover = 0.05, hook = 0.1;
+        if (!pos(v.rebarD)) return null;
+        if (mode === 'slab') {
+          if (!(pos(v.len) && pos(v.wid) && pos(v.thick) && pos(v.gridStep))) return null;
+          const st = v.gridStep / 100, layers = v.thick >= 15 ? 2 : 1;
+          const nL = Math.floor(v.wid / st) + 1, nW = Math.floor(v.len / st) + 1;
+          return { layers, main: layers * (nL * v.len + nW * v.wid) * 1.1, clamp: 0, ties: layers * nL * nW, kgm };
+        }
+        if (!(pos(v.rods) && pos(v.clampD) && pos(v.clampStep))) return null;
+        const cs = v.clampStep / 100, rods = Math.round(v.rods);
+        // Отрезки ленты: длина по оси, ширина и полная высота сечения
+        let parts = [];
+        if (mode === 'strip') {
+          const L = v.hLen, W = v.hWid, w = (v.sWid || 0) / 100, h = ((v.sDepth || 0) + (v.sAbove || 0)) / 100;
+          if (!(pos(L) && pos(W) && pos(w) && pos(h))) return null;
+          parts = [{ len: 2 * (L + W) - 4 * w, w, h }];
+          if (pos(v.sInner)) parts.push({ len: v.sInner, w, h });
+        } else if (mode === 'plan') {
+          const P = window.CalcPlan; if (!P || !extras.plan || !pos(v.pW) || !pos(v.pDepth)) return null;
+          const g = P.geometry(extras.plan, { w: v.pW, depth: v.pDepth, above: v.pAbove || 0 });
+          if (!g.valid) return null;
+          parts = g.edges.map((e) => ({ len: Math.max(0, e.len - e.w), w: e.w, h: e.h }))
+            .concat(g.inners.map((e) => ({ len: e.len, w: e.w, h: e.h })));
+        } else {
+          if (!(pos(v.cSide) && pos(v.cHei) && pos(v.cCount))) return null;
+          const n = Math.round(v.cCount), s = v.cSide / 100;
+          parts = Array.from({ length: n }, () => ({ len: v.cHei, w: s, h: s }));
+        }
+        let main = 0, clamp = 0, ties = 0;
+        for (const p of parts) {
+          const k = Math.ceil(p.len / cs) + 1;
+          const per = 2 * (Math.max(0, p.w - 2 * cover) + Math.max(0, p.h - 2 * cover)) + hook;
+          main += rods * p.len; clamp += k * per; ties += k * rods;
+        }
+        return { main: main * 1.1, clamp: clamp * 1.1, ties, kgm };
+      },
       draw(v, mode, box, yaw, extras) {
         const V = window.CalcViz; if (!V) return false;
         const cm = (x) => (x || 0) / 100;
@@ -229,28 +294,61 @@
         }
         if (volume == null) return null;
         const g = GRADES[sel.grade];
-        const withReserve = volume * 1.1;
-        const cementKg = withReserve * g.cement;
-        const bags = Math.ceil(cementKg / 50);
-        const sandKg = withReserve * g.sand;
-        const gravelKg = withReserve * g.gravel;
-        const waterL = withReserve * g.water;
-        return {
-          main: { label: 'Нужно бетона (с запасом 10%)', value: fmt(withReserve) + ' м³' },
-          rows: [
-            ['Чистый объём', fmt(volume) + ' м³'],
-            ['Цемент М400', fmtInt(cementKg) + ' кг (≈ ' + fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по 50 кг)'],
-            ['Песок', fmtInt(sandKg) + ' кг'],
-            ['Щебень', fmtInt(gravelKg) + ' кг'],
-            ['Вода', '≈ ' + fmtInt(waterL) + ' л'],
-          ],
-          note: 'Расход для бетона ' + g.name + ' на цементе М400 (усреднённо). Реальный расход зависит от влажности песка и фракции щебня.',
-          cost: [
-            { label: 'Цемент', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'cement' },
-            { label: 'Песок', amount: sandKg / 1000, unit: 'т', priceId: 'sand' },
-            { label: 'Щебень', amount: gravelKg / 1000, unit: 'т', priceId: 'gravel' },
-          ],
-        };
+        let res;
+        if (sel.source === 'ready') {
+          // Заводской бетон не теряется на замесах: запас 5% и заказ кратно 0,5 м³
+          const order = Math.ceil(volume * 1.05 * 2 - 1e-9) / 2;
+          res = {
+            main: { label: 'Заказать бетона ' + g.name, value: fmt(order, 1) + ' м³' },
+            rows: [
+              ['Чистый объём', fmt(volume) + ' м³'],
+              ['С запасом 5%', fmt(volume * 1.05) + ' м³, заводы возят кратно 0,5 м³'],
+            ],
+            note: 'Цена готового бетона — за 1 м³ марки ' + g.name + ' с завода. Доставку миксером и бетононасос завод обычно считает отдельно.',
+            cost: [{ label: 'Бетон ' + g.name, amount: order, unit: 'м³', priceId: 'ready' }],
+          };
+        } else {
+          const withReserve = volume * 1.1;
+          const cementKg = withReserve * g.cement;
+          const bags = Math.ceil(cementKg / 50);
+          const sandKg = withReserve * g.sand;
+          const gravelKg = withReserve * g.gravel;
+          const waterL = withReserve * g.water;
+          res = {
+            main: { label: 'Нужно бетона (с запасом 10%)', value: fmt(withReserve) + ' м³' },
+            rows: [
+              ['Чистый объём', fmt(volume) + ' м³'],
+              ['Цемент М400', fmtInt(cementKg) + ' кг (≈ ' + fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по 50 кг)'],
+              ['Песок', fmtInt(sandKg) + ' кг'],
+              ['Щебень', fmtInt(gravelKg) + ' кг'],
+              ['Вода', '≈ ' + fmtInt(waterL) + ' л'],
+            ],
+            note: 'Расход для бетона ' + g.name + ' на цементе М400 (усреднённо). Реальный расход зависит от влажности песка и фракции щебня.',
+            cost: [
+              { label: 'Цемент', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'cement' },
+              { label: 'Песок', amount: sandKg / 1000, unit: 'т', priceId: 'sand' },
+              { label: 'Щебень', amount: gravelKg / 1000, unit: 'т', priceId: 'gravel' },
+            ],
+          };
+        }
+        const rb = sel.rebar === 'yes' ? this.rebarCalc(v, mode, extras) : null;
+        if (rb) {
+          const mainKg = rb.main * rb.kgm(v.rebarD), clampKg = rb.clamp * rb.kgm(v.clampD || 0);
+          const tons = (mainKg + clampKg) / 1000;
+          const wireKg = Math.ceil(rb.ties * 0.3 * 0.0121 * 2) / 2;   // ~30 см проволоки 1,4 мм на узел
+          if (mode === 'slab') {
+            res.rows.push(['Арматура ⌀' + fmt(v.rebarD, 0) + ', ' + (rb.layers === 2 ? 'две сетки' : 'одна сетка'), fmtInt(rb.main) + ' м = ' + fmtInt(mainKg) + ' кг']);
+          } else {
+            res.rows.push(['Арматура ⌀' + fmt(v.rebarD, 0) + ', продольная', fmtInt(rb.main) + ' м = ' + fmtInt(mainKg) + ' кг']);
+            res.rows.push(['Хомуты ⌀' + fmt(v.clampD, 0), fmtInt(rb.clamp) + ' м = ' + fmtInt(clampKg) + ' кг']);
+          }
+          res.rows.push(['Арматура всего', fmt(tons, 3) + ' т, в метрах с запасом 10% на нахлёсты']);
+          res.rows.push(['Вязальная проволока', '≈ ' + fmt(wireKg, 1) + ' кг (' + fmtInt(rb.ties) + ' ' + plural(rb.ties, 'узел', 'узла', 'узлов') + ')']);
+          res.note += ' Арматура — обычная схема для частного дома' + (mode === 'slab' ? ' (вторая сетка при толщине от 15 см)' : '') + ', не проект.';
+          res.cost.push({ label: 'Арматура', amount: tons, unit: 'т', priceId: 'rebar' });
+          res.cost.push({ label: 'Вязальная проволока', amount: wireKg, unit: 'кг', priceId: 'wire' });
+        }
+        return res;
       },
     },
 
