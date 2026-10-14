@@ -872,8 +872,10 @@
       presets: [{ label: 'Кольца', fieldId: 'ringD', unit: 'м', items: [['КС-10', '1'], ['КС-15', '1.5'], ['КС-20', '2']] }],
       prices: [
         { id: 'ring', label: 'Кольцо', unit: '₽ за штуку' },
-        { id: 'pump', label: 'Откачка', unit: '₽ за вызов' },
+        { id: 'pump', label: 'Откачка', unit: '₽ за вызов', group: 'pump' },
       ],
+      // Откачку ассенизатором считаем только у септика; бак для воды не откачивают
+      groups(v, mode) { return { pump: mode === 'septic' }; },
       draw(v, mode, box, view) {
         const V = window.CalcViz; if (!V || !pos(v.ringD) || !pos(v.ringH)) return false;
         const r = v.ringD / 2;
@@ -2382,7 +2384,7 @@
         { id: 'cemBag', label: 'Мешок цемента', unit: 'кг', value: '50', group: 'cps' },
         { id: 'selfRate', label: 'Расход наливного пола', unit: 'кг/м² на 1 мм слоя', value: '1.5', group: 'self' },
         { id: 'selfBag', label: 'Мешок наливного пола', unit: 'кг', value: '20', group: 'self' },
-        { id: 'damperRoll', label: 'Демпферная лента в рулоне', unit: 'м, 0 = не считать', value: '50' },
+        { id: 'damperRoll', label: 'Демпферная лента в рулоне', unit: 'м, 0 = не считать', value: '50', group: 'damperField' },
         { id: 'fiberRate', label: 'Фиброволокно', unit: 'кг на 1 м³ раствора', value: '0.8', group: 'fiber' },
         { id: 'fiberPack', label: 'Упаковка фиброволокна', unit: 'кг', value: '0.6', group: 'fiber' },
         { id: 'meshSheet', label: 'Карта или рулон сетки', unit: 'м²', value: '6', group: 'mesh' },
@@ -2413,12 +2415,14 @@
         { id: 'sand', label: 'Цена песка', unit: '₽ за тонну', group: 'sandTon' },
         { id: 'sandM3', label: 'Цена песка', unit: '₽ за м³', group: 'sandCube' },
         { id: 'selfBag', label: 'Цена наливного пола', unit: '₽ за мешок', group: 'self' },
-        { id: 'damper', label: 'Цена демпферной ленты', unit: '₽ за рулон' },
+        { id: 'damper', label: 'Цена демпферной ленты', unit: '₽ за рулон', group: 'damper' },
         { id: 'fiber', label: 'Цена фиброволокна', unit: '₽ за упаковку', group: 'fiber' },
         { id: 'mesh', label: 'Цена сетки', unit: '₽ за карту', group: 'mesh' },
       ],
       groups(v, mode, extras, sel) {
-        return { ready: sel.mix === 'ready', cps: sel.mix === 'cps', self: sel.mix === 'self',
+        // Демпферная лента идёт по периметру — в «своей площади» его нет, поле и цену прячем
+        const dmp = mode !== 'custom';
+        return { damperField: dmp, damper: dmp && pos(v.damperRoll), ready: sel.mix === 'ready', cps: sel.mix === 'cps', self: sel.mix === 'self',
           sandTon: sel.mix === 'cps' && sel.sandBuy !== 'cube', sandCube: sel.mix === 'cps' && sel.sandBuy === 'cube',
           fiber: sel.reinf === 'fiber' && sel.mix !== 'self', mesh: sel.reinf === 'mesh' && sel.mix !== 'self', reinf: sel.mix !== 'self' };
       },
@@ -2753,7 +2757,7 @@
         { id: 'cableW', label: 'Мощность кабеля', unit: 'Вт на 1 м', value: '20', group: 'cable' },
         { id: 'matW', label: 'Мощность мата', unit: 'Вт/м²', value: '150', group: 'mat' },
         { id: 'volt', label: 'Напряжение сети', unit: 'В', value: '220', group: 'el' },
-        { id: 'damperRoll', label: 'Демпферная лента в рулоне', unit: 'м, 0 = не считать', value: '50' },
+        { id: 'damperRoll', label: 'Демпферная лента в рулоне', unit: 'м, 0 = не считать', value: '50', group: 'damperField' },
       ],
       selects: [
         { id: 'type', label: 'Тип пола', default: 'water', choices: [
@@ -2783,13 +2787,14 @@
         { id: 'collector', label: 'Цена коллектора', unit: '₽ за штуку в сборе, на нужное число выходов', group: 'water' },
         { id: 'thermo', label: 'Цена терморегулятора', unit: '₽ за штуку', group: 'el' },
         { id: 'insul', label: 'Цена теплоизоляции', unit: '₽ за м²' },
-        { id: 'damper', label: 'Цена демпферной ленты', unit: '₽ за рулон' },
+        { id: 'damper', label: 'Цена демпферной ленты', unit: '₽ за рулон', group: 'damper' },
       ],
       // Ориентир теплоотдачи водяного пола под плиткой при подаче 40–45 °C
       HEAT: [[100, 90], [150, 75], [200, 60], [250, 50], [300, 45]],
       groups(v, mode, extras, sel) {
         const w = sel.type === 'water';
-        return { water: w, el: !w, cable: sel.type === 'cable', mat: sel.type === 'mat', pipeM: w && sel.pipeBuy !== 'coil', pipeCoil: w && sel.pipeBuy === 'coil' };
+        const dmp = mode !== 'custom';   // в «своей площади» периметра нет — ленту не считаем
+        return { damperField: dmp, damper: dmp && pos(v.damperRoll), water: w, el: !w, cable: sel.type === 'cable', mat: sel.type === 'mat', pipeM: w && sel.pipeBuy !== 'coil', pipeCoil: w && sel.pipeBuy === 'coil' };
       },
       shape(v, mode, extras) {
         if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? { area: v.len * v.wid, per: 2 * (v.len + v.wid), minDim: Math.min(v.len, v.wid), pts: [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]] } : null;
