@@ -2537,6 +2537,8 @@
         { id: 'clip', label: 'Цена клипсы', unit: '₽ за штуку', group: 'water' },
         { id: 'cable', label: 'Цена кабеля', unit: '₽ за метр', group: 'cable' },
         { id: 'mat', label: 'Цена мата', unit: '₽ за м²', group: 'mat' },
+        { id: 'collector', label: 'Цена коллектора', unit: '₽ за штуку в сборе, на нужное число выходов', group: 'water' },
+        { id: 'thermo', label: 'Цена терморегулятора', unit: '₽ за штуку', group: 'el' },
         { id: 'insul', label: 'Цена теплоизоляции', unit: '₽ за м²' },
         { id: 'damper', label: 'Цена демпферной ленты', unit: '₽ за рулон' },
       ],
@@ -2558,6 +2560,12 @@
       // Полезная площадь: минус рамка вдоль стен и минус то, что не греем.
       // Для прямоугольника area − периметр×отступ + 4×отступ² — это ровно (L−2e)(W−2e).
       // Если отступ съедает комнату целиком, площадь обогрева нулевая, а не отрицательная.
+      // Терморегулятор: один на комнату, а если ток больше 16 А — по одному на каждую зону
+      thermo(v, watts, rows, cost, sensor) {
+        const zones = pos(v.volt) ? Math.max(1, Math.ceil(watts / v.volt / 16)) : 1;
+        rows.push(['Терморегулятор', fmtInt(zones) + ' шт' + (zones > 1 ? ', по одному на зону' : ' на комнату') + ', ' + sensor]);
+        cost.push({ label: 'Терморегулятор', amount: zones, unit: 'шт', priceId: 'thermo' });
+      },
       heated(v, sh) {
         if (!sh) return null;
         const e = v.edge || 0;
@@ -2623,6 +2631,7 @@
           rows.push(['Ориентир теплоотдачи', '≈ ' + heat + ' Вт/м², всего ≈ ' + fmtInt(H * heat) + ' Вт']);
           cost.push({ label: 'Труба', amount: Math.ceil(pipe), unit: 'м', priceId: 'pipe' });
           if (pos(v.clips)) cost.push({ label: 'Клипсы', amount: Math.ceil(pipe * v.clips), unit: 'шт', priceId: 'clip' });
+          cost.push({ label: 'Коллектор на ' + fmtInt(loops) + ' ' + plural(loops, 'выход', 'выхода', 'выходов'), amount: 1, unit: 'шт', priceId: 'collector' });
         } else if (sel.type === 'cable') {
           if (!pos(v.power) || !pos(v.cableW)) return null;
           const watts = H * v.power;
@@ -2633,8 +2642,9 @@
           rows.push(['Длина кабеля', fmtInt(watts) + ' Вт ÷ ' + fmt(v.cableW) + ' Вт/м = ' + fmtInt(cable) + ' м']);
           rows.push(['Шаг укладки', '≈ ' + fmtInt(step) + ' мм']);
           if (pos(v.volt)) rows.push(['Ток', '≈ ' + fmt(watts / v.volt) + ' А при ' + fmt(v.volt) + ' В']);
-          if (pos(v.volt) && watts / v.volt > 16) rows.push(['⚠ Больше 16 А', 'на одну линию с автоматом 16 А и один терморегулятор столько не вешают: разделите пол на две зоны со своими регуляторами']);
+          if (pos(v.volt) && watts / v.volt > 16) rows.push(['⚠ Больше 16 А', 'на одну линию с автоматом 16 А и один терморегулятор столько не вешают: разделите пол на зоны до 16 А, у каждой свой регулятор']);
           cost.push({ label: 'Кабель', amount: Math.ceil(cable), unit: 'м', priceId: 'cable' });
+          this.thermo(v, watts, rows, cost, 'датчик в гофре между витками кабеля');
           if (step < 80) rows.push(['⚠ Проверьте', 'шаг меньше 80 мм — возьмите кабель мощнее']);
         } else {
           if (!pos(v.matW)) return null;
@@ -2643,9 +2653,9 @@
           rows.push(['Мат', fmt(H) + ' м² по ' + fmt(v.matW) + ' Вт/м²']);
           rows.push(['Мощность', fmtInt(watts) + ' Вт (' + fmt(watts / 1000) + ' кВт)']);
           if (pos(v.volt)) rows.push(['Ток', '≈ ' + fmt(watts / v.volt) + ' А при ' + fmt(v.volt) + ' В']);
-          if (pos(v.volt) && watts / v.volt > 16) rows.push(['⚠ Больше 16 А', 'на одну линию с автоматом 16 А и один терморегулятор столько не вешают: разделите пол на две зоны со своими регуляторами']);
-          rows.push(['Терморегулятор', '1 шт на комнату, датчик в гофре между витками']);
+          if (pos(v.volt) && watts / v.volt > 16) rows.push(['⚠ Больше 16 А', 'на одну линию с автоматом 16 А и один терморегулятор столько не вешают: разделите пол на зоны до 16 А, у каждой свой регулятор']);
           cost.push({ label: 'Мат', amount: H, unit: 'м²', priceId: 'mat' });
+          this.thermo(v, watts, rows, cost, 'датчик в гофре между витками мата');
         }
 
         cost.push({ label: 'Теплоизоляция', amount: Math.ceil(sh.area), unit: 'м²', priceId: 'insul' });
