@@ -1239,6 +1239,11 @@
         { id: 'battenStep', label: 'Шаг обрешётки', unit: 'м', value: '0.35' },
         { id: 'rafterStep', label: 'Шаг стропил', unit: 'м', value: '0.6' },
         { id: 'insulation', label: 'Утеплитель: толщина', unit: 'см, 0 = холодная крыша', value: '0' },
+        { id: 'plankL', label: 'Длина доборной планки', unit: 'м (конёк, ветровая, карнизная)', value: '2' },
+        { id: 'plankOver', label: 'Нахлёст планок', unit: 'м', value: '0.1' },
+        { id: 'gutterL', label: 'Длина желоба', unit: 'м', value: '3' },
+        { id: 'downH', label: 'Высота от карниза до земли', unit: 'м, 0 = без водосточных труб', value: '3' },
+        { id: 'pipeL', label: 'Длина водосточной трубы', unit: 'м', value: '3' },
       ],
       selects: [{ id: 'material', label: 'Покрытие', default: 'metal', choices: [
         { id: 'metal', label: 'Металлочерепица', hint: 'листы, нахлёст по волне и по длине', sets: { sheetL: '2', sheetW: '1.1', sheetWFull: '1.19', overlapV: '0.15' } },
@@ -1258,11 +1263,20 @@
         { id: 'rafter', label: 'Стропило', unit: '₽ за метр' },
         { id: 'film', label: 'Плёнки (гидро- и пароизоляция)', unit: '₽ за м²' },
         { id: 'insul', label: 'Утеплитель', unit: '₽ за м³' },
+        { id: 'ridgeP', label: 'Коньковая планка', unit: '₽ за штуку', group: 'ridge' },
+        { id: 'windP', label: 'Ветровая планка', unit: '₽ за штуку', group: 'wind' },
+        { id: 'eaveP', label: 'Карнизная планка', unit: '₽ за штуку' },
+        { id: 'gutter', label: 'Желоб', unit: '₽ за штуку' },
+        { id: 'bracket', label: 'Кронштейн желоба', unit: '₽ за штуку' },
+        { id: 'pipe', label: 'Водосточная труба', unit: '₽ за штуку', group: 'down' },
+        { id: 'elbow', label: 'Колено трубы', unit: '₽ за штуку', group: 'down' },
+        { id: 'funnel', label: 'Воронка', unit: '₽ за штуку', group: 'down' },
       ],
       groups(v, mode, extras, sel) {
         const m = sel.material;
         return { sheet: m === 'metal' || m === 'prof' || m === 'ondulin', roll: m === 'seam', piece: m === 'soft',
-          metal: m === 'metal', prof: m === 'prof', ondulin: m === 'ondulin', soft: m === 'soft', seam: m === 'seam' };
+          metal: m === 'metal', prof: m === 'prof', ondulin: m === 'ondulin', soft: m === 'soft', seam: m === 'seam',
+          ridge: mode !== 'shed', wind: mode !== 'hip', down: pos(v.downH) };
       },
       // Геометрия: возвращает площадь скатов, длины конька, ребёр, ендов, карниза
       geom(v, mode) {
@@ -1406,9 +1420,42 @@
           rows.push(['Стропила', pairs + (g.faces === 1 ? ' шт' : ' пар') + ' по ' + fmt(g.slopeLen) + ' м = ' + fmt(rafterLen) + ' м']);
           cost.push({ label: 'Стропила', amount: Math.ceil(rafterLen), unit: 'м', priceId: 'rafter' });
         }
-        if (g.faces !== 1) rows.push(['Конёк', (g.ridge > 0 ? fmt(g.ridge) + ' м' : 'нет, все скаты сходятся в точку (шатровая крыша)') + (g.hips ? ', накосные рёбра ' + fmt(g.hips) + ' м' : '')]);
-        rows.push(['Карниз и водосток', fmt(g.eaves) + ' м желоба' + (g.faces === 2 ? ' (по двум скатам)' : g.faces === 1 ? ' (по нижнему краю)' : '')]);
-        if (g.wind) rows.push(['Ветровая планка', fmt(g.wind) + ' м по торцам скатов']);
+        // Доборы: планки внахлёст, полезная длина каждой = длина − нахлёст. Считаем по каждому
+        // отрезку отдельно (каждый карниз, торец, ребро): обрезок с одной стороны на другую не перенести
+        const usefulP = (v.plankL || 0) - (v.plankOver || 0);
+        const planks = (runs) => (usefulP > 0 ? runs.reduce((n, l) => n + (l > 0 ? Math.ceil(l / usefulP - 1e-9) : 0), 0) : 0);
+        const P = (n) => fmtInt(n) + ' шт по ' + fmt(v.plankL) + ' м';
+        const eaveRuns = g.faces === 4 ? [g.L, g.L, g.W, g.W] : g.faces === 2 ? [g.L, g.L] : [g.L];
+        if (g.faces !== 1) {
+          const n = planks([g.ridge].concat(g.hips ? [g.hips / 4, g.hips / 4, g.hips / 4, g.hips / 4] : []));
+          rows.push(['Конёк', (g.ridge > 0 ? fmt(g.ridge) + ' м' : 'нет, все скаты сходятся в точку (шатровая крыша)') + (g.hips ? ', накосные рёбра ' + fmt(g.hips) + ' м' : '') + (n ? ' → ' + P(n) + ' коньковой планки' : '')]);
+          if (n) cost.push({ label: 'Коньковая планка', amount: n, unit: 'шт', priceId: 'ridgeP' });
+        }
+        if (g.wind) {
+          const n = planks(Array(g.faces * 2).fill(g.slopeLen));
+          rows.push(['Ветровая планка', fmt(g.wind) + ' м по торцам скатов' + (n ? ' → ' + P(n) : '')]);
+          if (n) cost.push({ label: 'Ветровая планка', amount: n, unit: 'шт', priceId: 'windP' });
+        }
+        const eaveN = planks(eaveRuns);
+        rows.push(['Карнизная планка', fmt(g.eaves) + ' м' + (g.faces === 2 ? ' (по двум скатам)' : g.faces === 1 ? ' (по нижнему краю)' : '') + (eaveN ? ' → ' + P(eaveN) : '')]);
+        if (eaveN) cost.push({ label: 'Карнизная планка', amount: eaveN, unit: 'шт', priceId: 'eaveP' });
+        // Водосток по каждому карнизу: желоб встык на соединителях, кронштейны через 60 см,
+        // водосточная труба на каждые 10 м желоба, но не меньше одной на карниз
+        if (pos(v.gutterL)) {
+          const gut = eaveRuns.reduce((n, l) => n + Math.ceil(l / v.gutterL - 1e-9), 0);
+          const br = eaveRuns.reduce((n, l) => n + Math.ceil(l / 0.6 - 1e-9) + 1, 0);
+          rows.push(['Желоб', fmt(g.eaves) + ' м → ' + fmtInt(gut) + ' шт по ' + fmt(v.gutterL) + ' м, кронштейнов ' + fmtInt(br) + ' (через 60 см)']);
+          cost.push({ label: 'Желоб', amount: gut, unit: 'шт', priceId: 'gutter' });
+          cost.push({ label: 'Кронштейны желоба', amount: br, unit: 'шт', priceId: 'bracket' });
+        }
+        if (pos(v.downH) && pos(v.pipeL)) {
+          const downs = eaveRuns.reduce((n, l) => n + Math.max(1, Math.ceil(l / 10 - 1e-9)), 0);
+          const pipes = downs * Math.ceil(v.downH / v.pipeL - 1e-9), elbows = downs * 3;
+          rows.push(['Водосточные трубы', fmtInt(downs) + ' ' + plural(downs, 'стояк', 'стояка', 'стояков') + ' по ' + fmt(v.downH) + ' м → ' + fmtInt(pipes) + ' шт по ' + fmt(v.pipeL) + ' м, ' + fmtInt(downs) + ' ' + plural(downs, 'воронка', 'воронки', 'воронок') + ', ' + fmtInt(elbows) + ' ' + plural(elbows, 'колено', 'колена', 'колен') + ' (по 2 у карниза и 1 на слив)']);
+          cost.push({ label: 'Водосточные трубы', amount: pipes, unit: 'шт', priceId: 'pipe' });
+          cost.push({ label: 'Колена', amount: elbows, unit: 'шт', priceId: 'elbow' });
+          cost.push({ label: 'Воронки', amount: downs, unit: 'шт', priceId: 'funnel' });
+        }
         const films = g.area * 1.15;
         rows.push(['Гидроизоляция', fmt(films) + ' м² (+15% на нахлёсты)']);
         cost.push({ label: 'Плёнки', amount: Math.ceil(films), unit: 'м²', priceId: 'film' });
