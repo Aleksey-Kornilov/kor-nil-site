@@ -1616,6 +1616,10 @@
           { id: 'sliding', label: 'Откатные', hint: 'нужен фундамент под ролики и свободное место вдоль забора ≈ 1,5 ширины ворот' },
           { id: 'lift', label: 'Подъёмные', hint: 'секционные/подъёмно-поворотные, обычно в гараж; нужен проём с перемычкой' },
         ] },
+        { id: 'gatePrice', label: 'Цена ворот', default: 'piece', group: 'gates', choices: [
+          { id: 'piece', label: 'За штуку', hint: 'готовый комплект из магазина: створки, петли, запор' },
+          { id: 'meter', label: 'За метр ширины', hint: 'на заказ у сварщика и откатные: цена × ширина ворот' },
+        ] },
       ],
       common: [
         { id: 'sheetW', label: 'Рабочая ширина листа', unit: 'м', value: '1.15', group: 'proflist' },
@@ -1644,6 +1648,10 @@
         { id: 'chainRoll', label: 'Рулон сетки-рабицы', unit: '₽ за рулон', group: 'chainlink' },
         { id: 'block', label: 'Блок или кирпич', unit: '₽ за штуку', group: 'block' },
         { id: 'post', label: 'Столб', unit: '₽ за штуку' },
+        { id: 'gate', label: 'Ворота', unit: '₽ за штуку, комплект', group: 'gatePiece' },
+        { id: 'gateM', label: 'Ворота', unit: '₽ за метр ширины', group: 'gateMeter' },
+        { id: 'wicket', label: 'Калитка', unit: '₽ за штуку', group: 'wickets' },
+        { id: 'cement', label: 'Цемент под столбы', unit: '₽ за мешок 50 кг' },
         { id: 'lag', label: 'Лага 6 м', unit: '₽ за штуку', group: 'lags' },
         { id: 'screws', label: 'Саморезы', unit: '₽ за упаковку', group: 'screws' },
         { id: 'stain', label: 'Пропитка', unit: '₽ за литр', group: 'plank' },
@@ -1666,7 +1674,12 @@
       groups(v, mode, extras, sel) {
         const t = sel.type;
         const screws = t === 'proflist' || t === 'picket' || t === 'picket2' || t === 'plank';
-        return { proflist: t === 'proflist', picket: t === 'picket', picket2: t === 'picket2', pickets: t === 'picket' || t === 'picket2', plank: t === 'plank', chainlink: t === 'chainlink', block: t === 'block', lags: t !== 'block' && t !== 'chainlink', screws };
+        // Ворота и калитки: по самой сводке, а пока её нет — по введённым ширинам
+        const sm = this.summary(v, mode, sel, extras), ok = sm && !sm.error;
+        const gates = ok ? sm.gates > 0 : mode === 'plan' || (v.gate || 0) > 0;
+        const wickets = ok ? sm.wickets > 0 : mode === 'plan' || (v.wicket || 0) > 0;
+        return { proflist: t === 'proflist', picket: t === 'picket', picket2: t === 'picket2', pickets: t === 'picket' || t === 'picket2', plank: t === 'plank', chainlink: t === 'chainlink', block: t === 'block', lags: t !== 'block' && t !== 'chainlink', screws,
+          gates, gatePiece: gates && sel.gatePrice !== 'meter', gateMeter: gates && sel.gatePrice === 'meter', wickets };
       },
       // Сводка по забору: полезная длина, пролёты, столбы, проёмы — для обоих режимов
       summary(v, mode, sel, extras) {
@@ -1798,6 +1811,14 @@
         rows.push(['Бетон под столбы', fmt(holes) + ' м³ (лунки ⌀20 см) ≈ ' + fmtInt(cementBags) + ' ' + plural(cementBags, 'мешок', 'мешка', 'мешков') + ' цемента']);
         if (sm.sides) sm.sides.forEach((w) => rows.push(['Сторона ' + (w.i + 1), fmt(w.len) + ' м' + (w.opLen ? ', проёмы ' + fmt(w.opLen) + ' м' : '')]));
         cost.unshift(unitCost, { label: 'Столбы', amount: posts, unit: plural(posts, 'столб', 'столба', 'столбов'), priceId: 'post' });
+        cost.push({ label: 'Цемент под столбы', amount: cementBags, unit: plural(cementBags, 'мешок', 'мешка', 'мешков'), priceId: 'cement' });
+        if (gates) {
+          const gl = 'Ворота ' + { swing: 'распашные', sliding: 'откатные', lift: 'подъёмные' }[sel.gateType];
+          cost.push(sel.gatePrice === 'meter'
+            ? { label: gl + ', ширина', amount: gateLen, unit: 'м', priceId: 'gateM' }
+            : { label: gl, amount: gates, unit: 'шт', priceId: 'gate' });
+        }
+        if (wickets) cost.push({ label: 'Калитка', amount: wickets, unit: 'шт', priceId: 'wicket' });
         return { main: { label: 'Нужно', value: main }, rows, cost,
           note: 'Полезная длина = стороны с забором минус ворота и калитки. Столбы: пролёты + 1 на каждой стороне, угловые общие, плюс по одному на ворота и калитку. Бетон — лунки ⌀20 см на глубину столба, М200 с запасом 10%.' };
       },
