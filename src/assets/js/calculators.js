@@ -508,9 +508,14 @@
         { id: 'can', label: 'Объём банки', unit: 'л', value: '9', group: 'paint' },
       ],
       selects: [{ id: 'gableFinish', label: 'Отделка фронтонов', default: 'siding',
-        choices: [{ id: 'siding', label: 'Сайдинг', hint: 'как у стен из сайдинга' }, { id: 'plaster', label: 'Штукатурка', hint: '' }, { id: 'paint', label: 'Краска', hint: '' }, { id: 'none', label: 'Без отделки', hint: 'фронтоны не считаем' }] }],
+        choices: [{ id: 'siding', label: 'Сайдинг', hint: 'как у стен из сайдинга' }, { id: 'plaster', label: 'Штукатурка', hint: '' }, { id: 'paint', label: 'Краска', hint: '' }, { id: 'none', label: 'Без отделки', hint: 'фронтоны не считаем' }] },
+        { id: 'panelBuy', label: 'Сайдинг продают', default: 'piece', group: 'siding', choices: [
+          { id: 'piece', label: 'За панель', hint: 'цена одной панели' },
+          { id: 'm2', label: 'За м²', hint: 'по полезной площади панели: длина × рабочая ширина' },
+        ] }],
       prices: [
-        { id: 'panel', label: 'Панель сайдинга', unit: '₽ за штуку', group: 'siding' },
+        { id: 'panel', label: 'Панель сайдинга', unit: '₽ за штуку', group: 'panelPiece' },
+        { id: 'panelM2', label: 'Сайдинг', unit: '₽ за м²', group: 'panelM2' },
         { id: 'startP', label: 'Стартовая планка', unit: '₽ за штуку', group: 'siding' },
         { id: 'finishP', label: 'Финишная планка', unit: '₽ за штуку', group: 'siding' },
         { id: 'outerP', label: 'Наружный угол', unit: '₽ за штуку', group: 'siding' },
@@ -531,6 +536,7 @@
         if (!R || !extras.room || !lens) return out;
         const m = R.measure(extras.room, lens, v.hei || 0, this.finishes, extras.room.defaultFinish || 'siding');
         ['siding', 'plaster', 'paint'].forEach((f) => { out[f] = m.by[f].n > 0 || (sel.gableFinish === f && pos(v.gables)); });
+        out.panelPiece = out.siding && sel.panelBuy !== 'm2'; out.panelM2 = out.siding && sel.panelBuy === 'm2';
         return out;
       },
       draw(v, mode, box, yaw, extras) {
@@ -606,7 +612,11 @@
           rows.push(['Наружный угол', fmtInt(outer) + ' ' + plural(outer, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(outer * v.hei) + ' м → ' + pcs(outerN)]);
           if (inner) rows.push(['Внутренний угол', fmtInt(inner) + ' ' + plural(inner, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(inner * v.hei) + ' м → ' + pcs(innerN)]);
           if (jLen > 0) rows.push(['J-профиль вокруг проёмов', fmt(jLen) + ' м → ' + pcs(jN) + ' (по 5 см на подрезку угла)']);
-          cost.push({ label: 'Сайдинг', amount: panels, unit: plural(panels, 'панель', 'панели', 'панелей'), priceId: 'panel' });
+          if (sel.panelBuy === 'm2') {
+            const m2 = Math.round(panels * v.panelL * v.panelW * 100) / 100;
+            rows.push(['Сайдинг в м²', fmtInt(panels) + ' × ' + fmt(v.panelL) + ' × ' + fmt(v.panelW) + ' м = ' + fmt(m2) + ' м² полезной площади']);
+            cost.push({ label: 'Сайдинг, ' + fmtInt(panels) + ' ' + plural(panels, 'панель', 'панели', 'панелей'), amount: m2, unit: 'м²', priceId: 'panelM2' });
+          } else cost.push({ label: 'Сайдинг', amount: panels, unit: plural(panels, 'панель', 'панели', 'панелей'), priceId: 'panel' });
           if (startN) cost.push({ label: 'Стартовая планка', amount: startN, unit: 'шт', priceId: 'startP' }, { label: 'Финишная планка', amount: startN, unit: 'шт', priceId: 'finishP' });
           if (outerN) cost.push({ label: 'Наружный угол', amount: outerN, unit: 'шт', priceId: 'outerP' });
           if (innerN) cost.push({ label: 'Внутренний угол', amount: innerN, unit: 'шт', priceId: 'innerP' });
@@ -1258,7 +1268,7 @@
       common: [
         { id: 'sheetL', label: 'Длина листа', unit: 'м', value: '2', group: 'sheet' },
         { id: 'sheetW', label: 'Рабочая ширина листа', unit: 'м', value: '1.1', group: 'sheet' },
-        { id: 'sheetWFull', label: 'Полная ширина листа', unit: 'м, по ней магазин считает м²', value: '1.19', group: 'metal' },
+        { id: 'sheetWFull', label: 'Полная ширина листа', unit: 'м, по ней магазин считает м²', value: '1.19', group: 'full' },
         { id: 'overlapV', label: 'Нахлёст по вертикали', unit: 'м', value: '0.15', group: 'sheet' },
         { id: 'rollW', label: 'Ширина рулона', unit: 'м', value: '1', group: 'roll' },
         { id: 'rollL', label: 'Длина рулона', unit: 'м', value: '10', group: 'roll' },
@@ -1267,6 +1277,11 @@
         { id: 'battenStep', label: 'Шаг обрешётки', unit: 'м', value: '0.35' },
         { id: 'rafterStep', label: 'Шаг стропил', unit: 'м', value: '0.6' },
         { id: 'insulation', label: 'Утеплитель: толщина', unit: 'см, 0 = холодная крыша', value: '0' },
+        { id: 'insulPack', label: 'Объём упаковки утеплителя', unit: 'м³, написан на упаковке', value: '0.3', group: 'insulPack' },
+        { id: 'rafterW', label: 'Стропило: толщина', unit: 'мм', value: '50', group: 'woodCube' },
+        { id: 'rafterH', label: 'Стропило: ширина', unit: 'мм', value: '150', group: 'woodCube' },
+        { id: 'battenW', label: 'Обрешётка: толщина', unit: 'мм', value: '25', group: 'battenCube' },
+        { id: 'battenH', label: 'Обрешётка: ширина', unit: 'мм', value: '100', group: 'battenCube' },
         { id: 'plankL', label: 'Длина доборной планки', unit: 'м (конёк, ветровая, карнизная)', value: '2' },
         { id: 'plankOver', label: 'Нахлёст планок', unit: 'м', value: '0.1' },
         { id: 'gutterL', label: 'Длина желоба', unit: 'м', value: '3' },
@@ -1275,22 +1290,38 @@
       ],
       selects: [{ id: 'material', label: 'Покрытие', default: 'metal', choices: [
         { id: 'metal', label: 'Металлочерепица', hint: 'листы, нахлёст по волне и по длине', sets: { sheetL: '2', sheetW: '1.1', sheetWFull: '1.19', overlapV: '0.15' } },
-        { id: 'prof', label: 'Профнастил', hint: 'листы, обрешётка реже', sets: { sheetL: '2', sheetW: '1.1', overlapV: '0.15' } },
+        { id: 'prof', label: 'Профнастил', hint: 'листы, обрешётка реже', sets: { sheetL: '2', sheetW: '1.1', sheetWFull: '1.15', overlapV: '0.15' } },
         { id: 'ondulin', label: 'Ондулин', hint: 'листы 2×0,95 м, рабочая ширина 0,86', sets: { sheetL: '2', sheetW: '0.86', overlapV: '0.2' } },
         { id: 'soft', label: 'Мягкая черепица', hint: 'гонт в упаковках по 3 м², сплошная обрешётка', sets: { packM2: '3' } },
         { id: 'seam', label: 'Фальцевая кровля', hint: 'картины из рулона' },
-      ] }],
+      ] },
+        { id: 'profBuy', label: 'Профнастил продают', default: 'sheet', group: 'prof', choices: [
+          { id: 'sheet', label: 'За лист', hint: 'цена листа нужной длины' },
+          { id: 'm2', label: 'За м²', hint: 'по полной ширине листа, как считает магазин' },
+        ] },
+        { id: 'woodBuy', label: 'Стропила и обрешётку продают', default: 'meter', choices: [
+          { id: 'meter', label: 'За метр', hint: 'строительные магазины' },
+          { id: 'cube', label: 'За куб', hint: 'пилорамы и базы: цена за 1 м³ доски или бруса нужного сечения' },
+        ] },
+        { id: 'insulBuy', label: 'Утеплитель продают', default: 'cube', group: 'insul', choices: [
+          { id: 'cube', label: 'За куб', hint: 'цена за 1 м³' },
+          { id: 'pack', label: 'За упаковку', hint: 'объём упаковки написан на ней' },
+        ] }],
       prices: [
         // Свой ценник у каждого покрытия — в той единице, в какой его продают
         { id: 'metalM2', label: 'Металлочерепица', unit: '₽ за м²', group: 'metal' },
-        { id: 'profSheet', label: 'Лист профнастила', unit: '₽ за лист', group: 'prof' },
+        { id: 'profSheet', label: 'Лист профнастила', unit: '₽ за лист', group: 'profSheet' },
+        { id: 'profM2', label: 'Профнастил', unit: '₽ за м²', group: 'profM2' },
         { id: 'ondulinSheet', label: 'Лист ондулина', unit: '₽ за лист', group: 'ondulin' },
         { id: 'softPack', label: 'Упаковка мягкой черепицы', unit: '₽ за упаковку', group: 'soft' },
         { id: 'seamM2', label: 'Сталь для фальца', unit: '₽ за м²', group: 'seam' },
-        { id: 'batten', label: 'Обрешётка', unit: '₽ за метр' },
-        { id: 'rafter', label: 'Стропило', unit: '₽ за метр' },
+        { id: 'batten', label: 'Обрешётка', unit: '₽ за метр', group: 'battenM' },
+        { id: 'battenM3', label: 'Обрешётка (доска)', unit: '₽ за м³', group: 'battenCube' },
+        { id: 'rafter', label: 'Стропило', unit: '₽ за метр', group: 'woodM' },
+        { id: 'rafterM3', label: 'Стропило (доска или брус)', unit: '₽ за м³', group: 'woodCube' },
         { id: 'film', label: 'Плёнки (гидро- и пароизоляция)', unit: '₽ за м²' },
-        { id: 'insul', label: 'Утеплитель', unit: '₽ за м³' },
+        { id: 'insul', label: 'Утеплитель', unit: '₽ за м³', group: 'insulCube' },
+        { id: 'insulPackP', label: 'Утеплитель', unit: '₽ за упаковку', group: 'insulPack' },
         { id: 'ridgeP', label: 'Коньковая планка', unit: '₽ за штуку', group: 'ridge' },
         { id: 'windP', label: 'Ветровая планка', unit: '₽ за штуку', group: 'wind' },
         { id: 'eaveP', label: 'Карнизная планка', unit: '₽ за штуку' },
@@ -1304,7 +1335,12 @@
         const m = sel.material;
         return { sheet: m === 'metal' || m === 'prof' || m === 'ondulin', roll: m === 'seam', piece: m === 'soft',
           metal: m === 'metal', prof: m === 'prof', ondulin: m === 'ondulin', soft: m === 'soft', seam: m === 'seam',
-          ridge: mode !== 'shed', wind: mode !== 'hip', down: pos(v.downH) };
+          ridge: mode !== 'shed', wind: mode !== 'hip', down: pos(v.downH),
+          full: m === 'metal' || (m === 'prof' && sel.profBuy === 'm2'), profSheet: m === 'prof' && sel.profBuy !== 'm2', profM2: m === 'prof' && sel.profBuy === 'm2',
+          // У мягкой черепицы обрешётка сплошная (фанера, ОСП) — цены рейки ей не нужны; утеплитель — только когда задана толщина
+          woodM: sel.woodBuy !== 'cube', woodCube: sel.woodBuy === 'cube',
+          battenM: m !== 'soft' && sel.woodBuy !== 'cube', battenCube: m !== 'soft' && sel.woodBuy === 'cube',
+          insul: pos(v.insulation), insulCube: pos(v.insulation) && sel.insulBuy !== 'pack', insulPack: pos(v.insulation) && sel.insulBuy === 'pack' };
       },
       // Геометрия: возвращает площадь скатов, длины конька, ребёр, ендов, карниза
       geom(v, mode) {
@@ -1411,6 +1447,11 @@
             const m2 = Math.round(total * v.sheetL * fullW * 100) / 100;
             rows.push(['Металлочерепица в м²', fmtInt(total) + ' × ' + fmt(v.sheetL) + ' × ' + fmt(fullW) + ' м = ' + fmt(m2) + ' м² по полной ширине листа — так считает магазин']);
             unitCost = { label: 'Металлочерепица, ' + fmtInt(total) + ' ' + plural(total, 'лист', 'листа', 'листов'), amount: m2, unit: 'м²', priceId: 'metalM2' };
+          } else if (m === 'prof' && sel.profBuy === 'm2') {
+            const fullW = pos(v.sheetWFull) ? v.sheetWFull : v.sheetW;
+            const m2 = Math.round(total * v.sheetL * fullW * 100) / 100;
+            rows.push(['Профнастил в м²', fmtInt(total) + ' × ' + fmt(v.sheetL) + ' × ' + fmt(fullW) + ' м = ' + fmt(m2) + ' м² по полной ширине листа']);
+            unitCost = { label: 'Профнастил, ' + fmtInt(total) + ' ' + plural(total, 'лист', 'листа', 'листов'), amount: m2, unit: 'м²', priceId: 'profM2' };
           } else unitCost = { label: m === 'prof' ? 'Профнастил' : 'Ондулин', amount: total, unit: plural(total, 'лист', 'листа', 'листов'), priceId: m === 'prof' ? 'profSheet' : 'ondulinSheet' };
         } else if (m === 'soft') {
           if (!pos(v.packM2)) return null;
@@ -1440,13 +1481,21 @@
           rows.push(['Обрешётка', g.faces === 4
             ? fmt(battenLen) + ' м (площадь ' + fmt(g.area) + ' м² ÷ шаг ' + fmt(v.battenStep) + ' м)'
             : fmtInt(lines) + ' ' + plural(lines, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(g.L) + ' м' + (g.faces === 2 ? ' × 2 ската' : '') + ' = ' + fmt(battenLen) + ' м']);
-          cost.push({ label: 'Обрешётка', amount: Math.ceil(battenLen), unit: 'м', priceId: 'batten' });
+          if (sel.woodBuy === 'cube' && pos(v.battenW) && pos(v.battenH)) {
+            const m3 = Math.ceil(battenLen) * v.battenW * v.battenH / 1e6;
+            rows.push(['Обрешётка в кубах', fmtInt(Math.ceil(battenLen)) + ' м × ' + fmt(v.battenW, 0) + '×' + fmt(v.battenH, 0) + ' мм = ' + fmt(m3, 3) + ' м³']);
+            cost.push({ label: 'Обрешётка, ' + fmtInt(Math.ceil(battenLen)) + ' м', amount: Math.round(m3 * 1000) / 1000, unit: 'м³', priceId: 'battenM3' });
+          } else cost.push({ label: 'Обрешётка', amount: Math.ceil(battenLen), unit: 'м', priceId: 'batten' });
         }
         if (pos(v.rafterStep)) {
           const pairs = Math.ceil(g.L / v.rafterStep) + 1;
           const rafterLen = pairs * g.slopeLen * (g.faces === 1 ? 1 : 2);
           rows.push(['Стропила', pairs + (g.faces === 1 ? ' шт' : ' пар') + ' по ' + fmt(g.slopeLen) + ' м = ' + fmt(rafterLen) + ' м']);
-          cost.push({ label: 'Стропила', amount: Math.ceil(rafterLen), unit: 'м', priceId: 'rafter' });
+          if (sel.woodBuy === 'cube' && pos(v.rafterW) && pos(v.rafterH)) {
+            const m3 = Math.ceil(rafterLen) * v.rafterW * v.rafterH / 1e6;
+            rows.push(['Стропила в кубах', fmtInt(Math.ceil(rafterLen)) + ' м × ' + fmt(v.rafterW, 0) + '×' + fmt(v.rafterH, 0) + ' мм = ' + fmt(m3, 3) + ' м³']);
+            cost.push({ label: 'Стропила, ' + fmtInt(Math.ceil(rafterLen)) + ' м', amount: Math.round(m3 * 1000) / 1000, unit: 'м³', priceId: 'rafterM3' });
+          } else cost.push({ label: 'Стропила', amount: Math.ceil(rafterLen), unit: 'м', priceId: 'rafter' });
         }
         // Доборы: планки внахлёст, полезная длина каждой = длина − нахлёст. Считаем по каждому
         // отрезку отдельно (каждый карниз, торец, ребро): обрезок с одной стороны на другую не перенести
@@ -1490,7 +1539,11 @@
         if (pos(v.insulation)) {
           const vol = g.area * v.insulation / 100;
           rows.push(['Утеплитель', fmt(v.insulation) + ' см × ' + fmt(g.area) + ' м² = ' + fmt(vol) + ' м³, пароизоляция ' + fmt(films) + ' м²']);
-          cost.push({ label: 'Утеплитель', amount: Math.ceil(vol * 10) / 10, unit: 'м³', priceId: 'insul' });
+          if (sel.insulBuy === 'pack' && pos(v.insulPack)) {
+            const packs = Math.ceil(vol / v.insulPack - 1e-9);
+            rows.push(['Утеплитель в упаковках', fmt(vol) + ' м³ ÷ ' + fmt(v.insulPack, 3) + ' м³ = ' + fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок')]);
+            cost.push({ label: 'Утеплитель', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок'), priceId: 'insulPackP' });
+          } else cost.push({ label: 'Утеплитель', amount: Math.ceil(vol * 10) / 10, unit: 'м³', priceId: 'insul' });
         }
         cost.unshift(unitCost);
         return { main: { label: 'Нужно на кровлю', value: main + ' · ' + fmt(g.area) + ' м²' }, rows, cost,
@@ -1520,18 +1573,34 @@
         { id: 'mortar', label: 'Раствор или клей', unit: 'кг сухой смеси на м³ кладки (клей для блока ≈ 25, раствор для кирпича ≈ 400)', value: '25' },
         { id: 'bagKg', label: 'Мешок раствора', unit: 'кг', value: '25' },
         { id: 'meshStep', label: 'Армирование через каждые', unit: 'рядов, 0 = без сетки', value: '4', int: true },
+        { id: 'palletN', label: 'Кирпичей на поддоне', unit: 'шт', value: '480', int: true, group: 'pallet' },
       ],
       presets: [{ label: 'Расход смеси', fieldId: 'mortar', unit: 'кг/м³', items: [['Клей для блоков', '25'], ['Кирпич полуторный', '330'], ['Кирпич одинарный', '400']] }],
       selects: [{ id: 'unit', label: 'Из чего кладём', default: 'gas', choices: [
         { id: 'gas', label: 'Газоблок 600×300×200', hint: 'кладка на клей, 27,8 шт в м³', sets: { mortar: '25', innerThick: '150' } },
         { id: 'foam', label: 'Пеноблок 600×300×200', hint: 'то же, 27,8 шт в м³', sets: { mortar: '25', innerThick: '150' } },
-        { id: 'brick', label: 'Кирпич одинарный 250×120×65', hint: '394 шт в м³ со швом 10 мм, раствора ≈ 0,23 м³', sets: { mortar: '400', innerThick: '120' } },
-        { id: 'brick15', label: 'Кирпич полуторный 250×120×88', hint: '302 шт в м³ со швом 10 мм, раствора ≈ 0,19 м³', sets: { mortar: '330', innerThick: '120' } },
+        { id: 'brick', label: 'Кирпич одинарный 250×120×65', hint: '394 шт в м³ со швом 10 мм, раствора ≈ 0,23 м³', sets: { mortar: '400', innerThick: '120', palletN: '480' } },
+        { id: 'brick15', label: 'Кирпич полуторный 250×120×88', hint: '302 шт в м³ со швом 10 мм, раствора ≈ 0,19 м³', sets: { mortar: '330', innerThick: '120', palletN: '352' } },
         { id: 'ceramo', label: 'Керамоблок 380×250×219', hint: '48 шт в м³, вертикальные швы на пазах', sets: { mortar: '100', innerThick: '120' } },
-      ] }],
+      ] },
+        { id: 'blockBuy', label: 'Блоки продают', default: 'piece', group: 'blocks', choices: [
+          { id: 'piece', label: 'За штуку', hint: 'строительные магазины' },
+          { id: 'cube', label: 'За куб', hint: 'заводы и базы: цена за 1 м³ блоков' },
+        ] },
+        { id: 'brickBuy', label: 'Кирпич продают', default: 'piece', group: 'bricks', choices: [
+          { id: 'piece', label: 'За штуку', hint: 'магазины и небольшие партии' },
+          { id: 'pallet', label: 'За поддон', hint: 'заводы и базы: целыми поддонами' },
+        ] }],
+      // Кирпич или блок; и в чём его цена: штука, куб блоков, поддон кирпича
+      buy(sel) {
+        const brick = sel.unit === 'brick' || sel.unit === 'brick15';
+        return brick ? (sel.brickBuy === 'pallet' ? 'pallet' : 'piece') : (sel.blockBuy === 'cube' ? 'cube' : 'piece');
+      },
       groups(v, mode, extras, sel) {
-        const u = sel.unit;
-        return { gas: u === 'gas', foam: u === 'foam', brick: u === 'brick', brick15: u === 'brick15', ceramo: u === 'ceramo', glue: u === 'gas' || u === 'foam', mortar: u !== 'gas' && u !== 'foam' };
+        const u = sel.unit, b = this.buy(sel), brick = u === 'brick' || u === 'brick15';
+        const out = { blocks: !brick, bricks: brick, pallet: brick && b === 'pallet', glue: u === 'gas' || u === 'foam', mortar: u !== 'gas' && u !== 'foam' };
+        ['gas', 'foam', 'brick', 'brick15', 'ceramo'].forEach((k) => { out[k] = u === k && b === 'piece'; out[k + '_alt'] = u === k && b !== 'piece'; });
+        return out;
       },
       prices: [
         // Свой ценник у каждого блока и кирпича: кирпич дешевле газоблока в разы, одна цена на всё врала.
@@ -1541,6 +1610,11 @@
         { id: 'brick', label: 'Кирпич одинарный', unit: '₽ за штуку', group: 'brick' },
         { id: 'brick15', label: 'Кирпич полуторный', unit: '₽ за штуку', group: 'brick15' },
         { id: 'ceramo', label: 'Керамоблок', unit: '₽ за штуку', group: 'ceramo' },
+        { id: 'gasM3', label: 'Газоблок', unit: '₽ за м³', group: 'gas_alt' },
+        { id: 'foamM3', label: 'Пеноблок', unit: '₽ за м³', group: 'foam_alt' },
+        { id: 'ceramoM3', label: 'Керамоблок', unit: '₽ за м³', group: 'ceramo_alt' },
+        { id: 'brickPal', label: 'Кирпич одинарный', unit: '₽ за поддон', group: 'brick_alt' },
+        { id: 'brick15Pal', label: 'Кирпич полуторный', unit: '₽ за поддон', group: 'brick15_alt' },
         { id: 'glue', label: 'Клей для блоков', unit: '₽ за мешок', group: 'glue', from: 'mortar' },
         { id: 'mortar', label: 'Кладочный раствор', unit: '₽ за мешок', group: 'mortar' },
         { id: 'mesh', label: 'Кладочная сетка', unit: '₽ за метр' },
@@ -1640,7 +1714,18 @@
           ['Рядов по высоте', fmtInt(rowsTotal) + ' (высота ряда ' + fmt(rowH * 100) + ' см)'],
         ];
         const UNIT_NAME = { gas: 'Газоблок', foam: 'Пеноблок', brick: 'Кирпич одинарный', brick15: 'Кирпич полуторный', ceramo: 'Керамоблок' };
-        const cost = [{ label: UNIT_NAME[sel.unit] || 'Блоки или кирпич', amount: units, unit: 'шт', priceId: sel.unit }];
+        const uName = UNIT_NAME[sel.unit] || 'Блоки или кирпич', buy = this.buy(sel);
+        let cost;
+        if (buy === 'cube') {
+          // Блоки берут целыми штуками, а цена за куб — переводим штуки в кубы изделия
+          const m3 = Math.round(units / per * 100) / 100;
+          rows.push(['Блоков в кубах', fmtInt(units) + ' шт ÷ ' + fmt(per) + ' шт/м³ = ' + fmt(m3) + ' м³']);
+          cost = [{ label: uName + ', ' + fmtInt(units) + ' шт', amount: m3, unit: 'м³', priceId: sel.unit + 'M3' }];
+        } else if (buy === 'pallet' && pos(v.palletN)) {
+          const pal = Math.ceil(units / v.palletN - 1e-9);
+          rows.push(['Поддонов', fmtInt(units) + ' шт ÷ ' + fmtInt(v.palletN) + ' на поддоне = ' + fmtInt(pal) + ' (с округлением вверх, остаток ' + fmtInt(pal * v.palletN - units) + ' шт)']);
+          cost = [{ label: uName + ', ' + fmtInt(units) + ' шт', amount: pal, unit: plural(pal, 'поддон', 'поддона', 'поддонов'), priceId: sel.unit + 'Pal' }];
+        } else cost = [{ label: uName, amount: units, unit: 'шт', priceId: sel.unit }];
         if (mortarKg > 0) {
           rows.push(['Раствор или клей', fmtInt(mortarKg) + ' кг' + (bags != null ? ' ≈ ' + fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по ' + fmt(v.bagKg) + ' кг' : '')]);
           const glued = sel.unit === 'gas' || sel.unit === 'foam';
@@ -1695,9 +1780,18 @@
           { id: 'piece', label: 'За штуку', hint: 'готовый комплект из магазина: створки, петли, запор' },
           { id: 'meter', label: 'За метр ширины', hint: 'на заказ у сварщика и откатные: цена × ширина ворот' },
         ] },
+        { id: 'sheetBuy', label: 'Профнастил продают', default: 'sheet', group: 'proflist', choices: [
+          { id: 'sheet', label: 'За лист', hint: 'цена листа нужной высоты' },
+          { id: 'm2', label: 'За м²', hint: 'по полной ширине листа, как считает магазин' },
+        ] },
+        { id: 'lagBuy', label: 'Лаги продают', default: 'piece', group: 'lags', choices: [
+          { id: 'piece', label: 'За штуку', hint: 'профтруба по 6 м' },
+          { id: 'meter', label: 'За метр', hint: 'цена погонного метра' },
+        ] },
       ],
       common: [
         { id: 'sheetW', label: 'Рабочая ширина листа', unit: 'м', value: '1.15', group: 'proflist' },
+        { id: 'sheetWFull', label: 'Полная ширина листа', unit: 'м, по ней магазин считает м²', value: '1.2', group: 'sheetM2' },
         { id: 'plankW', label: 'Ширина штакетины', unit: 'м', value: '0.1', group: 'picket' },
         { id: 'gap', label: 'Зазор между штакетинами', unit: 'м', value: '0.05', group: 'picket' },
         { id: 'plankW2', label: 'Ширина штакетины', unit: 'м', value: '0.1', group: 'picket2' },
@@ -1717,7 +1811,8 @@
       prices: [
         // Свой ценник у каждого материала: иначе цена листа профнастила умножалась на сотни штакетин.
         // from — прежняя общая цена; она была введена для профнастила (он по умолчанию) и переезжает только к нему
-        { id: 'sheet', label: 'Лист профнастила', unit: '₽ за лист', group: 'proflist', from: 'unit' },
+        { id: 'sheet', label: 'Лист профнастила', unit: '₽ за лист', group: 'sheetPiece', from: 'unit' },
+        { id: 'sheetM2', label: 'Профнастил', unit: '₽ за м²', group: 'sheetM2' },
         { id: 'picket', label: 'Штакетина', unit: '₽ за штуку', group: 'pickets' },
         { id: 'board', label: 'Доска', unit: '₽ за штуку', group: 'plank' },
         { id: 'chainRoll', label: 'Рулон сетки-рабицы', unit: '₽ за рулон', group: 'chainlink' },
@@ -1727,7 +1822,8 @@
         { id: 'gateM', label: 'Ворота', unit: '₽ за метр ширины', group: 'gateMeter' },
         { id: 'wicket', label: 'Калитка', unit: '₽ за штуку', group: 'wickets' },
         { id: 'cement', label: 'Цемент под столбы', unit: '₽ за мешок 50 кг' },
-        { id: 'lag', label: 'Лага 6 м', unit: '₽ за штуку', group: 'lags' },
+        { id: 'lag', label: 'Лага 6 м', unit: '₽ за штуку', group: 'lagPiece' },
+        { id: 'lagM', label: 'Лага', unit: '₽ за метр', group: 'lagMeter' },
         { id: 'screws', label: 'Саморезы', unit: '₽ за упаковку', group: 'screws' },
         { id: 'stain', label: 'Пропитка', unit: '₽ за литр', group: 'plank' },
       ],
@@ -1754,7 +1850,9 @@
         const gates = ok ? sm.gates > 0 : mode === 'plan' || (v.gate || 0) > 0;
         const wickets = ok ? sm.wickets > 0 : mode === 'plan' || (v.wicket || 0) > 0;
         return { proflist: t === 'proflist', picket: t === 'picket', picket2: t === 'picket2', pickets: t === 'picket' || t === 'picket2', plank: t === 'plank', chainlink: t === 'chainlink', block: t === 'block', lags: t !== 'block' && t !== 'chainlink', screws,
-          gates, gatePiece: gates && sel.gatePrice !== 'meter', gateMeter: gates && sel.gatePrice === 'meter', wickets };
+          gates, gatePiece: gates && sel.gatePrice !== 'meter', gateMeter: gates && sel.gatePrice === 'meter', wickets,
+          sheetPiece: t === 'proflist' && sel.sheetBuy !== 'm2', sheetM2: t === 'proflist' && sel.sheetBuy === 'm2',
+          lagPiece: t !== 'block' && t !== 'chainlink' && sel.lagBuy !== 'meter', lagMeter: t !== 'block' && t !== 'chainlink' && sel.lagBuy === 'meter' };
       },
       // Сводка по забору: полезная длина, пролёты, столбы, проёмы — для обоих режимов
       summary(v, mode, sel, extras) {
@@ -1830,7 +1928,11 @@
           main = P(sheets, 'лист', 'листа', 'листов') + ' · ' + P(posts, 'столб', 'столба', 'столбов');
           rows.push(['Листы профнастила', fmtInt(sheets) + ' шт высотой ' + fmt(v.hei) + ' м (рабочая ширина ' + fmt(v.sheetW) + ' м)']);
           screws = sheets * (pos(v.screwsPer) ? Math.round(v.screwsPer) : 8); screwNote = 'по ' + (pos(v.screwsPer) ? Math.round(v.screwsPer) : 8) + ' на лист';
-          unitCost = { label: 'Профнастил', amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов'), priceId: 'sheet' };
+          if (sel.sheetBuy === 'm2') {
+            const fullW = pos(v.sheetWFull) ? v.sheetWFull : v.sheetW, m2 = Math.round(sheets * v.hei * fullW * 100) / 100;
+            rows.push(['Профнастил в м²', fmtInt(sheets) + ' × ' + fmt(v.hei) + ' × ' + fmt(fullW) + ' м = ' + fmt(m2) + ' м² по полной ширине листа']);
+            unitCost = { label: 'Профнастил, ' + fmtInt(sheets) + ' ' + plural(sheets, 'лист', 'листа', 'листов'), amount: m2, unit: 'м²', priceId: 'sheetM2' };
+          } else unitCost = { label: 'Профнастил', amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов'), priceId: 'sheet' };
         } else if (t === 'picket' || t === 'picket2') {
           const pw = t === 'picket' ? v.plankW : v.plankW2, gp = t === 'picket' ? (v.gap || 0) : (v.gap2 || 0);
           if (!pos(pw)) return null;
@@ -1876,7 +1978,9 @@
         if (t !== 'block' && t !== 'chainlink') {
           const lagPieces = Math.ceil(rowsL * net / 6 - 1e-9);
           rows.push(['Лаги', fmtInt(rowsL) + ' ' + plural(rowsL, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м → ' + fmtInt(lagPieces) + ' шт по 6 м']);
-          cost.push({ label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' });
+          cost.push(sel.lagBuy === 'meter'
+            ? { label: 'Лаги, ' + fmtInt(lagPieces) + ' шт по 6 м', amount: lagPieces * 6, unit: 'м', priceId: 'lagM' }
+            : { label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' });
         }
         if (screws > 0) {
           const pack = pos(v.screwPack) ? Math.round(v.screwPack) : 250, packs = Math.ceil(screws / pack);
@@ -2289,6 +2393,10 @@
           { id: 'cps', label: 'Цемент и песок 1:3', hint: 'мешки цемента и тонны песка', sets: screedThick },
           { id: 'self', label: 'Наливной пол', hint: 'самовыравнивающийся, слой от 5 мм', sets: { thick: '10' } },
         ] },
+        { id: 'sandBuy', label: 'Песок продают', default: 'ton', group: 'cps', choices: [
+          { id: 'ton', label: 'За тонну', hint: 'карьеры и большинство баз' },
+          { id: 'cube', label: 'За куб', hint: 'пересчёт по насыпной плотности 1,55 т/м³' },
+        ] },
         { id: 'reinf', label: 'Армирование', default: 'fiber', group: 'reinf', choices: [
           { id: 'fiber', label: 'Фиброволокно', hint: 'мешается в раствор, держит от усадочных трещин' },
           { id: 'mesh', label: 'Сетка', hint: 'карты внахлёст, считаем с запасом 10%' },
@@ -2302,7 +2410,8 @@
       prices: [
         { id: 'readyBag', label: 'Цена пескобетона', unit: '₽ за мешок', group: 'ready' },
         { id: 'cem', label: 'Цена цемента', unit: '₽ за мешок', group: 'cps' },
-        { id: 'sand', label: 'Цена песка', unit: '₽ за тонну', group: 'cps' },
+        { id: 'sand', label: 'Цена песка', unit: '₽ за тонну', group: 'sandTon' },
+        { id: 'sandM3', label: 'Цена песка', unit: '₽ за м³', group: 'sandCube' },
         { id: 'selfBag', label: 'Цена наливного пола', unit: '₽ за мешок', group: 'self' },
         { id: 'damper', label: 'Цена демпферной ленты', unit: '₽ за рулон' },
         { id: 'fiber', label: 'Цена фиброволокна', unit: '₽ за упаковку', group: 'fiber' },
@@ -2310,6 +2419,7 @@
       ],
       groups(v, mode, extras, sel) {
         return { ready: sel.mix === 'ready', cps: sel.mix === 'cps', self: sel.mix === 'self',
+          sandTon: sel.mix === 'cps' && sel.sandBuy !== 'cube', sandCube: sel.mix === 'cps' && sel.sandBuy === 'cube',
           fiber: sel.reinf === 'fiber' && sel.mix !== 'self', mesh: sel.reinf === 'mesh' && sel.mix !== 'self', reinf: sel.mix !== 'self' };
       },
       shape(v, mode, extras) {
@@ -2357,11 +2467,14 @@
           const cemBags = pos(v.cemBag) ? Math.ceil(cem * 1.05 / v.cemBag) : null;
           const sandT = sand * 1.05 / 1000;
           rows.push(['Цемент М400', fmtInt(cem) + ' кг' + (cemBags != null ? ' ≈ ' + fmtInt(cemBags) + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' по ' + fmt(v.cemBag) + ' кг' : '')]);
-          rows.push(['Песок', fmt(sandT) + ' т (' + fmtInt(sand) + ' кг, ≈ ' + fmt(sand / 1550) + ' м³)']);
+          rows.push(['Песок', fmt(sandT) + ' т с запасом 5% (≈ ' + fmt(sandT / MATERIALS.sand.density) + ' м³)']);
           rows.push(['Вода', '≈ ' + fmtInt(cem * 0.45) + ' л, доливать по консистенции']);
           main = (cemBags != null ? fmtInt(cemBags) + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' цемента' : fmtInt(cem) + ' кг цемента') + ' · ' + fmt(sandT) + ' т песка';
           if (cemBags != null) cost.push({ label: 'Цемент', amount: cemBags, unit: plural(cemBags, 'мешок', 'мешка', 'мешков'), priceId: 'cem' });
-          cost.push({ label: 'Песок', amount: sandT, unit: 'т', priceId: 'sand' });
+          // Насыпная плотность песка — та же, что в калькуляторе песка и щебня
+          cost.push(sel.sandBuy === 'cube'
+            ? { label: 'Песок', amount: Math.round(sandT / MATERIALS.sand.density * 100) / 100, unit: 'м³', priceId: 'sandM3' }
+            : { label: 'Песок', amount: sandT, unit: 'т', priceId: 'sand' });
         } else {
           if (!pos(v.selfRate)) return null;
           const perM2 = v.selfRate * v.thick, kg = area * perM2;
@@ -2456,6 +2569,10 @@
           { id: 'one', label: 'Один слой', hint: 'обычная обшивка' },
           { id: 'two', label: 'Два слоя', hint: 'жёсткость и звукоизоляция: листов и саморезов вдвое больше' },
         ] },
+        { id: 'profBuy', label: 'Профиль продают', default: 'piece', group: 'prof', choices: [
+          { id: 'piece', label: 'За штуку', hint: 'профиль целой длины, обычно 3 м' },
+          { id: 'meter', label: 'За метр', hint: 'цена за погонный метр — умножим на длину профиля' },
+        ] },
       ],
       presets: [
         { label: 'Лист', fieldId: 'sheetL', unit: 'см', items: [['Стандарт 2500', '250'], ['Малый 2000', '200'], ['Длинный 3000', '300']] },
@@ -2463,15 +2580,21 @@
       ],
       prices: [
         { id: 'sheet', label: 'Цена листа', unit: '₽ за лист' },
-        { id: 'stud', label: 'Цена несущего профиля', unit: '₽ за штуку' },
-        { id: 'track', label: 'Цена направляющего профиля', unit: '₽ за штуку' },
+        { id: 'stud', label: 'Цена несущего профиля', unit: '₽ за штуку', group: 'profPiece' },
+        { id: 'track', label: 'Цена направляющего профиля', unit: '₽ за штуку', group: 'profPiece' },
+        { id: 'studM', label: 'Цена несущего профиля', unit: '₽ за метр', group: 'profMeter' },
+        { id: 'trackM', label: 'Цена направляющего профиля', unit: '₽ за метр', group: 'profMeter' },
         { id: 'hanger', label: 'Цена подвеса', unit: '₽ за штуку', group: 'ceil' },
         { id: 'crab', label: 'Цена краба', unit: '₽ за штуку', group: 'ceil' },
         { id: 'ext', label: 'Цена удлинителя профиля', unit: '₽ за штуку', group: 'ceil' },
         { id: 'tape', label: 'Цена ленты', unit: '₽ за рулон' },
         { id: 'putty', label: 'Цена шпаклёвки', unit: '₽ за килограмм' },
       ],
-      groups(v, mode) { return { ceil: mode === 'ceiling' }; },
+      groups(v, mode, extras, sel) {
+        // В «своей площади» каркаса нет — и цен профиля тоже
+        const prof = mode !== 'custom';
+        return { ceil: mode === 'ceiling', prof, profPiece: prof && sel.profBuy !== 'meter', profMeter: prof && sel.profBuy === 'meter' };
+      },
       lens(v, mode, extras) {
         return (mode === 'wall' && pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null;
       },
@@ -2558,12 +2681,16 @@
 
         if (studs != null) {
           rows.push(['Несущий профиль', fmtInt(studs) + ' ' + plural(studs, 'штука', 'штуки', 'штук') + ' по ' + fmt(v.profileLen || 3) + ' м']);
-          cost.push({ label: 'Несущий профиль', amount: studs, unit: plural(studs, 'штука', 'штуки', 'штук'), priceId: 'stud' });
+          cost.push(sel.profBuy === 'meter'
+            ? { label: 'Несущий профиль, ' + fmtInt(studs) + ' шт', amount: studs * (v.profileLen || 3), unit: 'м', priceId: 'studM' }
+            : { label: 'Несущий профиль', amount: studs, unit: plural(studs, 'штука', 'штуки', 'штук'), priceId: 'stud' });
         }
         if (trackLen != null && pos(v.profileLen)) {
           const tracks = Math.ceil(trackLen / v.profileLen);
           rows.push(['Направляющий профиль', fmt(trackLen) + ' м → ' + fmtInt(tracks) + ' ' + plural(tracks, 'штука', 'штуки', 'штук') + ' по ' + fmt(v.profileLen) + ' м']);
-          cost.push({ label: 'Направляющий профиль', amount: tracks, unit: plural(tracks, 'штука', 'штуки', 'штук'), priceId: 'track' });
+          cost.push(sel.profBuy === 'meter'
+            ? { label: 'Направляющий профиль, ' + fmtInt(tracks) + ' шт', amount: tracks * v.profileLen, unit: 'м', priceId: 'trackM' }
+            : { label: 'Направляющий профиль', amount: tracks, unit: plural(tracks, 'штука', 'штуки', 'штук'), priceId: 'track' });
         }
         if (exts) {
           rows.push(['Удлинители профиля', fmtInt(exts) + ' шт: основной профиль длиннее ' + fmt(v.profileLen || 3) + ' м наращивают']);
@@ -2638,13 +2765,18 @@
           { id: 'snail', label: 'Улитка', hint: 'подача и обратка рядом, пол греет равномернее' },
           { id: 'snake', label: 'Змейка', hint: 'проще уложить, но у дальней стены прохладнее' },
         ] },
+        { id: 'pipeBuy', label: 'Трубу продают', default: 'meter', group: 'water', choices: [
+          { id: 'meter', label: 'За метр', hint: 'цена погонного метра' },
+          { id: 'coil', label: 'За бухту', hint: 'бухтами целиком: число бухт — по целым контурам' },
+        ] },
       ],
       presets: [
         { label: 'Шаг укладки', fieldId: 'step', unit: 'мм', group: 'water', items: [['Основное отопление', '100'], ['Комфорт', '150'], ['Дополнительный обогрев', '200'], ['Экономный', '300']] },
         { label: 'Мощность', fieldId: 'power', unit: 'Вт/м²', group: 'el', items: [['Комфортный подогрев', '130'], ['Основной обогрев', '180'], ['Балкон, лоджия', '200']] },
       ],
       prices: [
-        { id: 'pipe', label: 'Цена трубы', unit: '₽ за метр', group: 'water' },
+        { id: 'pipe', label: 'Цена трубы', unit: '₽ за метр', group: 'pipeM' },
+        { id: 'coilP', label: 'Цена бухты трубы', unit: '₽ за бухту', group: 'pipeCoil' },
         { id: 'clip', label: 'Цена клипсы', unit: '₽ за штуку', group: 'water' },
         { id: 'cable', label: 'Цена кабеля', unit: '₽ за метр', group: 'cable' },
         { id: 'mat', label: 'Цена мата', unit: '₽ за м²', group: 'mat' },
@@ -2656,7 +2788,8 @@
       // Ориентир теплоотдачи водяного пола под плиткой при подаче 40–45 °C
       HEAT: [[100, 90], [150, 75], [200, 60], [250, 50], [300, 45]],
       groups(v, mode, extras, sel) {
-        return { water: sel.type === 'water', el: sel.type !== 'water', cable: sel.type === 'cable', mat: sel.type === 'mat' };
+        const w = sel.type === 'water';
+        return { water: w, el: !w, cable: sel.type === 'cable', mat: sel.type === 'mat', pipeM: w && sel.pipeBuy !== 'coil', pipeCoil: w && sel.pipeBuy === 'coil' };
       },
       shape(v, mode, extras) {
         if (mode === 'rect') return (pos(v.len) && pos(v.wid)) ? { area: v.len * v.wid, per: 2 * (v.len + v.wid), minDim: Math.min(v.len, v.wid), pts: [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]] } : null;
@@ -2740,7 +2873,9 @@
           else if (pos(v.coil)) rows.push(['⚠ Бухта', 'контур ' + fmtInt(perLoop) + ' м длиннее бухты ' + fmt(v.coil) + ' м: возьмите бухту длиннее — трубу в стяжке не сращивают']);
           if (pos(v.clips)) rows.push(['Клипсы крепления', fmtInt(Math.ceil(pipe * v.clips)) + ' шт']);
           rows.push(['Ориентир теплоотдачи', '≈ ' + heat + ' Вт/м², всего ≈ ' + fmtInt(H * heat) + ' Вт']);
-          cost.push({ label: 'Труба', amount: Math.ceil(pipe), unit: 'м', priceId: 'pipe' });
+          // За бухту — только когда контур в неё влезает; иначе выше предупреждение взять бухту длиннее
+          if (sel.pipeBuy === 'coil') { if (coils != null) cost.push({ label: 'Труба, бухты по ' + fmt(v.coil) + ' м', amount: coils, unit: 'шт', priceId: 'coilP' }); }
+          else cost.push({ label: 'Труба', amount: Math.ceil(pipe), unit: 'м', priceId: 'pipe' });
           if (pos(v.clips)) cost.push({ label: 'Клипсы', amount: Math.ceil(pipe * v.clips), unit: 'шт', priceId: 'clip' });
           cost.push({ label: 'Коллектор на ' + fmtInt(loops) + ' ' + plural(loops, 'выход', 'выхода', 'выходов'), amount: 1, unit: 'шт', priceId: 'collector' });
         } else if (sel.type === 'cable') {
