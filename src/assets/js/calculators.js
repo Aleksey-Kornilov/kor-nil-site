@@ -505,6 +505,7 @@
         { id: 'panelL', label: 'Длина панели сайдинга', unit: 'м', value: '3.66', group: 'siding' },
         { id: 'panelW', label: 'Рабочая ширина панели', unit: 'м', value: '0.23', group: 'siding' },
         { id: 'sidingWaste', label: 'Запас на подрезку', unit: '%', value: '10', group: 'siding' },
+        { id: 'profL', label: 'Длина профилей', unit: 'м (стартовая, финишная, углы, J)', value: '3', group: 'siding' },
         { id: 'plasterRate', label: 'Расход штукатурки', unit: 'кг/м² при вашей толщине', value: '15', group: 'plaster' },
         { id: 'plasterBag', label: 'Мешок штукатурки', unit: 'кг', value: '25', group: 'plaster' },
         { id: 'coats', label: 'Слоёв краски', unit: '', value: '2', group: 'paint', int: true },
@@ -515,6 +516,11 @@
         choices: [{ id: 'siding', label: 'Сайдинг', hint: 'как у стен из сайдинга' }, { id: 'plaster', label: 'Штукатурка', hint: '' }, { id: 'paint', label: 'Краска', hint: '' }, { id: 'none', label: 'Без отделки', hint: 'фронтоны не считаем' }] }],
       prices: [
         { id: 'panel', label: 'Панель сайдинга', unit: '₽ за штуку', group: 'siding' },
+        { id: 'startP', label: 'Стартовая планка', unit: '₽ за штуку', group: 'siding' },
+        { id: 'finishP', label: 'Финишная планка', unit: '₽ за штуку', group: 'siding' },
+        { id: 'outerP', label: 'Наружный угол', unit: '₽ за штуку', group: 'siding' },
+        { id: 'innerP', label: 'Внутренний угол', unit: '₽ за штуку', group: 'siding' },
+        { id: 'jP', label: 'J-профиль', unit: '₽ за штуку', group: 'siding' },
         { id: 'plaster', label: 'Штукатурка', unit: '₽ за мешок', group: 'plaster' },
         { id: 'can', label: 'Краска', unit: '₽ за банку', group: 'paint' },
       ],
@@ -562,7 +568,9 @@
           const need = area.siding * (1 + (v.sidingWaste || 0) / 100);
           const panels = Math.ceil(need / (v.panelL * v.panelW));
           const start = m.by.siding.len;
-          const jLen = extras.room.openings.filter((o) => m.walls[o.wall] && m.walls[o.wall].finish === 'siding').reduce((s2, o) => s2 + 2 * (o.w + o.h), 0);
+          // У проёма от самой земли (дверь) J-профиль только с трёх сторон: снизу его нет
+          const sideOps = extras.room.openings.filter((o) => m.walls[o.wall] && m.walls[o.wall].finish === 'siding' && o.w > 0 && o.h > 0);
+          const jLen = sideOps.reduce((s2, o) => s2 + 2 * o.h + (o.y > 0.01 ? 2 : 1) * o.w, 0);
           mains.push('сайдинг ' + fmtInt(panels) + ' ' + plural(panels, 'панель', 'панели', 'панелей'));
           rows.push(['Сайдинг: площадь', fmt(area.siding) + ' м² (+' + fmt(v.sidingWaste || 0) + '% подрезка = ' + fmt(need) + ')']);
           rows.push(['Стартовая планка', fmt(start) + ' м']);
@@ -579,10 +587,35 @@
               if (Math.sign(cross) === sgn) outer++; else inner++;
             }
           }
-          rows.push(['Наружный угол', fmtInt(outer) + ' ' + plural(outer, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(outer * v.hei) + ' м']);
-          if (inner) rows.push(['Внутренний угол', fmtInt(inner) + ' ' + plural(inner, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(inner * v.hei) + ' м']);
-          if (jLen > 0) rows.push(['J-профиль вокруг проёмов', fmt(jLen) + ' м']);
+          // Профили по 3 м: целые на длинные отрезки, а короткие куски раскладываем по профилям
+          // «самый длинный — в первый, куда влезет», так обрезки идут в дело, а не в мусор
+          const L = pos(v.profL) ? v.profL : 3;
+          const bars = (pieces) => {
+            let n = 0; const rest = [], free = [];
+            pieces.forEach((p) => { const full = Math.floor(p / L + 1e-9); n += full; if (p - full * L > 0.01) rest.push(p - full * L); });
+            rest.sort((x, y) => y - x).forEach((r) => {
+              const k = free.findIndex((f) => f >= r - 1e-9);
+              if (k >= 0) free[k] -= r; else { n++; free.push(L - r); }
+            });
+            return n;
+          };
+          const sideWalls = m.walls.filter((w) => w.finish === 'siding');
+          const startN = bars(sideWalls.map((w) => w.len));
+          const outerN = bars(Array(outer).fill(v.hei)), innerN = bars(Array(inner).fill(v.hei));
+          const jPieces = [];
+          sideOps.forEach((o) => { jPieces.push(o.w + 0.05, o.h + 0.05, o.h + 0.05); if (o.y > 0.01) jPieces.push(o.w + 0.05); });
+          const jN = bars(jPieces);
+          const pcs = (n) => fmtInt(n) + ' шт по ' + fmt(L) + ' м';
+          rows[rows.length - 1] = ['Стартовая планка', fmt(start) + ' м → ' + pcs(startN)];
+          rows.push(['Финишная планка', 'под карнизом, столько же: ' + pcs(startN)]);
+          rows.push(['Наружный угол', fmtInt(outer) + ' ' + plural(outer, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(outer * v.hei) + ' м → ' + pcs(outerN)]);
+          if (inner) rows.push(['Внутренний угол', fmtInt(inner) + ' ' + plural(inner, 'угол', 'угла', 'углов') + ' × ' + fmt(v.hei) + ' м = ' + fmt(inner * v.hei) + ' м → ' + pcs(innerN)]);
+          if (jLen > 0) rows.push(['J-профиль вокруг проёмов', fmt(jLen) + ' м → ' + pcs(jN) + ' (по 5 см на подрезку угла)']);
           cost.push({ label: 'Сайдинг', amount: panels, unit: plural(panels, 'панель', 'панели', 'панелей'), priceId: 'panel' });
+          if (startN) cost.push({ label: 'Стартовая планка', amount: startN, unit: 'шт', priceId: 'startP' }, { label: 'Финишная планка', amount: startN, unit: 'шт', priceId: 'finishP' });
+          if (outerN) cost.push({ label: 'Наружный угол', amount: outerN, unit: 'шт', priceId: 'outerP' });
+          if (innerN) cost.push({ label: 'Внутренний угол', amount: innerN, unit: 'шт', priceId: 'innerP' });
+          if (jN) cost.push({ label: 'J-профиль', amount: jN, unit: 'шт', priceId: 'jP' });
         }
         if (area.plaster > 0 && pos(v.plasterRate) && pos(v.plasterBag)) {
           const kg = area.plaster * v.plasterRate, bags = Math.ceil(kg / v.plasterBag);
