@@ -82,16 +82,11 @@
   };
   // Чем возят: грузоподъёмность — что реально берут, а не по паспорту.
   const TRUCKS = [
-    { name: 'Газель', tons: 1.5 },
-    { name: 'Самосвал 5 т', tons: 5 },
-    { name: 'КамАЗ, самосвал 10 т', tons: 10 },
-    { name: 'Самосвал 20 т (тонар)', tons: 20 },
+    { id: 'gazel', name: 'Газель', tons: 1.5 },
+    { id: 't5', name: 'Самосвал 5 т', tons: 5 },
+    { id: 't10', name: 'КамАЗ, самосвал 10 т', tons: 10 },
+    { id: 't20', name: 'Самосвал 20 т (тонар)', tons: 20 },
   ];
-  function bestTrips(tons) {
-    if (tons <= 0) return 0;
-    for (const t of TRUCKS) if (tons <= t.tons) return 1;
-    return Math.ceil(tons / TRUCKS[TRUCKS.length - 1].tons);
-  }
 
   const CALCS = {
     /* --- Бетон / фундамент --- */
@@ -1921,11 +1916,22 @@
         { id: 'compact', label: 'Слой', default: 'yes', group: 'layer', choices: [
           { id: 'yes', label: 'Утрамбуем', hint: 'толщина — после трамбовки: рыхлого материала нужно больше' },
           { id: 'no', label: 'Насыпаем как есть', hint: 'грядка, отсыпка без трамбовки' },
-        ] }],
-      groups(v, mode) { return { layer: mode === 'area' }; },
+        ] },
+        { id: 'priceUnit', label: 'Материал продают', default: 'ton', choices: [
+          { id: 'ton', label: 'За тонну', hint: 'карьеры и большинство баз' },
+          { id: 'cube', label: 'За куб', hint: 'часть баз и почти всегда земля, торф, керамзит' },
+        ] },
+        { id: 'truck', label: 'Чем везут', default: 't10', choices: TRUCKS.map((t) => ({ id: t.id, label: t.name, hint: 'берёт до ' + fmt(t.tons) + ' т за рейс' })) }],
+      groups(v, mode, extras, sel) {
+        const out = { layer: mode === 'area', ton: sel.priceUnit !== 'cube', cube: sel.priceUnit === 'cube' };
+        TRUCKS.forEach((t) => { out['truck_' + t.id] = sel.truck === t.id; });
+        return out;
+      },
       prices: [
-        { id: 'perTon', label: 'Цена материала', unit: '₽ за тонну' },
-        { id: 'delivery', label: 'Доставка', unit: '₽ за рейс, необязательно' },
+        { id: 'perTon', label: 'Цена материала', unit: '₽ за тонну', group: 'ton' },
+        { id: 'perM3', label: 'Цена материала', unit: '₽ за м³', group: 'cube' },
+        // Рейс у каждой машины свой; прежняя общая цена доставки — к КамАЗу, он по умолчанию
+        ...TRUCKS.map((t) => ({ id: 'del_' + t.id, label: 'Доставка: ' + t.name, unit: '₽ за рейс, необязательно', group: 'truck_' + t.id, from: t.id === 't10' ? 'delivery' : undefined })),
       ],
       draw(v, mode, box, yaw) {
         const V = window.CalcViz; if (!V || mode !== 'area' || !(pos(v.len) && pos(v.wid) && pos(v.thick))) return false;
@@ -1950,18 +1956,22 @@
           cubes *= m.compact;
         }
         const tons = cubes * m.density;
+        const truck = TRUCKS.find((t) => t.id === sel.truck) || TRUCKS[2];
+        const trips = Math.ceil(tons / truck.tons - 1e-9);
         TRUCKS.forEach((t) => {
-          const n = Math.ceil(tons / t.tons);
-          if (n > 0 && n <= 12) rows.push([t.name, n === 1 ? 'один рейс' : fmtInt(n) + ' ' + plural(n, 'рейс', 'рейса', 'рейсов')]);
+          const n = Math.ceil(tons / t.tons - 1e-9);
+          if (n > 0 && (n <= 12 || t === truck)) rows.push([t.name + (t === truck ? ' ✓' : ''), n === 1 ? 'один рейс' : fmtInt(n) + ' ' + plural(n, 'рейс', 'рейса', 'рейсов')]);
         });
         return {
           main: { label: 'Нужно: ' + m.name.toLowerCase(), value: fmt(cubes) + ' м³ · ' + fmt(tons) + ' т' },
           rows,
-          note: 'Плотность усреднённая: ' + m.hint + '. Продавцы считают тоннами, поэтому берите объём с запасом 5–10% — часть уйдёт в просыпь'
+          note: 'Плотность усреднённая: ' + m.hint + '. Тонны и кубы связаны через неё, поэтому берите с запасом 5–10% — часть уйдёт в просыпь'
             + (mode === 'area' && sel.compact === 'yes' ? '. Усадка при трамбовке уже учтена.' : mode === 'area' ? '.' : ', а если слой будут трамбовать — добавьте ещё 15–30% на усадку.'),
           cost: [
-            { label: m.name, amount: tons, unit: 'т', priceId: 'perTon' },
-            { label: 'Доставка', amount: bestTrips(tons), unit: plural(bestTrips(tons), 'рейс', 'рейса', 'рейсов'), priceId: 'delivery', optional: true },
+            sel.priceUnit === 'cube'
+              ? { label: m.name, amount: cubes, unit: 'м³', priceId: 'perM3' }
+              : { label: m.name, amount: tons, unit: 'т', priceId: 'perTon' },
+            { label: 'Доставка: ' + truck.name, amount: trips, unit: plural(trips, 'рейс', 'рейса', 'рейсов'), priceId: 'del_' + truck.id, optional: true },
           ],
         };
       },
