@@ -250,6 +250,11 @@
     } else {
       svg.appendChild(el('polygon', { points: pts.map((p) => X(p).toFixed(1) + ',' + Y(p).toFixed(1)).join(' '), class: 'viz-area' }));
     }
+    // Слой поверх контура (планки кварцвинила): рисует вызывающий, в тех же координатах
+    if (opts && opts.under) {
+      opts.under(svg, X, Y, el);
+      svg.appendChild(el('polygon', { points: pts.map((p) => X(p).toFixed(1) + ',' + Y(p).toFixed(1)).join(' '), class: 'viz-outline' }));
+    }
     const defs = el('defs');
     const mk = el('marker', { id: 'viz-arr2', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
     mk.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead' })); defs.appendChild(mk); svg.appendChild(defs);

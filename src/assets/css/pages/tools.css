@@ -111,6 +111,10 @@
 .viz-window { fill: #9ecbf0; stroke: #3b7bb5; stroke-width: 1; }
 .viz-door { fill: #c79a66; stroke: #8a5f33; stroke-width: 1; }
 .viz-area { fill: var(--color-accent-subtle); stroke: var(--color-accent); stroke-width: 1.5; }
+.viz-outline { fill: none; stroke: var(--color-accent); stroke-width: 1.5; }
+.viz-plank { fill: #e3d2b6; stroke: #7a6a55; stroke-width: 0.6; }
+.viz-plank--cut { fill: #c4a57c; }
+.viz-plank--reuse { fill: #a9cfa0; }
 
 /* Проёмы (краска) */
 .calc-openings:empty { display: none; }
@@ -149,6 +153,7 @@
 .room-wall--fence { fill: #c9d3df; }
 .room-wall--paint { fill: #e8e2d6; }
 .room-wall--paper { fill: #d9c9a8; }
+.room-wall--lvt { fill: #d8c3a5; }
 .room-wall--none { fill: #cfd3d8; fill-opacity: 0.5; }
 .room-wall.is-selected { stroke: var(--color-accent); stroke-width: 3; }
 .room-opening { cursor: grab; }

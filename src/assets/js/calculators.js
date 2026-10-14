@@ -88,6 +88,126 @@
     { id: 't20', name: 'Самосвал 20 т (тонар)', tons: 20 },
   ];
 
+  // Профили и планки фиксированной длины L: целые — на длинные отрезки, короткие куски
+  // раскладываем «самый длинный — в первый, куда влезет», так обрезки идут в дело, а не в мусор
+  function packBars(pieces, L) {
+    let n = 0; const rest = [], free = [];
+    pieces.forEach((p) => { const full = Math.floor(p / L + 1e-9); n += full; if (p - full * L > 0.01) rest.push(p - full * L); });
+    rest.sort((x, y) => y - x).forEach((r) => {
+      const k = free.findIndex((f) => f >= r - 1e-9);
+      if (k >= 0) free[k] -= r; else { n++; free.push(L - r); }
+    });
+    return n;
+  }
+
+  /* ---------- Кварцвинил: раскладка планок ряд за рядом (всё в сантиметрах) ---------- */
+
+  // Ряды поперёк направления планок. Если последний выходит полоской уже трети планки,
+  // первый и последний режут поровну — так кладут мастера, узкая полоса у стены отходит.
+  function plankBands(span, w) {
+    const n = Math.max(1, Math.ceil(span / w - 1e-9));
+    const last = span - (n - 1) * w;
+    const ws = Array(n).fill(w);
+    const balanced = n > 1 && last < w / 3 - 1e-9;
+    if (balanced) ws[0] = ws[n - 1] = (last + w) / 2; else ws[n - 1] = last;
+    let y = 0;
+    return { n, last, balanced, edge: ws[0], bands: ws.map((bw) => { const b = [y, y + bw]; y += bw; return b; }) };
+  }
+
+  // Куски ряда [y0, y1] внутри многоугольника: объединение сечений по краям ряда и у вершин
+  function bandSegs(poly, y0, y1) {
+    const ys = [y0 + 0.01, y1 - 0.01];
+    poly.forEach((p) => { if (p[1] > y0 && p[1] < y1) ys.push(p[1] - 0.01, p[1] + 0.01); });
+    const iv = [];
+    ys.forEach((y) => {
+      const xs = [];
+      poly.forEach((a, i) => { const b = poly[(i + 1) % poly.length]; if ((a[1] <= y) !== (b[1] <= y)) xs.push(a[0] + (y - a[1]) / (b[1] - a[1]) * (b[0] - a[0])); });
+      xs.sort((p, q) => p - q);
+      for (let i = 0; i + 1 < xs.length; i += 2) iv.push([xs[i], xs[i + 1]]);
+    });
+    iv.sort((p, q) => p[0] - q[0]);
+    const out = [];
+    iv.forEach((s) => { const l = out[out.length - 1]; if (l && s[0] <= l[1] + 0.01) l[1] = Math.max(l[1], s[1]); else out.push(s.slice()); });
+    return out;
+  }
+
+  // Раскладка: rows — [{ segs: [[x0, x1], …] }], куски ряда между стенами и проёмами; P — длина планки.
+  // У отпиленной планки замок остаётся только на одном конце, поэтому обрезков две кучки:
+  // starts — правые концы (остались от конца ряда), ими начинают ряд; ends — левые концы
+  // (остались, когда ряд начали отпиленной планкой), ими ряд заканчивают. Короче minPiece — в отход.
+  // free — «вразбежку»: ряд начинается обрезком, если стыки не ближе shift к стыкам прошлого ряда;
+  // third / half — стыки по сетке со смещением на 1/3 или 1/2 планки, сетку сдвигаем так,
+  // чтобы у стен не оставались узкие куски.
+  function plankLayout(rows, P, o, pools) {
+    pools = pools || { starts: [], ends: [] };
+    const m = Math.min(Math.max(o.minPiece || 0, 0), P / 2), S = Math.min(Math.max(o.shift || 0, 0), P / 2);
+    const n = o.pattern === 'half' ? 2 : o.pattern === 'third' ? 3 : 0;
+    const res = { fresh: 0, reused: 0, forced: 0, pieces: [], pools };
+    const keep = (pool, l) => { if (l >= m - 1e-6 && l >= 1) pool.push(l); };
+    const take = (pool, need) => { let bi = -1; pool.forEach((l, i) => { if (l >= need - 1e-6 && (bi < 0 || l < pool[bi])) bi = i; }); return bi < 0 ? null : pool.splice(bi, 1)[0]; };
+    const startAt = (s, ri, x0) => { const a = ((s + (ri % n) * P / n - x0) % P + P) % P; return a < 1e-6 ? P : a; };
+    let phase = 0;
+    if (n) {
+      let best = -1;
+      for (let s = 0; s < P / n - 1e-9; s += 1) {
+        let worst = Infinity;
+        rows.forEach((row, ri) => row.segs.forEach(([x0, x1]) => {
+          const len = x1 - x0, a = startAt(s, ri, x0);
+          if (a >= len - 1e-6) return;
+          worst = Math.min(worst, a);
+          const b = (len - a) % P; if (b > 1e-6 && P - b > 1e-6) worst = Math.min(worst, b);
+        }));
+        if (worst > best + 1e-6) { best = worst; phase = s; }
+      }
+    }
+    let prevJ = [];
+    rows.forEach((row, ri) => {
+      const J = [];
+      row.segs.forEach(([x0, x1]) => {
+        const len = x1 - x0;
+        const piece = (a, b, kind) => res.pieces.push({ x0: a, x1: b, row: ri, kind });
+        const okJ = (a) => { for (let x = x0 + a; x < x1 - 1e-6; x += P) if (prevJ.some((q) => Math.abs(q - x) < S - 1e-6)) return false; return true; };
+        const okEnd = (a) => { if (a >= len - 1e-6) return true; const b = (len - a) % P; return b < 1e-6 || P - b < 1e-6 || b >= m - 1e-6; };
+        const lo = Math.min(m, len);
+        let a = null, kind = null;
+        if (n) {
+          a = Math.min(startAt(phase, ri, x0), len);
+          if (a >= P - 1e-6) { kind = 'full'; res.fresh++; }
+          else if (take(pools.starts, a) != null) { kind = 'reuse'; res.reused++; }
+          else { kind = 'cut'; res.fresh++; keep(pools.ends, P - a); }
+        } else {
+          // Сначала обрезок как есть, потом подрезанный, и только потом новая планка — по возможности целая
+          const fits = (from, to) => { for (let t = from; t >= to - 1e-6; t -= 1) if (okJ(t) && okEnd(t)) return t; return null; };
+          const order = pools.starts.map((l, i) => i).sort((p, q) => pools.starts[q] - pools.starts[p]);
+          for (const i of order) {
+            const l = pools.starts[i], t = Math.min(l, len);
+            if (t >= lo - 1e-6 && okJ(t) && okEnd(t)) { a = t; pools.starts.splice(i, 1); if (l > len) keep(pools.starts, l - len); break; }
+          }
+          if (a == null) for (const i of order) { const t = fits(Math.min(pools.starts[i], len) - 1, lo); if (t != null) { a = t; pools.starts.splice(i, 1); break; } }
+          if (a != null) { kind = 'reuse'; res.reused++; } else {
+            let t = fits(Math.min(P, len), lo);
+            if (t == null) { t = Math.min(P, len); res.forced++; }
+            a = t; res.fresh++; kind = t >= P - 1e-6 ? 'full' : 'cut';
+            if (kind === 'cut') keep(pools.ends, P - t);
+          }
+        }
+        piece(x0, x0 + a, kind);
+        let x = x0 + a;
+        if (x < x1 - 1e-6) J.push(x);
+        while (x1 - x >= P - 1e-6) { piece(x, x + P, 'full'); res.fresh++; x += P; if (x < x1 - 1e-6) J.push(x); }
+        const b = x1 - x;
+        if (b > 1e-6) {
+          if (take(pools.ends, b) != null) { piece(x, x1, 'reuse'); res.reused++; } else { piece(x, x1, 'cut'); res.fresh++; keep(pools.starts, P - b); }
+        }
+      });
+      prevJ = J;
+    });
+    return res;
+  }
+
+  // Ёлочка ставит короткие планки 60×12 — при возврате к обычной укладке возвращаем обычные 122×18,3
+  const LVT_BACK = (vals) => ((parseNum(vals.plankL) || 0) <= 80 && (parseNum(vals.plankW) || 0) <= 15 ? { plankL: '122', plankW: '18.3', perPack: '10' } : {});
+
   const CALCS = {
     /* --- Бетон / фундамент --- */
     concrete: {
@@ -588,18 +708,9 @@
               if (Math.sign(cross) === sgn) outer++; else inner++;
             }
           }
-          // Профили по 3 м: целые на длинные отрезки, а короткие куски раскладываем по профилям
-          // «самый длинный — в первый, куда влезет», так обрезки идут в дело, а не в мусор
+          // Профили по 3 м, обрезки раскладываются по профилям (packBars)
           const L = pos(v.profL) ? v.profL : 3;
-          const bars = (pieces) => {
-            let n = 0; const rest = [], free = [];
-            pieces.forEach((p) => { const full = Math.floor(p / L + 1e-9); n += full; if (p - full * L > 0.01) rest.push(p - full * L); });
-            rest.sort((x, y) => y - x).forEach((r) => {
-              const k = free.findIndex((f) => f >= r - 1e-9);
-              if (k >= 0) free[k] -= r; else { n++; free.push(L - r); }
-            });
-            return n;
-          };
+          const bars = (pieces) => packBars(pieces, L);
           const sideWalls = m.walls.filter((w) => w.finish === 'siding');
           const startN = bars(sideWalls.map((w) => w.len));
           const outerN = bars(Array(outer).fill(v.hei)), innerN = bars(Array(inner).fill(v.hei));
@@ -1238,6 +1349,276 @@
         cost.unshift(unitCost);
         return { main: { label: 'Нужно на пол', value: main + ' · ' + fmt(sh.area) + ' м²' }, rows, cost,
           note: 'Запас на подрезку: прямая раскладка 5%, вразбежку 10%, по диагонали 15%. Плитка считается с учётом шва: при шве 2 мм плитка 60×60 занимает 60,2×60,2. Ламинат кладут с зазором 8–10 мм у стен, он закрывается плинтусом.' };
+      },
+    },
+
+    /* --- Кварцвинил: пол и стены, раскладка планок ряд за рядом --- */
+    lvt: {
+      modeLabel: 'Где кладём',
+      modes: [
+        { id: 'rect', label: 'Пол: прямоугольная комната', fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+        ] },
+        { id: 'plan', label: 'Пол: свой план (ниши, выступы)', plan: { simple: true, presetsKey: 'ROOM_PRESETS' }, fields: [] },
+        { id: 'walls', label: 'Стены', room: true, fields: [
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '4' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '3' },
+          { id: 'hei', label: 'Высота укладки', unit: 'м (до потолка или панель)', value: '2.7' },
+        ] },
+        { id: 'area', label: 'Пол: знаю площадь', fields: [
+          { id: 'area', label: 'Площадь пола', unit: 'м²', value: '20' },
+          { id: 'per', label: 'Периметр комнаты', unit: 'м, для плинтуса; 0 = без него', value: '18' },
+        ] },
+      ],
+      common: [
+        { id: 'plankL', label: 'Длина планки', unit: 'см', value: '122' },
+        { id: 'plankW', label: 'Ширина планки', unit: 'см', value: '18.3' },
+        { id: 'perPack', label: 'Планок в упаковке', unit: 'шт', value: '10', int: true },
+        { id: 'shift', label: 'Смещение стыков соседних рядов', unit: 'см, не меньше', value: '30', group: 'free' },
+        { id: 'minPiece', label: 'Самый короткий кусок в ряду', unit: 'см', value: '20', group: 'rows' },
+        { id: 'gap', label: 'Зазор у стен', unit: 'мм', value: '5', group: 'click' },
+        { id: 'underlay', label: 'Подложка в рулоне', unit: 'м², 0 = без подложки', value: '10', group: 'click' },
+        { id: 'glueRate', label: 'Расход клея', unit: 'кг/м²', value: '0.35', group: 'glue' },
+        { id: 'glueBucket', label: 'Ведро клея', unit: 'кг', value: '13', group: 'glue' },
+        { id: 'primerRate', label: 'Расход грунтовки', unit: 'л/м²', value: '0.15', group: 'glue' },
+        { id: 'primerCan', label: 'Канистра грунтовки', unit: 'л', value: '10', group: 'glue' },
+        { id: 'skirting', label: 'Плинтус: длина планки', unit: 'м, 0 = без плинтуса', value: '2.5', group: 'floor' },
+        { id: 'doorways', label: 'Дверных проёмов', unit: 'шт: порожки и минус из плинтуса', value: '1', group: 'floor', int: true },
+        { id: 'profL', label: 'Торцевой профиль: длина', unit: 'м', value: '2.7', group: 'edges' },
+      ],
+      roomOpts: {
+        finishes: { lvt: 'Кварцвинил', none: 'Без отделки' }, defaultFinish: 'lvt', wallWord: 'Стена',
+        openingsTitle: 'Окна и двери на этой стене (вычитаются из площади):',
+        hint: 'Нажмите на стену, чтобы включить или выключить кварцвинил: например, только акцентная стена за кроватью. Окно и дверь тяните по стене.',
+      },
+      selects: [
+        { id: 'type', label: 'Кварцвинил', default: 'click', group: 'floor', choices: [
+          { id: 'click', label: 'Замковый', hint: 'плавающий пол: подложка 1–1,5 мм, зазор у стен, без клея' },
+          { id: 'glue', label: 'Клеевой', hint: 'на клей по ровному основанию: подложки и зазора нет, подходит и для стен' },
+        ] },
+        { id: 'pattern', label: 'Укладка', default: 'free', choices: [
+          { id: 'free', label: 'Вразбежку', hint: 'обрезок с конца ряда начинает следующий ряд — отхода меньше всего', sets: (vals) => LVT_BACK(vals) },
+          { id: 'third', label: 'Со смещением на треть', hint: 'стыки «лесенкой»: каждый ряд сдвинут на 1/3 планки', sets: (vals) => LVT_BACK(vals) },
+          { id: 'half', label: 'Со смещением на половину', hint: 'как кирпичная кладка: стык ровно посередине соседней планки', sets: (vals) => LVT_BACK(vals) },
+          { id: 'herring', label: 'Ёлочка', hint: 'нужны специальные планки «ёлочка» двух видов, A и B; запас 15%', sets: (vals) => ((parseNum(vals.plankL) || 0) > 80 ? { plankL: '60', plankW: '12', perPack: '20' } : {}) },
+        ] },
+        { id: 'dir', label: 'Планки', default: 'long', group: 'dir', choices: [
+          { id: 'long', label: 'Вдоль длинной стены', hint: 'стыков меньше, комната кажется длиннее' },
+          { id: 'short', label: 'Поперёк', hint: 'визуально расширяет узкую комнату' },
+        ] },
+      ],
+      prices: [
+        // Кварцвинил продают за м² (решение Алексея 12.10): за упаковки калькулятор пересчитывает сам
+        { id: 'lvtM2', label: 'Кварцвинил', unit: '₽ за м²' },
+        { id: 'underlay', label: 'Подложка', unit: '₽ за рулон', group: 'underlayP' },
+        { id: 'glue', label: 'Клей', unit: '₽ за ведро', group: 'glue' },
+        { id: 'primer', label: 'Грунтовка', unit: '₽ за канистру', group: 'glue' },
+        { id: 'skirt', label: 'Плинтус', unit: '₽ за планку', group: 'skirtP' },
+        { id: 'threshold', label: 'Порожек', unit: '₽ за шт', group: 'thr' },
+        { id: 'profile', label: 'Торцевой профиль', unit: '₽ за шт', group: 'edges' },
+      ],
+      groups(v, mode, extras, sel) {
+        const floor = mode !== 'walls', click = floor && sel.type === 'click';
+        const rows = mode !== 'area' && sel.pattern !== 'herring';
+        let edges = false;
+        if (!floor) {
+          const R = window.CalcRoom, lens = this.lens(v, mode);
+          if (R && extras.room && lens && pos(v.hei)) edges = this.wallEdges(v, R.measure(extras.room, lens, v.hei, this.roomOpts.finishes, 'lvt')).length > 0;
+        }
+        return { floor, click, glue: !click, walls: !floor, edges, rows, free: rows && sel.pattern === 'free',
+          dir: (mode === 'rect' || mode === 'plan') && sel.pattern !== 'herring',
+          underlayP: click && pos(v.underlay), skirtP: floor && pos(v.skirting) && (mode !== 'area' || pos(v.per)), thr: floor && pos(v.doorways) };
+      },
+      lens(v, mode) { return (mode === 'walls' && pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null; },
+      // Пол: контур, площадь, периметр и раскладка рядов вдоль выбранной стороны
+      floorLayout(v, mode, extras, sel, noLayout) {
+        let pts;
+        if (mode === 'rect') {
+          if (!pos(v.len) || !pos(v.wid)) return null;
+          pts = [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]];
+        } else {
+          const P = window.CalcPlan; if (!P || !extras.plan) return null;
+          const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+          if (!g.valid) return { error: 'Контур помещения пересекает сам себя — поправьте углы на плане.' };
+          pts = g.verts;
+        }
+        let area = 0, per = 0;
+        pts.forEach((a, i) => { const b = pts[(i + 1) % pts.length]; area += a[0] * b[1] - b[0] * a[1]; per += Math.hypot(b[0] - a[0], b[1] - a[1]); });
+        const out = { pts, area: Math.abs(area) / 2, per };
+        const P = v.plankL, w = v.plankW;
+        // Огромная площадь мелкой планкой подвесит браузер — тогда считаем по запасу в процентах
+        if (noLayout || !pos(P) || !pos(w) || out.area / (P * w / 10000) > 20000) return out;
+        const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+        const minX = Math.min(...xs), minY = Math.min(...ys), spanX = Math.max(...xs) - minX, spanY = Math.max(...ys) - minY;
+        const tr = (sel.dir === 'short') === (spanX >= spanY);
+        const cm = pts.map((p) => (tr ? [(p[1] - minY) * 100, (p[0] - minX) * 100] : [(p[0] - minX) * 100, (p[1] - minY) * 100]));
+        const g = sel.type === 'click' ? Math.max(0, v.gap || 0) / 10 : 0;
+        const H = (tr ? spanX : spanY) * 100 - 2 * g;
+        if (!(H > 0)) return out;
+        const bandsInfo = plankBands(H, w);
+        const rows = bandsInfo.bands.map(([b0, b1]) => {
+          const y0 = g + b0, y1 = g + b1;
+          return { y0, y1, segs: bandSegs(cm, y0, y1).map(([a, b]) => [a + g, b - g]).filter(([a, b]) => b - a > 0.5) };
+        });
+        const lay = plankLayout(rows, P, { pattern: sel.pattern, shift: v.shift, minPiece: v.minPiece });
+        return Object.assign(out, lay, { bandsInfo, rows, tr, minX, minY, along: (tr ? spanY : spanX) });
+      },
+      // Видимые края под торцевой профиль: стена рядом без кварцвинила и откосы проёмов.
+      // Внутренний угол двух покрытых стен стыкуют без профиля
+      wallEdges(v, wm) {
+        const ws = wm.walls, n = ws.length, edges = [];
+        ws.forEach((wl, i) => {
+          if (wl.finish !== 'lvt') return;
+          if (ws[(i + n - 1) % n].finish !== 'lvt') edges.push(v.hei);
+          if (ws[(i + 1) % n].finish !== 'lvt') edges.push(v.hei);
+          wl.ops.forEach((o) => {
+            edges.push(o.h, o.h);
+            if (o.y > 0.01) edges.push(o.w);
+            if (o.y + o.h < v.hei - 0.01) edges.push(o.w);
+          });
+        });
+        return edges;
+      },
+      // Стены: ряды снизу вверх, проёмы вырезают куски ряда; обрезки ходят со стены на стену
+      wallLayout(v, sel, m) {
+        const pools = { starts: [], ends: [] };
+        const bandsInfo = plankBands(v.hei * 100, v.plankW);
+        const tot = { fresh: 0, reused: 0, forced: 0, pools, bandsInfo };
+        m.walls.forEach((wl) => {
+          if (wl.finish !== 'lvt') return;
+          const L = wl.len * 100;
+          const rows = bandsInfo.bands.map(([y0, y1]) => {
+            let segs = [[0, L]];
+            wl.ops.forEach((o) => {
+              if ((o.y + o.h) * 100 <= y0 + 0.5 || o.y * 100 >= y1 - 0.5) return;
+              const ox0 = o.x * 100, ox1 = (o.x + o.w) * 100;
+              segs = segs.flatMap(([a, b]) => { if (ox1 <= a || ox0 >= b) return [[a, b]]; const r = []; if (ox0 > a) r.push([a, ox0]); if (ox1 < b) r.push([ox1, b]); return r; });
+            });
+            return { y0, y1, segs: segs.filter(([a, b]) => b - a > 0.5) };
+          });
+          const lay = plankLayout(rows, v.plankL, { pattern: sel.pattern, shift: v.shift, minPiece: v.minPiece }, pools);
+          tot.fresh += lay.fresh; tot.reused += lay.reused; tot.forced += lay.forced;
+        });
+        return tot;
+      },
+      draw(v, mode, box, view, extras) {
+        const V = window.CalcViz; const sel = this._sel || {};
+        if (!V || (mode !== 'rect' && mode !== 'plan')) return false;
+        const fl = this.floorLayout(v, mode, extras, sel, sel.pattern === 'herring');
+        if (!fl || fl.error) return false;
+        const pts = fl.pts;
+        const dims = mode === 'rect'
+          ? [{ from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 }]
+          : pts.map((a, i) => { const b = pts[(i + 1) % pts.length]; return { from: a, to: b, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 20 }; });
+        const toM = (x, y) => (fl.tr ? [fl.minX + y / 100, fl.minY + x / 100] : [fl.minX + x / 100, fl.minY + y / 100]);
+        const under = fl.pieces ? (svg, X, Y, el) => {
+          fl.pieces.forEach((p) => {
+            const r = fl.rows[p.row], a = toM(p.x0, r.y0), b = toM(p.x1, r.y1);
+            const x1 = X(a), x2 = X(b), y1 = Y(a), y2 = Y(b);
+            svg.appendChild(el('rect', { x: Math.min(x1, x2).toFixed(1), y: Math.min(y1, y2).toFixed(1), width: Math.abs(x2 - x1).toFixed(1), height: Math.abs(y2 - y1).toFixed(1), class: 'viz-plank viz-plank--' + p.kind }));
+          });
+        } : null;
+        V.shape(box, pts, dims, { title: 'Раскладка кварцвинила', under, center: under ? null : fmt(fl.area) + ' м²',
+          caption: under ? 'Светлые — целые, тёмные — отпиленные, зелёные — из обрезков' : 'Ёлочка считается по площади с запасом 15%' });
+        return true;
+      },
+      compute(v, mode, sel, extras) {
+        if (!pos(v.plankL) || !pos(v.plankW) || !pos(v.perPack)) return null;
+        const P = v.plankL, w = v.plankW, plankA = P * w / 10000, packA = plankA * v.perPack;
+        const floor = mode !== 'walls', click = floor && sel.type === 'click', herring = sel.pattern === 'herring';
+        const rows = [], cost = [];
+        let area, per = null, lay = null, wm = null;
+        if (mode === 'walls') {
+          const R = window.CalcRoom; const lens = this.lens(v, mode);
+          if (!R || !extras.room || !lens || !pos(v.hei)) return null;
+          wm = R.measure(extras.room, lens, v.hei, this.roomOpts.finishes, 'lvt');
+          if (wm.by.lvt.n === 0) return { error: 'Кварцвинил не выбран ни на одной стене — нажмите на стену на развёртке, чтобы включить.' };
+          area = wm.by.lvt.area;
+          if (!(area > 0)) return null;
+          if (!herring && area / plankA <= 20000) lay = this.wallLayout(v, sel, wm);
+        } else if (mode === 'area') {
+          if (!pos(v.area)) return null;
+          area = v.area; per = v.per || 0;
+        } else {
+          const fl = this.floorLayout(v, mode, extras, sel, herring);
+          if (fl && fl.error) return fl;
+          if (!fl) return null;
+          area = fl.area; per = fl.per;
+          if (fl.pieces) lay = fl;
+        }
+        const pct = { free: 5, third: 7, half: 10, herring: 15 }[sel.pattern] || 5;
+        let planks = lay ? lay.fresh : Math.ceil(area * (1 + pct / 100) / plankA - 1e-9);
+        if (herring && planks % 2) planks++;
+        const packs = Math.ceil(planks / v.perPack);
+        const spare = packs * v.perPack - planks;
+        rows.push(['Планок', fmtInt(planks) + ' шт ' + fmt(P) + '×' + fmt(w) + ' см' + (lay ? ' — по раскладке' : ' — с запасом ' + pct + '%') + (herring ? ', поровну A и B' : '')]);
+        rows.push(['Упаковок', fmtInt(packs) + ' по ' + fmtInt(v.perPack) + ' шт (' + fmt(packA) + ' м²)' + (spare ? ', ' + fmtInt(spare) + ' ' + plural(spare, 'планка останется', 'планки останутся', 'планок останется') + ' в запас' : '')]);
+        if (lay) {
+          const b = lay.bandsInfo;
+          let rowsTxt = fmtInt(b.n) + ' ' + plural(b.n, 'ряд', 'ряда', 'рядов') + ' по ' + fmt(w) + ' см';
+          if (b.balanced) rowsTxt += '; ' + (floor ? 'первый и последний' : 'нижний и верхний') + ' режут вдоль, по ' + fmt(b.edge, 1) + ' см: иначе последний вышел бы полоской ' + fmt(b.last, 1) + ' см';
+          else if (b.n > 1 && b.last < w - 0.05) rowsTxt += '; последний — ' + fmt(b.last, 1) + ' см, планки режут вдоль';
+          rows.push(['Рядов', rowsTxt]);
+          rows.push(['Стыки', sel.pattern === 'free' ? 'соседние ряды не ближе ' + fmt(Math.min(v.shift || 0, P / 2)) + ' см друг к другу, кусок у стены не короче ' + fmt(Math.min(v.minPiece || 0, P / 2)) + ' см'
+            : 'каждый ряд сдвинут на ' + fmt(P / (sel.pattern === 'half' ? 2 : 3), 1) + ' см; сетку стыков калькулятор сдвинул так, чтобы у стен не было узких кусков']);
+          if (lay.reused) rows.push(['Из обрезков', fmtInt(lay.reused) + ' ' + plural(lay.reused, 'кусок', 'куска', 'кусков') + ' взяты из обрезков прошлых рядов — новых планок на них не ушло']);
+          const waste = planks * plankA - area;
+          rows.push(['Отход', fmt(Math.max(0, waste)) + ' м², ' + fmt(Math.max(0, waste) / area * 100, 1) + '% от площади' + (click ? ' (с полосой зазора у стен)' : '')]);
+          const left = lay.pools.starts.length + lay.pools.ends.length;
+          if (left) rows.push(['Останутся обрезки', fmtInt(left) + ' ' + plural(left, 'годный кусок', 'годных куска', 'годных кусков') + ' — пригодятся при ремонте']);
+          if (lay.forced) rows.push(['⚠ Смещение', 'в ' + fmtInt(lay.forced) + ' ' + plural(lay.forced, 'ряду', 'рядах', 'рядах') + ' не вышло выдержать смещение и длину куска — уменьшите их или выберите смещение на треть']);
+        }
+        rows.push(['Площадь', fmt(area) + ' м²' + (wm ? ': ' + fmtInt(wm.by.lvt.n) + ' ' + plural(wm.by.lvt.n, 'стена', 'стены', 'стен') + ' до ' + fmt(v.hei) + ' м' + (wm.openings ? ', проёмы ' + fmt(wm.openings) + ' м² вычтены' : '') : '') + (per ? ', периметр ' + fmt(per) + ' м' : '')]);
+        cost.push({ label: 'Кварцвинил, ' + fmtInt(packs) + ' упак.', amount: Math.round(packs * packA * 100) / 100, unit: 'м²', priceId: 'lvtM2' });
+        if (click) {
+          if (pos(v.underlay)) {
+            const rolls = Math.ceil(area / v.underlay);
+            rows.push(['Подложка', fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.underlay) + ' м², только тонкая 1–1,5 мм: на толстой замки ломаются']);
+            cost.push({ label: 'Подложка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'underlay' });
+          }
+          rows.push(['Зазор у стен', fmt(v.gap || 0) + ' мм по периметру, его закроет плинтус: замковый кварцвинил плавающий']);
+        } else {
+          const glueKg = area * (v.glueRate || 0);
+          if (glueKg > 0) {
+            const buckets = pos(v.glueBucket) ? Math.ceil(glueKg / v.glueBucket) : null;
+            rows.push(['Клей', fmt(glueKg) + ' кг' + (buckets != null ? ' ≈ ' + fmtInt(buckets) + ' ' + plural(buckets, 'ведро', 'ведра', 'вёдер') + ' по ' + fmt(v.glueBucket) + ' кг' : '')]);
+            if (buckets != null) cost.push({ label: 'Клей', amount: buckets, unit: plural(buckets, 'ведро', 'ведра', 'вёдер'), priceId: 'glue' });
+          }
+          const primerL = area * (v.primerRate || 0);
+          if (primerL > 0) {
+            const cans = pos(v.primerCan) ? Math.ceil(primerL / v.primerCan) : null;
+            rows.push(['Грунтовка', fmt(primerL) + ' л' + (cans != null ? ' ≈ ' + fmtInt(cans) + ' ' + plural(cans, 'канистра', 'канистры', 'канистр') + ' по ' + fmt(v.primerCan) + ' л' : '') + ': под клей основание грунтуют обязательно']);
+            if (cans != null) cost.push({ label: 'Грунтовка', amount: cans, unit: plural(cans, 'канистра', 'канистры', 'канистр'), priceId: 'primer' });
+          }
+          rows.push([floor ? 'Основание' : 'Стены', 'ровные и сухие: перепад не больше 2 мм на 2 м, ' + (floor ? 'иначе нужна наливная смесь — клеевой повторит каждую неровность' : 'по штукатурке или гипсокартону; неровности проступят через планку')]);
+        }
+        if (floor) {
+          const doors = v.doorways || 0;
+          if (pos(v.skirting) && per > 0) {
+            const skirtLen = Math.max(0, per - doors * 0.9);
+            const sk = Math.ceil(skirtLen / v.skirting - 1e-9);
+            rows.push(['Плинтус', fmt(skirtLen) + ' м → ' + fmtInt(sk) + ' ' + plural(sk, 'планка', 'планки', 'планок') + ' по ' + fmt(v.skirting) + ' м']);
+            cost.push({ label: 'Плинтус', amount: sk, unit: plural(sk, 'планка', 'планки', 'планок'), priceId: 'skirt' });
+          }
+          if (doors > 0) {
+            rows.push(['Порожки', fmtInt(doors) + ' шт в дверные проёмы' + (click ? ': плавающий пол между комнатами режут, иначе его поведёт' : '')]);
+            cost.push({ label: 'Порожки', amount: doors, unit: 'шт', priceId: 'threshold' });
+          }
+        } else {
+          const edges = this.wallEdges(v, wm);
+          const eLen = edges.reduce((s, x) => s + x, 0);
+          if (eLen > 0 && pos(v.profL)) {
+            const bars = packBars(edges, v.profL);
+            rows.push(['Торцевой профиль', fmt(eLen) + ' м → ' + fmtInt(bars) + ' шт по ' + fmt(v.profL) + ' м: края у стен без кварцвинила и вокруг окон и дверей']);
+            cost.push({ label: 'Торцевой профиль', amount: bars, unit: 'шт', priceId: 'profile' });
+          }
+          wm.walls.forEach((wl) => rows.push(['Стена ' + (wl.i + 1) + ' · ' + this.roomOpts.finishes[wl.finish], fmt(wl.net) + ' м²' + (wl.count ? ' (проёмов ' + wl.count + ')' : '')]));
+        }
+        const main = fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' · ' + fmt(area) + ' м²';
+        return { main: { label: floor ? 'Нужно на пол' : 'Нужно на стены', value: main }, rows, cost,
+          note: (lay ? 'Счёт по раскладке: каждый ряд собран из целых планок и обрезков, поэтому запас точнее процентов. ' : 'Запас в процентах: вразбежку 5%, на треть 7%, на половину 10%, ёлочка 15%. ')
+            + 'Запаса на брак тут нет — если кладёте впервые, возьмите ещё упаковку. Всё берите из одной партии: у разных партий расходится оттенок.' };
       },
     },
 
