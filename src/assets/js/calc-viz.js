@@ -64,7 +64,20 @@
     // Масштаб НЕ зависит от угла: берём радиус модели вокруг её центра, иначе при
     // вращении картинка «дышит» и кажется, что искажается.
     const prs = boxes.map(toPrism);
-    const xs = prs.flatMap((b) => b.poly.map((q) => q[0])), ys = prs.flatMap((b) => b.poly.map((q) => q[1])), zs = prs.flatMap((b) => [b.z, b.z + b.dz]);
+    // Линии (поручень): ломаные [[x,y,z],…]; режем на короткие куски, чтобы каждый
+    // встал в общий порядок рисования рядом с ближайшими брусками
+    const segs = [];
+    (opts.lines || []).forEach((ln) => {
+      for (let i = 1; i < ln.pts.length; i++) {
+        const a = ln.pts[i - 1], b = ln.pts[i], k = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.25));
+        for (let j = 0; j < k; j++) {
+          const at = (f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+          segs.push({ a: at(j / k), b: at((j + 1) / k), cls: ln.cls || 'viz-rail' });
+        }
+      }
+    });
+    const lp = segs.flatMap((sg) => [sg.a, sg.b]);
+    const xs = prs.flatMap((b) => b.poly.map((q) => q[0])).concat(lp.map((q) => q[0])), ys = prs.flatMap((b) => b.poly.map((q) => q[1])).concat(lp.map((q) => q[1])), zs = prs.flatMap((b) => [b.z, b.z + b.dz]).concat(lp.map((q) => q[2]));
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
     const gm = opts.ground ? Math.max(0.6, (Math.max(...xs) - Math.min(...xs)) * 0.18) : 0;
     const rx = (Math.max(...xs) - Math.min(...xs)) / 2 + gm, ry = (Math.max(...ys) - Math.min(...ys)) / 2 + gm, rz = (Math.max(...zs) - Math.min(...zs)) / 2;
@@ -94,8 +107,9 @@
       const cx2 = b.poly.reduce((s, q) => s + q[0], 0) / b.poly.length, cy2 = b.poly.reduce((s, q) => s + q[1], 0) / b.poly.length;
       const c = pr([cx2, cy2, b.z + b.dz / 2]);
       return { b, depth: c.depth };
-    }).sort((a, b) => a.depth - b.depth);
-    items.forEach(({ b }) => {
+    }).concat(segs.map((sg) => ({ sg, depth: pr([(sg.a[0] + sg.b[0]) / 2, (sg.a[1] + sg.b[1]) / 2, (sg.a[2] + sg.b[2]) / 2]).depth }))).sort((a, b) => a.depth - b.depth);
+    items.forEach(({ b, sg }) => {
+      if (sg) { const a = pr(sg.a), q = pr(sg.b); svg.appendChild(el('line', { x1: X(a).toFixed(1), y1: Y(a).toFixed(1), x2: X(q).toFixed(1), y2: Y(q).toFixed(1), class: sg.cls })); return; }
       prismFaces(b).forEach((fc) => {
         const p = fc.pts.map(pr);
         // площадь со знаком: грань видна, если её обход на экране против часовой (с учётом порядка вершин)

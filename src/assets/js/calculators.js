@@ -776,7 +776,7 @@
         { id: 'thick', label: 'Толщина ступени', unit: 'мм', value: '40', group: 'steps' },
         { id: 'slabT', label: 'Толщина плиты марша', unit: 'см, под ступенями', value: '15', group: 'concrete' },
         { id: 'rebarRate', label: 'Арматуры на 1 м³ бетона', unit: 'кг', value: '90', group: 'concrete' },
-        { id: 'balusterStep', label: 'Шаг балясин', unit: 'м', value: '0.5' },
+        { id: 'balusterStep', label: 'Шаг балясин', unit: 'м, пусто — без перил', value: '0.5' },
         { id: 'headroom', label: 'Нужный просвет над головой', unit: 'м', value: '2' },
         { id: 'slab', label: 'Толщина перекрытия', unit: 'м, для проёма', value: '0.2' },
       ],
@@ -789,6 +789,11 @@
         { id: 'risers', label: 'Подступенки', default: 'yes', group: 'steps', choices: [
           { id: 'yes', label: 'Есть', hint: 'вертикальные доски между ступенями закрывают лестницу' },
           { id: 'no', label: 'Открытая лестница', hint: 'без подступенков: легче и светлее' },
+        ] },
+        { id: 'rails', label: 'Перила', default: 'inner', choices: [
+          { id: 'inner', label: 'С одной стороны', hint: 'у лестницы с поворотом — по внутренней стороне, там поручень короче' },
+          { id: 'outer', label: 'С другой стороны', hint: 'у лестницы с поворотом — по внешней стороне, поручень обходит площадку' },
+          { id: 'both', label: 'С двух сторон', hint: 'лестница стоит свободно, стены рядом нет' },
         ] },
       ],
       prices: [
@@ -829,6 +834,34 @@
         const split = Math.max(1, Math.min(steps - 2, Math.round(pos(v.split) ? v.split : Math.ceil(steps / 2))));
         return { n, riser, steps, run: run / 100, comfort, angle, H, split, upper: steps - split - 1 };
       },
+      // Линии поручня по кромкам ступеней — одни и те же для схемы и для расчёта.
+      // С поворотом внешний поручень обходит площадку по двум краям, внутренний
+      // встречается во внутреннем углу; перед верхним маршем подъём на ступень («гусёк»).
+      railPaths(c, v, mode, side) {
+        const t = v.tread / 100, r = c.riser / 100, H = v.height, w = v.width || 0.9;
+        const build = (outer) => {
+          if (mode === 'straight') { const y = outer ? 0 : w; return [[0, y, r], [c.steps * t, y, H]]; }
+          const px = c.split * t, landZ = (c.split + 1) * r, up = c.upper;
+          if (outer) return [[0, 0, r], [px, 0, landZ], [px + w, 0, landZ], [px + w, w, landZ]].concat(up > 0 ? [[px + w, w, landZ + r], [px + w, w + up * t, H]] : []);
+          return [[0, w, r], [px, w, landZ]].concat(up > 0 ? [[px, w, landZ + r], [px, w + up * t, H]] : []);
+        };
+        return side === 'both' ? [build(false), build(true)] : [build(side === 'outer')];
+      },
+      // Балясины: шаг по каждому отрезку отдельно, чтобы на углах и переломах стояла стойка.
+      // На «гуське» (подъём на месте) отдельной не нужно — там уже стоит угловая.
+      balusters(paths, stepM) {
+        const out = [];
+        paths.forEach((pts) => {
+          out.push(pts[0]);
+          for (let i = 1; i < pts.length; i++) {
+            const a = pts[i - 1], b = pts[i], plan = Math.hypot(b[0] - a[0], b[1] - a[1]);
+            if (plan < 1e-9) continue;
+            const n = Math.max(1, Math.ceil(Math.hypot(plan, b[2] - a[2]) / stepM - 1e-9));
+            for (let k = 1; k <= n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n, a[2] + (b[2] - a[2]) * k / n]);
+          }
+        });
+        return out;
+      },
       draw(v, mode, box, view) {
         const V = window.CalcViz; const c = this.calc(v, mode);
         if (!V || !c || !pos(v.width) || (mode !== 'straight' && c.steps < 3)) return false;
@@ -849,6 +882,13 @@
             prisms.push({ poly: [[px, y], [px + w, y], [px + w, y + t], [px, y + t]], z: (split + 2 + i) * r - th, dz: th });
           }
         }
+        // Перила: поручень на 0,9 м над кромками ступеней, балясины от ступени до поручня
+        const lines = [];
+        if (pos(v.balusterStep)) {
+          const RH = 0.9, b = 0.04, paths = this.railPaths(c, v, mode, (this._sel || {}).rails);
+          paths.forEach((pts) => lines.push({ pts: pts.map((q) => [q[0], q[1], q[2] + RH]) }));
+          this.balusters(paths, v.balusterStep).forEach((q) => prisms.push({ poly: [[q[0] - b / 2, q[1] - b / 2], [q[0] + b / 2, q[1] - b / 2], [q[0] + b / 2, q[1] + b / 2], [q[0] - b / 2, q[1] + b / 2]], z: q[2], dz: RH }));
+        }
         const dims = [{ from: [0, 0, 0], to: [0, 0, v.height], label: 'высота ' + fmt(v.height) + ' м', offset: -28 }];
         if (mode === 'straight') dims.push({ from: [0, 0, 0], to: [c.run, 0, 0], label: 'по полу ' + fmt(c.run) + ' м', offset: 24 });
         else {
@@ -857,7 +897,7 @@
           dims.push({ from: [0, 0, 0], to: [px + w, 0, 0], label: 'нижний марш ' + fmt(px) + ' м', offset: 24 });
           dims.push({ from: [px + w, 0, 0], to: [px + w, w + upper, 0], label: 'верхний ' + fmt(upper) + ' м', offset: -24 });
         }
-        V.iso(box, prisms, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, caption: (mode === 'straight' ? c.steps : c.steps - 1) + ' ' + plural(mode === 'straight' ? c.steps : c.steps - 1, 'ступень', 'ступени', 'ступеней') + (mode === 'straight' ? '' : ' и площадка') + ' по ' + fmt(c.riser) + ' см, уклон ' + fmt(c.angle) + '°. Потяните, чтобы повернуть.' });
+        V.iso(box, prisms, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, lines, caption: (mode === 'straight' ? c.steps : c.steps - 1) + ' ' + plural(mode === 'straight' ? c.steps : c.steps - 1, 'ступень', 'ступени', 'ступеней') + (mode === 'straight' ? '' : ' и площадка') + ' по ' + fmt(c.riser) + ' см, уклон ' + fmt(c.angle) + '°. Потяните, чтобы повернуть.' });
         return true;
       },
       compute(v, mode, sel) {
@@ -923,10 +963,12 @@
           cost.push({ label: 'Фанера', amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов'), priceId: 'plywood' });
           cost.push({ label: 'Накладки на ступени', amount: treads, unit: 'шт', priceId: 'clad' });
         }
-        const railLen = mode === 'straight' ? Math.hypot(c.run, v.height) : Math.hypot(c.run, v.height) + (v.width || 0.9);
         if (pos(v.balusterStep)) {
-          const bal = Math.ceil(railLen / v.balusterStep) + 1;
-          rows.push(['Ограждение', 'поручень ' + fmt(railLen) + ' м, балясины ' + fmtInt(bal) + ' шт с шагом ' + fmt(v.balusterStep) + ' м']);
+          const paths = this.railPaths(c, v, mode, sel.rails);
+          const railLen = paths.reduce((s2, pts) => s2 + pts.slice(1).reduce((s3, q, i) => s3 + Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1], q[2] - pts[i][2]), 0), 0);
+          const bal = this.balusters(paths, v.balusterStep).length;
+          const side = sel.rails === 'both' ? 'с двух сторон' : !turn ? 'с одной стороны' : sel.rails === 'outer' ? 'по внешней стороне' : 'по внутренней стороне';
+          rows.push(['Ограждение', 'поручень ' + fmt(railLen) + ' м ' + side + ', балясины ' + fmtInt(bal) + ' шт с шагом ' + fmt(v.balusterStep) + ' м. Длина — по кромкам ступеней, как на схеме; берите с запасом на свесы']);
           cost.push({ label: 'Балясины', amount: bal, unit: 'шт', priceId: 'baluster' });
           cost.push({ label: 'Поручень', amount: Math.ceil(railLen * 10) / 10, unit: 'м', priceId: 'rail' });
         }
