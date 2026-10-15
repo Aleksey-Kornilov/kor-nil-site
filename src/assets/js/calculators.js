@@ -1111,9 +1111,11 @@
           { id: 'dB', label: 'Стало', unit: '', value: '2875' },
         ] },
         { id: 'vat', label: 'НДС', fields: [
-          { id: 'vA', label: 'Сумма', unit: '', value: '120000' },
-          { id: 'vRate', label: 'Ставка НДС', unit: '%', value: '20' },
-        ] },
+          { id: 'vA', label: 'Сумма', unit: '', value: '122000' },
+          { id: 'vRate', label: 'Ставка НДС', unit: '%', value: '22' },
+        ], presets: { label: 'Ставки с 2026 года', fieldId: 'vRate', unit: '%', items: [
+          ['Основная', '22'], ['Льготная', '10'], ['УСН', '7'], ['УСН', '5'],
+        ] } },
         { id: 'discount', label: 'Скидка или наценка', fields: [
           { id: 'scA', label: 'Цена', unit: '', value: '4990' },
           { id: 'scP', label: 'Скидка', unit: '%', value: '30' },
@@ -1175,7 +1177,7 @@
           return { main: { label: 'НДС ' + fmt(v.vRate) + '% в сумме', value: f(tax) }, rows: [
             ['С НДС', f(v.vA)], ['Без НДС', f(v.vA - tax)],
             ['Формула', fmt(v.vA) + ' × ' + fmt(v.vRate) + ' ÷ (100 + ' + fmt(v.vRate) + ')'],
-          ], note: 'Выделение из суммы: делим на 120 и умножаем на 20 при ставке 20%. Просто вычесть 20% нельзя — получится меньше.', cost: [] };
+          ], note: 'Выделение из суммы: делим на ' + fmt(100 + v.vRate) + ' и умножаем на ' + fmt(v.vRate) + '. Просто вычесть ' + fmt(v.vRate) + '% нельзя — получится больше налога, чем на самом деле.', cost: [] };
         }
         if (!num(v.scA) || !num(v.scP)) return null;
         const off = v.scA * v.scP / 100;
