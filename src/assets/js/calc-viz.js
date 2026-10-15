@@ -53,6 +53,8 @@
 
   function iso(container, boxes, dims, opts) {
     opts = opts || {};
+    // Тысячи деталей на схеме не разглядеть, а браузер на них падает — такую схему не рисуем
+    if (boxes.length > 1500) { const old = container.querySelector('svg'); if (old) old.remove(); return; }
     const yaw = opts.yaw == null ? -0.6 : opts.yaw;
     const pitch = opts.pitch == null ? DEFAULT_PITCH : Math.max(0.12, Math.min(1.45, opts.pitch));
     const zoom = opts.zoom == null ? 1 : Math.max(0.4, Math.min(4, opts.zoom));

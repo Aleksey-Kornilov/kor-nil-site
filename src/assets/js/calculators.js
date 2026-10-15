@@ -831,7 +831,7 @@
       },
       draw(v, mode, box, view) {
         const V = window.CalcViz; const c = this.calc(v, mode);
-        if (!V || !c || !pos(v.width)) return false;
+        if (!V || !c || !pos(v.width) || (mode !== 'straight' && c.steps < 3)) return false;
         const t = (v.tread || 0) / 100, r = c.riser / 100, w = v.width, th = (v.thick || 40) / 1000;
         const prisms = [];
         if (mode === 'straight') {
@@ -864,6 +864,7 @@
         const c = this.calc(v, mode);
         if (!c) return null;
         if (c.riser < 12 || c.riser > 22) return { error: 'Высота ступени получилась ' + fmt(c.riser) + ' см. Удобный диапазон 15–19 см, допустимо 12–22. Измените желаемую высоту ступени.' };
+        if (mode !== 'straight' && c.steps < 3) return { error: 'Высота ' + fmt(v.height) + ' м — это всего ' + c.n + ' ' + plural(c.n, 'подъём', 'подъёма', 'подъёмов') + ', а двум маршам с площадкой нужно хотя бы 4. Здесь подойдёт прямая лестница.' };
         const rows = [], cost = [];
         const turn = mode !== 'straight';
         const treads = turn ? c.steps - 1 : c.steps;   // с поворотом одну ступень заменяет площадка
@@ -2725,7 +2726,7 @@
           if (cans != null) cost.push({ label: 'Грунтовка', amount: cans, unit: plural(cans, 'канистра', 'канистры', 'канистр'), priceId: 'primer' });
         }
         if (beacons) {
-          rows.push(['Маяки', fmtInt(beacons.count) + ' шт с шагом ' + fmt(v.beaconStep) + ' м → ' + fmtInt(beacons.profiles) + ' ' + plural(beacons.profiles, 'профиль', 'профиля', 'профилей') + ' по ' + fmt(v.beaconLen) + ' м']);
+          rows.push(['Маяки', fmtInt(beacons.count) + ' шт с шагом ' + fmt(v.beaconStep) + ' м → ' + fmtInt(beacons.profiles) + ' ' + plural(beacons.profiles, 'профиль', 'профиля', 'профилей') + (pos(v.beaconLen) ? ' по ' + fmt(v.beaconLen) + ' м' : '')]);
           cost.push({ label: 'Маяки', amount: beacons.profiles, unit: plural(beacons.profiles, 'профиль', 'профиля', 'профилей'), priceId: 'beacon' });
         }
         wallRows.forEach((r) => rows.push(r));
@@ -3589,7 +3590,9 @@
     let lastViz = null;
     function drawViz() {
       if (!def.draw || !lastViz) { vizBox.hidden = true; return; }
-      const ok = def.draw(lastViz.v, state.mode, vizBox, { yaw: state.yaw, pitch: state.pitch, zoom: state.zoom }, lastViz.extras);
+      // Сбой схемы не должен останавливать расчёт: иначе на экране остаются прошлые цифры
+      let ok = false;
+      try { ok = def.draw(lastViz.v, state.mode, vizBox, { yaw: state.yaw, pitch: state.pitch, zoom: state.zoom }, lastViz.extras); } catch (e) { ok = false; }
       vizBox.hidden = !ok;
       if (ok && !vizBox.querySelector('svg')) vizBox.hidden = true;
     }
