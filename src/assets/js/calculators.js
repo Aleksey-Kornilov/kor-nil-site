@@ -207,7 +207,17 @@
   // Ёлочка ставит короткие планки 60×12 — при возврате к обычной укладке возвращаем обычные 122×18,3
   const LVT_BACK = (vals) => ((parseNum(vals.plankL) || 0) <= 80 && (parseNum(vals.plankW) || 0) <= 15 ? { plankL: '122', plankW: '18.3', perPack: '10' } : {});
 
-  // Забор: свободные куски стороны между воротами и калитками
+  // Доски/планки раскладки на плане пола: целые, отпиленные и из обрезков — разным цветом
+function plankUnder(fl) {
+  if (!fl || !fl.pieces) return null;
+  const toM = (x, y) => (fl.tr ? [fl.minX + y / 100, fl.minY + x / 100] : [fl.minX + x / 100, fl.minY + y / 100]);
+  return (svg, X, Y, el) => fl.pieces.forEach((p) => {
+    const r = fl.rows[p.row], a = toM(p.x0, r.y0), b = toM(p.x1, r.y1);
+    const x1 = X(a), x2 = X(b), y1 = Y(a), y2 = Y(b);
+    svg.appendChild(el('rect', { x: Math.min(x1, x2).toFixed(1), y: Math.min(y1, y2).toFixed(1), width: Math.abs(x2 - x1).toFixed(1), height: Math.abs(y2 - y1).toFixed(1), class: 'viz-plank viz-plank--' + p.kind }));
+  });
+}
+// Забор: свободные куски стороны между воротами и калитками
 function fenceSegs(len, ops) {
   const cuts = ops.map((o) => [o.x, o.x + o.w]).sort((p, q) => p[0] - q[0]);
   let at = 0; const out = [];
@@ -1336,6 +1346,9 @@ const CALCS = {
         { id: 'boardW', label: 'Ширина доски', unit: 'см', value: '19', group: 'board' },
         { id: 'packM2', label: 'В упаковке', unit: 'м²', value: '2.1', group: 'board' },
         { id: 'underlay', label: 'Подложка в рулоне', unit: 'м²', value: '10', group: 'board' },
+        { id: 'lamShift', label: 'Смещение стыков соседних рядов', unit: 'см, не меньше', value: '40', group: 'lamFree' },
+        { id: 'lamMin', label: 'Кусок у стены', unit: 'см, не короче', value: '30', group: 'board' },
+        { id: 'lamGap', label: 'Зазор у стен', unit: 'мм', value: '10', group: 'board' },
         { id: 'lvtPack', label: 'В упаковке', unit: 'м²', value: '2.23', group: 'lvt' },
         { id: 'lvtL', label: 'Длина планки', unit: 'см', value: '122', group: 'lvt' },
         { id: 'lvtW', label: 'Ширина планки', unit: 'см', value: '18', group: 'lvt' },
@@ -1359,7 +1372,16 @@ const CALCS = {
           { id: 'lvtGlue', label: 'Кварцвинил клеевой', hint: 'на клей по ровному основанию: подложки нет, зазор не нужен' },
           { id: 'roll', label: 'Линолеум / ковролин', hint: 'рулон одним куском, без швов' },
         ] },
-        { id: 'layout', label: 'Раскладка', default: 'straight', choices: [
+        { id: 'lamPattern', label: 'Как класть ламинат', default: 'free', group: 'board', choices: [
+          { id: 'free', label: 'Вразбежку', hint: 'обрезок с конца ряда начинает следующий — отход меньше всего' },
+          { id: 'third', label: 'Со смещением на треть', hint: 'стыки по ровной сетке, ряд сдвинут на треть доски' },
+          { id: 'half', label: 'На половину', hint: 'кирпичиком: ряд сдвинут на полдоски, отход больше' },
+        ] },
+        { id: 'lamDir', label: 'Доски вдоль', default: 'long', group: 'board', choices: [
+          { id: 'long', label: 'Длинной стены', hint: 'обычно так: меньше стыков' },
+          { id: 'short', label: 'Короткой стены', hint: 'визуально расширяет узкую комнату' },
+        ] },
+        { id: 'layout', label: 'Раскладка', default: 'straight', group: 'pctLayout', choices: [
           { id: 'straight', label: 'Прямая', hint: 'запас 5%' },
           { id: 'offset', label: 'Со смещением (вразбежку)', hint: 'запас 10%' },
           { id: 'diagonal', label: 'По диагонали', hint: 'запас 15%: много подрезки по углам' },
@@ -1381,10 +1403,15 @@ const CALCS = {
       groups(v, mode, extras, sel) {
         const m = sel.material;
         const lvt = m === 'lvtClick' || m === 'lvtGlue';
-        return { tile: m === 'tile', board: m === 'board', roll: m === 'roll',
+        return { tile: m === 'tile', board: m === 'board', roll: m === 'roll', pctLayout: m !== 'board' && m !== 'roll', lamFree: m === 'board' && sel.lamPattern !== 'third' && sel.lamPattern !== 'half',
           lvt, lvtGlue: m === 'lvtGlue', lvtClick: m === 'lvtClick', skirt: mode !== 'bath' };
       },
       lens(v, mode) { return (mode === 'bath' && pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null; },
+      // Ламинат по доскам — той же раскладкой, что кварцвинил (CALCS.lvt.floorLayout)
+      boardLayout(v, mode, extras, sel) {
+        const vm = { len: v.len, wid: v.wid, plankL: v.boardL, plankW: v.boardW, gap: v.lamGap == null ? 10 : v.lamGap, shift: v.lamShift, minPiece: v.lamMin };
+        return CALCS.lvt.floorLayout(vm, mode === 'plan' ? 'plan' : 'rect', extras, { type: 'click', pattern: sel.lamPattern || 'free', dir: sel.lamDir || 'long' });
+      },
       // Площадь стен под плиткой минус двери и окна
       wallsArea(v, mode, extras) {
         if (mode !== 'bath') return null;
@@ -1407,7 +1434,11 @@ const CALCS = {
         const dims = (mode === 'rect' || mode === 'bath')
           ? [{ from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 }]
           : sh.pts.map((a, i) => { const b = sh.pts[(i + 1) % sh.pts.length]; return { from: a, to: b, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 20 }; });
-        V.shape(box, sh.pts, dims, { center: fmt(sh.area) + ' м²', title: 'Пол', caption: 'Площадь пола ' + fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м' });
+        const sel = this._sel || {};
+        const fl = sel.material === 'board' ? this.boardLayout(v, mode, extras, sel) : null, under = fl && !fl.error ? plankUnder(fl) : null;
+        V.shape(box, sh.pts, dims, under
+          ? { title: 'Раскладка ламината', under, caption: 'Светлые — целые, тёмные — отпиленные, зелёные — из обрезков' }
+          : { center: fmt(sh.area) + ' м²', title: 'Пол', caption: 'Площадь пола ' + fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м' });
         return true;
       },
       compute(v, mode, sel, extras) {
@@ -1471,14 +1502,34 @@ const CALCS = {
           }
           unitCost = { label: 'Кварцвинил, ' + fmtInt(packs) + ' упак.', amount: Math.round(packs * v.lvtPack * 100) / 100, unit: 'м²', priceId: 'lvtM2' };
         } else if (m === 'board') {
-          if (!pos(v.packM2)) return null;
-          const packs = Math.ceil(sh.area * waste / v.packM2);
-          const boards = (pos(v.boardL) && pos(v.boardW)) ? Math.ceil(sh.area * waste / (v.boardL / 100 * v.boardW / 100)) : null;
+          if (!pos(v.packM2) || !pos(v.boardL) || !pos(v.boardW)) return null;
+          // Раскладка ряд за рядом — та же, что у кварцвинила; на огромной площади — по запасу в процентах
+          const fl = this.boardLayout(v, mode, extras, sel), lay = fl && !fl.error && fl.pieces ? fl : null;
+          const bA = v.boardL * v.boardW / 10000, perPack = Math.max(1, Math.round(v.packM2 / bA));
+          const pct = { free: 5, third: 7, half: 10 }[sel.lamPattern] || 5;
+          const boards = lay ? lay.fresh : Math.ceil(sh.area * (1 + pct / 100) / bA - 1e-9);
+          const packs = Math.ceil(boards / perPack), spare = packs * perPack - boards;
           const rolls = pos(v.underlay) ? Math.ceil(sh.area / v.underlay) : null;
           main = fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок');
-          rows.push(['Ламинат', fmtInt(packs) + ' упак. по ' + fmt(v.packM2) + ' м² (площадь ' + fmt(sh.area) + ' м², запас ' + wastePct + '%)' + (boards ? ', это ≈ ' + fmtInt(boards) + ' ' + plural(boards, 'доска', 'доски', 'досок') : '')]);
+          rows.push(['Ламинат', fmtInt(boards) + ' ' + plural(boards, 'доска', 'доски', 'досок') + ' ' + fmt(v.boardL) + '×' + fmt(v.boardW) + ' см' + (lay ? ' — по раскладке' : ' — с запасом ' + pct + '%')]);
+          rows.push(['Упаковок', fmtInt(packs) + ' по ' + perPack + ' ' + plural(perPack, 'доске', 'доски', 'досок') + ' (' + fmt(v.packM2) + ' м²)' + (spare ? ', ' + fmtInt(spare) + ' ' + plural(spare, 'доска останется', 'доски останутся', 'досок останется') + ' в запас' : '')]);
+          if (lay) {
+            const b = lay.bandsInfo;
+            let rowsTxt = fmtInt(b.n) + ' ' + plural(b.n, 'ряд', 'ряда', 'рядов') + ' по ' + fmt(v.boardW) + ' см';
+            if (b.balanced) rowsTxt += '; первый и последний режут вдоль, по ' + fmt(b.edge, 1) + ' см: иначе последний вышел бы полоской ' + fmt(b.last, 1) + ' см';
+            else if (b.n > 1 && b.last < v.boardW - 0.05) rowsTxt += '; последний — ' + fmt(b.last, 1) + ' см, доски режут вдоль';
+            rows.push(['Рядов', rowsTxt]);
+            rows.push(['Стыки', (sel.lamPattern || 'free') === 'free' ? 'соседние ряды не ближе ' + fmt(Math.min(v.lamShift || 0, v.boardL / 2)) + ' см друг к другу, кусок у стены не короче ' + fmt(Math.min(v.lamMin || 0, v.boardL / 2)) + ' см'
+              : 'каждый ряд сдвинут на ' + fmt(v.boardL / (sel.lamPattern === 'half' ? 2 : 3), 1) + ' см; сетку стыков калькулятор сдвинул так, чтобы у стен не было узких кусков']);
+            if (lay.reused) rows.push(['Из обрезков', fmtInt(lay.reused) + ' ' + plural(lay.reused, 'кусок', 'куска', 'кусков') + ' взяты из обрезков прошлых рядов — новых досок на них не ушло']);
+            const wasteM2 = boards * bA - sh.area;
+            rows.push(['Отход', fmt(Math.max(0, wasteM2)) + ' м², ' + fmt(Math.max(0, wasteM2) / sh.area * 100, 1) + '% от площади (с полосой зазора у стен)']);
+            const left = lay.pools.starts.length + lay.pools.ends.length;
+            if (left) rows.push(['Останутся обрезки', fmtInt(left) + ' ' + plural(left, 'годный кусок', 'годных куска', 'годных кусков') + ' — пригодятся при ремонте']);
+            if (lay.forced) rows.push(['⚠ Смещение', 'в ' + fmtInt(lay.forced) + ' ' + plural(lay.forced, 'ряду', 'рядах', 'рядах') + ' не вышло выдержать смещение и длину куска — уменьшите их или выберите смещение на треть']);
+          }
           if (rolls != null) { rows.push(['Подложка', fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.underlay) + ' м²']); cost.push({ label: 'Подложка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'underlay' }); }
-          rows.push(['Зазор у стен', '8–10 мм по всему периметру — под плинтус, ламинат должен «гулять»']);
+          rows.push(['Зазор у стен', fmt(v.lamGap == null ? 10 : v.lamGap) + ' мм по всему периметру — под плинтус, ламинат должен «гулять»']);
           unitCost = { label: 'Ламинат, ' + fmtInt(packs) + ' упак.', amount: Math.round(packs * v.packM2 * 100) / 100, unit: 'м²', priceId: 'boardM2' };
         } else {
           if (!pos(v.rollW2)) return null;
@@ -1514,7 +1565,7 @@ const CALCS = {
         rows.push(['Площадь пола', fmt(sh.area) + ' м², периметр ' + fmt(sh.per) + ' м']);
         cost.unshift(unitCost);
         return { main: { label: 'Нужно на пол', value: main + ' · ' + fmt(sh.area) + ' м²' }, rows, cost,
-          note: 'Запас на подрезку: прямая раскладка 5%, вразбежку 10%, по диагонали 15%. Плитка считается с учётом шва: при шве 2 мм плитка 60×60 занимает 60,2×60,2. Ламинат кладут с зазором 8–10 мм у стен, он закрывается плинтусом.' };
+          note: (m === 'board' ? 'Ламинат раскладывается по доскам ряд за рядом: обрезки идут в дело, отход — сколько выйдет на самом деле. ' : 'Запас на подрезку: прямая раскладка 5%, вразбежку 10%, по диагонали 15%. ') + 'Плитка считается с учётом шва: при шве 2 мм плитка 60×60 занимает 60,2×60,2. Ламинат кладут с зазором 8–10 мм у стен, он закрывается плинтусом.' };
       },
     },
 
@@ -1677,14 +1728,7 @@ const CALCS = {
         const dims = mode === 'rect'
           ? [{ from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 }]
           : pts.map((a, i) => { const b = pts[(i + 1) % pts.length]; return { from: a, to: b, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 20 }; });
-        const toM = (x, y) => (fl.tr ? [fl.minX + y / 100, fl.minY + x / 100] : [fl.minX + x / 100, fl.minY + y / 100]);
-        const under = fl.pieces ? (svg, X, Y, el) => {
-          fl.pieces.forEach((p) => {
-            const r = fl.rows[p.row], a = toM(p.x0, r.y0), b = toM(p.x1, r.y1);
-            const x1 = X(a), x2 = X(b), y1 = Y(a), y2 = Y(b);
-            svg.appendChild(el('rect', { x: Math.min(x1, x2).toFixed(1), y: Math.min(y1, y2).toFixed(1), width: Math.abs(x2 - x1).toFixed(1), height: Math.abs(y2 - y1).toFixed(1), class: 'viz-plank viz-plank--' + p.kind }));
-          });
-        } : null;
+        const under = plankUnder(fl);
         V.shape(box, pts, dims, { title: 'Раскладка кварцвинила', under, center: under ? null : fmt(fl.area) + ' м²',
           caption: under ? 'Светлые — целые, тёмные — отпиленные, зелёные — из обрезков' : 'Ёлочка считается по площади с запасом 15%' });
         return true;
