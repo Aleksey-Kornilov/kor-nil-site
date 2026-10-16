@@ -1,0 +1,103 @@
+---
+layout: layouts/base.njk
+permalink: /projects/dom-12x12/
+pageCrumb: "Каркасный дом 12 × 12"
+pageCrumbParent:
+  href: /projects/
+  label: "Работы"
+pageTitle: "Дизайн-проект каркасного дома 12 × 12 м — расстановка, электрика, вода, 3D"
+pageDescription: "Настоящий проект для заказчика под Самарой: каркасный дом 12 × 12 м, двенадцать помещений. Расстановка 119 предметов, 31 группа в щите, розетки и свет с высотами, вода, отопление, 3D — 305 листов."
+pageKeywords: "дизайн-проект каркасного дома, проект электрики каркасного дома, план розеток частного дома, щит частного дома однолинейная схема, расстановка мебели в доме, проект дома Самара"
+pageSchema: |
+  {
+    "@type": "CreativeWork",
+    "@id": "https://kor-nil.ru/projects/dom-12x12/#work",
+    "name": "Дизайн-проект каркасного дома 12 × 12 м",
+    "creator": { "@id": "https://kor-nil.ru#person" },
+    "dateCreated": "2026-10",
+    "locationCreated": "Самарская область",
+    "url": "https://kor-nil.ru/projects/dom-12x12/"
+  }
+---
+
+{%- set listy = [
+  { img: 'dom12-mebel', zoom: true, alt: 'План расстановки мебели каркасного дома 12 × 12 м', title: 'Расстановка мебели',
+    text: '119 предметов с размерами и привязками от угла стены. Каждый — в таблице: что, какого размера, в какой комнате.' },
+  { img: 'dom12-rozetki', zoom: true, alt: 'План розеток и выводов каркасного дома', title: 'Розетки и выводы',
+    text: 'Каждая точка с высотой от чистого пола: розетки, выводы под плиту, духовку, бойлер и кондиционеры.' },
+  { img: 'dom12-kuhnya-el', zoom: true, alt: 'Электрика кухни-гостиной: точки, высоты и трассы кабелей', title: 'Кабели по комнатам',
+    text: 'Для каждой комнаты отдельно: где точка, на какой высоте и откуда к ней идёт кабель. Мастеру не нужно догадываться.' },
+  { img: 'dom12-shchit', zoom: true, alt: 'Однолинейная схема щита: 31 группа', title: 'Щит',
+    text: '31 группа, автоматы и УЗО, сечение и длина каждого кабеля. Плита и котёл через реле приоритета — выделенной мощности хватает.' }
+] -%}
+
+<section class="section container seo-hero">
+  <p class="hero-eyebrow">Дизайн-проект · заказчик · Самарская область</p>
+  <h1>Каркасный дом 12 × 12 м</h1>
+  <p class="section-lead">
+    Дом построен, перегородки и окна стоят, стены открыты, внутри пусто: ни электрики, ни воды.
+    Нужно было решить, где что стоит, и успеть провести всё в стенах до обшивки.
+  </p>
+  <div class="hero-cta">
+    <a href="#zayavka" class="btn btn-primary btn-lg">Хочу так же</a>
+    <a href="#listy" class="btn btn-secondary btn-lg">Смотреть листы</a>
+  </div>
+</section>
+
+<section class="section container">
+  <div class="grid grid-2">
+    <figure class="card list-foto">
+      <img src="/assets/images/raboty/dom12-3d-dom-960.webp" srcset="/assets/images/raboty/dom12-3d-dom-480.webp 480w, /assets/images/raboty/dom12-3d-dom-960.webp 960w" sizes="(min-width: 720px) 50vw, 100vw" width="960" height="559" alt="Трёхмерный вид каркасного дома 12 × 12 м сверху с мебелью" decoding="async">
+      <figcaption>Весь дом в 3D. Заказчик крутит его пальцем на телефоне и заходит в любую комнату.</figcaption>
+    </figure>
+    <figure class="card list-foto">
+      <img src="/assets/images/raboty/dom12-3d-kuhnya-960.webp" srcset="/assets/images/raboty/dom12-3d-kuhnya-480.webp 480w, /assets/images/raboty/dom12-3d-kuhnya-960.webp 960w" sizes="(min-width: 720px) 50vw, 100vw" width="960" height="563" alt="Кухня-гостиная изнутри в 3D" loading="lazy" decoding="async">
+      <figcaption>Кухня-гостиная изнутри: видно, влезает ли стол и где будет свет.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Как шла работа</h2>
+  <ol class="shagi shagi--4">
+    <li><h3>Обмер</h3><p>Размеры сняли телефоном в обмернике на сайте — каждая стена, окно и дверь с привязкой к углу.</p></li>
+    <li><h3>Варианты</h3><p>Несколько вариантов расстановки. Заказчик смотрел их на сайте по своему паролю и выбрал свой.</p></li>
+    <li><h3>Инженерия</h3><p>По выбранной расстановке — розетки, свет, щит, вода, канализация, отопление, закладные под тяжёлое.</p></li>
+    <li><h3>Правки и сдача</h3><p>Замечание заказчик оставил прямо на сайте — добавить бра у кровати. Поправили в тот же день.</p></li>
+  </ol>
+</section>
+
+<section class="section container" id="listy">
+  <h2 class="section-title">Листы проекта</h2>
+  <p class="section-lead">Несколько листов из 305. Нажмите на картинку, чтобы открыть крупно.</p>
+  <div class="grid grid-2">
+    {%- for l in listy %}
+    <figure class="card list-foto list-foto--list">
+      <a href="/assets/images/raboty/{{ l.img }}-1800.webp" target="_blank" rel="noopener">
+        <img src="/assets/images/raboty/{{ l.img }}-960.webp" srcset="/assets/images/raboty/{{ l.img }}-480.webp 480w, /assets/images/raboty/{{ l.img }}-960.webp 960w" sizes="(min-width: 720px) 50vw, 100vw" width="960" height="720" alt="{{ l.alt }}" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>{{ l.title }}.</strong> {{ l.text }}</figcaption>
+    </figure>
+    {%- endfor %}
+  </div>
+</section>
+
+<section class="section container">
+  <div class="glass vrezka">
+    <h2>Что получил заказчик</h2>
+    <ul>
+      <li>Расстановку мебели по каждой комнате и вид каждой стены с размерами.</li>
+      <li>Электрику: розетки, выключатели, свет по группам, распаечные коробки, щит и кабели.</li>
+      <li>Воду и канализацию с уклонами, отопление, тёплые полы, закладные под шкафы и технику.</li>
+      <li>3D всего дома и каждой комнаты.</li>
+      <li>Все листы в PDF на печать — 305 штук, по комнатам и по стенам.</li>
+    </ul>
+    <p>Заказчик — Валерий, Самарская область. Адрес дома и проект целиком закрыты — они у заказчика. Здесь показано с его разрешения.</p>
+  </div>
+</section>
+
+<section class="section container">
+  {%- set zId = "zd12" %}{% set zTema = "dom" %}{% set zZagolovok = "Хотите так же для своего дома?" %}
+  {% include "components/zayavka.njk" %}
+  <p class="section-more"><a href="/uslugi/dom/">Цены и как идёт работа →</a></p>
+</section>

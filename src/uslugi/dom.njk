@@ -96,17 +96,9 @@ pageSchema: |
 
 <section class="section container" id="chto">
   <h2 class="section-title">Что вы получите</h2>
-  <p class="section-lead">Так выглядят листы настоящего проекта — летней кухни.</p>
+  <p class="section-lead">Так выглядят настоящие проекты: дом заказчика и моя летняя кухня.</p>
   <div class="grid grid-2">
-    {%- for r in raboty.items %}{% if r.id == "kuhnya" %}{% include "components/rabota.njk" %}{% endif %}{% endfor %}
-    <article class="card rabota">
-      <img class="rabota-img" src="/assets/images/raboty/kuhnya-elektrika-960.webp" srcset="/assets/images/raboty/kuhnya-elektrika-480.webp 480w, /assets/images/raboty/kuhnya-elektrika-960.webp 960w" sizes="(min-width: 720px) 50vw, 100vw" width="960" height="600" alt="Летняя кухня: электрика в 3D" loading="lazy" decoding="async">
-      <div class="rabota-telo">
-        <p class="rabota-teg">Электрика</p>
-        <h3 class="card-title">Каждая розетка — на своём месте</h3>
-        <p class="card-description">Розетки, свет и кабели видно в объёме: что над столешницей, что у мангала, где проходит линия.</p>
-      </div>
-    </article>
+    {%- for id in ["dom", "kuhnya"] %}{% for r in raboty.items %}{% if r.id == id %}{% include "components/rabota.njk" %}{% endif %}{% endfor %}{% endfor %}
   </div>
 </section>
 

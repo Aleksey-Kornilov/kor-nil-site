@@ -86,3 +86,11 @@
 .cookie-plashka[hidden] { display: none; }
 .cookie-plashka p { margin: 0; flex: 1; }
 @media (max-width: 480px) { .cookie-plashka { flex-direction: column; align-items: stretch; } }
+
+/* Страница работы: картинки и листы с подписью */
+.list-foto { margin: 0; padding: 0; overflow: hidden; }
+.list-foto img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9.3; object-fit: cover; background: var(--color-bg-subtle); }
+.list-foto--list img { aspect-ratio: 4 / 3; object-fit: contain; background: #fff; }
+.list-foto figcaption { padding: var(--space-4) var(--space-5); color: var(--color-text-muted); font-size: var(--fs-small); }
+.list-foto figcaption strong { color: var(--color-text); }
+.vrezka ul { margin-bottom: var(--space-4); }
