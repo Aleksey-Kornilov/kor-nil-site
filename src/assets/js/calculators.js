@@ -210,6 +210,8 @@
   // Набор банок краски без лишнего: банки 9, 2,7 и 0,9 л (самые ходовые объёмы); меньше всего лишних
 // литров, при равенстве — меньше банок
 function canSet(liters) {
+  // Больше 200 л подбирать нечего — это бочки, а перебор на огромных числах подвесит страницу
+  if (!(liters > 0) || liters > 200) return null;
   let best = null;
   for (let a = 0; a <= Math.ceil(liters / 9); a++) for (let b = 0; b <= Math.ceil(liters / 2.7); b++) {
     const c = Math.max(0, Math.ceil((liters - a * 9 - b * 2.7) / 0.9 - 1e-9)), vol = a * 9 + b * 2.7 + c * 0.9, n = a + b + c;
@@ -793,7 +795,7 @@ const CALCS = {
           if (!p) return null;
           const rows = [['Без запаса', fmt(p.liters) + ' л'], ['Площадь окраски', fmt(area) + ' м² × ' + fmt(coats) + ' сл.']];
           if (p.cans != null) rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + fmtInt(p.cans) + ' шт']);
-          rows.push(['Набор без лишнего', canSet(p.reserve) + ' — если в магазине есть банки разного объёма']);
+          if (canSet(p.reserve)) rows.push(['Набор без лишнего', canSet(p.reserve) + ' — если в магазине есть банки разного объёма']);
           return { main: { label: 'Нужно краски (с запасом 10%)', value: fmt(p.reserve) + ' л' }, rows,
             note: 'Расход указан на банке (обычно 8–12 м²/л). Для тёмного по светлому может понадобиться больше слоёв.',
             cost: p.cans != null ? [{ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }] : [] };
@@ -837,7 +839,7 @@ const CALCS = {
             rows.push(['Краска: стен', fmtInt(m.paint.n) + ' ' + plural(m.paint.n, 'стена', 'стены', 'стен') + ', ' + fmt(m.paint.area) + ' м² × ' + fmt(coats) + ' сл.']);
             rows.push(['Без запаса', fmt(p.liters) + ' л']);
             if (p.cans != null) { rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + fmtInt(p.cans) + ' шт']); cost.push({ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }); }
-            rows.push(['Набор без лишнего', canSet(p.reserve) + ' — если в магазине есть банки разного объёма']);
+            if (canSet(p.reserve)) rows.push(['Набор без лишнего', canSet(p.reserve) + ' — если в магазине есть банки разного объёма']);
           }
         }
         if (!mains.length) return null;
