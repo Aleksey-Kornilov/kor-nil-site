@@ -274,6 +274,18 @@ function clipSeg(x1, y1, x2, y2, a, b) {
   t0 = Math.max(0, t0); t1 = Math.min(1, t1); if (t1 <= t0) return null;
   return [x1 + dx * t0, y1 + (y2 - y1) * t0, x1 + dx * t1, y1 + (y2 - y1) * t1];
 }
+// Виды забора: основной и второй материал выбираются из одного списка
+const FENCE_TYPES = [
+  { id: 'proflist', label: 'Профнастил', hint: 'листы по рабочей ширине, лаги, саморезы' },
+  { id: 'picket', label: 'Штакетник (дерево или металл)', hint: 'односторонний: штакетины с зазором' },
+  { id: 'picket2', label: 'Штакетник шахматный', hint: 'с двух сторон вразбежку — штакетин почти вдвое больше, зато просветов нет' },
+  { id: 'plank', label: 'Деревянный сплошной (доска)', hint: 'доска встык или с малым зазором, плюс пропитка' },
+  { id: 'ranch', label: 'Ранчо', hint: 'доски или планки горизонтально с зазором' },
+  { id: 'louver', label: 'Жалюзи', hint: 'металлические ламели в рамке на каждый пролёт: глухой, но продувается' },
+  { id: 'mesh3d', label: '3D-сетка', hint: 'сварные панели с рёбрами жёсткости; шаг столбов — ширина панели' },
+  { id: 'chainlink', label: 'Сетка-рабица', hint: 'рулоны по длине' },
+  { id: 'block', label: 'Блоки / кирпич', hint: 'кладка: штук на м² и раствор' },
+];
 // Цвета забора на схеме: популярные RAL, оцинковка и дерево (оттенки чуть светлее эталона — иначе на экране чернеют)
 const FENCE_COLORS = [
   { id: 'auto', label: 'По материалу', hint: 'профнастил — зелёный мох, штакетник и доска — дерево, рабица — оцинковка; цвет только для картинки' },
@@ -2285,7 +2297,7 @@ const CALCS = {
     /* --- Забор: по длине или по плану участка; типы забора и ворот --- */
     fence: {
       modeLabel: 'Как задаём забор',
-      finishes: { fence: 'Забор', none: 'Без забора (сосед, дом)' },
+      finishes: { fence: 'Основной забор', other: 'Второй материал', none: 'Без забора (сосед, дом)' },
       modes: [
         { id: 'plan', label: 'По плану участка', room: true, plan: { simple: true, presetsKey: 'PLOT_PRESETS' }, fields: [
           { id: 'hei', label: 'Высота забора', unit: 'м', value: '2' },
@@ -2300,17 +2312,8 @@ const CALCS = {
         ] },
       ],
       selects: [
-        { id: 'type', label: 'Из чего забор', default: 'proflist', choices: [
-          { id: 'proflist', label: 'Профнастил', hint: 'листы по рабочей ширине, лаги, саморезы' },
-          { id: 'picket', label: 'Штакетник (дерево или металл)', hint: 'односторонний: штакетины с зазором' },
-          { id: 'picket2', label: 'Штакетник шахматный', hint: 'с двух сторон вразбежку — штакетин почти вдвое больше, зато просветов нет' },
-          { id: 'plank', label: 'Деревянный сплошной (доска)', hint: 'доска встык или с малым зазором, плюс пропитка' },
-          { id: 'ranch', label: 'Ранчо', hint: 'доски или планки горизонтально с зазором' },
-          { id: 'louver', label: 'Жалюзи', hint: 'металлические ламели в рамке на каждый пролёт: глухой, но продувается' },
-          { id: 'mesh3d', label: '3D-сетка', hint: 'сварные панели с рёбрами жёсткости; шаг столбов — ширина панели' },
-          { id: 'chainlink', label: 'Сетка-рабица', hint: 'рулоны по длине' },
-          { id: 'block', label: 'Блоки / кирпич', hint: 'кладка: штук на м² и раствор' },
-        ] },
+        { id: 'type', label: 'Из чего забор', default: 'proflist', choices: FENCE_TYPES },
+        { id: 'type2', label: 'Второй материал (стороны «второй материал» на развёртке)', default: 'chainlink', group: 'second', choices: FENCE_TYPES },
         { id: 'gateType', label: 'Ворота', default: 'swing', choices: [
           { id: 'swing', label: 'Распашные', hint: 'две створки, два столба' },
           { id: 'sliding', label: 'Откатные', hint: 'нужен фундамент под ролики и свободное место вдоль забора ≈ 1,5 ширины ворот' },
@@ -2394,12 +2397,12 @@ const CALCS = {
         { id: 'stain', label: 'Пропитка', unit: '₽ за литр', group: 'plank' },
       ],
       roomOpts: {
-        finishes: { fence: 'Забор', none: 'Без забора (сосед, дом)' }, defaultFinish: 'fence', fullHeight: true, wallWord: 'Сторона',
+        finishes: { fence: 'Основной забор', other: 'Второй материал', none: 'Без забора (сосед, дом)' }, defaultFinish: 'fence', fullHeight: true, wallWord: 'Сторона',
         kindLabels: { gate: 'Ворота', wicket: 'Калитка' },
         openingPresets: [{ kind: 'gate', label: '+ ворота', w: 3, h: 2, y: 0 }, { kind: 'gate', label: '+ ворота 4 м', w: 4, h: 2, y: 0 }, { kind: 'wicket', label: '+ калитка', w: 1, h: 2, y: 0 }],
         openingLabel: (o) => (o.kind === 'wicket' ? 'калитка ' : 'ворота ') + String(o.w).replace('.', ',') + ' м',
         openingsTitle: 'Ворота и калитки на этой стороне (нажмите на них в развёртке, чтобы найти):',
-        hint: 'Нажмите на сторону, чтобы включить или выключить забор на ней. Ворота и калитки тяните по стороне, можно перетащить на соседнюю.',
+        hint: 'Нажмите на сторону и выберите: основной забор, второй материал (например, рабица вдоль соседей) или без забора. Ворота и калитки тяните по стороне, можно перетащить на соседнюю.',
         wallTitle: (i, w) => 'Сторона ' + (i + 1) + ': ' + String(Math.round(w.len * 100) / 100).replace('.', ',') + ' м' + (w.count ? ', проёмов ' + w.count : ''),
       },
       lens(v, mode, extras) {
@@ -2408,7 +2411,24 @@ const CALCS = {
         const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
         return g.valid ? g.edges.map((e) => e.len) : null;
       },
+      // Какие материалы стоят на сторонах плана: { fence, other } — есть ли стороны каждого
+      sideKinds(v, mode, extras) {
+        if (mode !== 'plan') return { fence: true, other: false };
+        const R = window.CalcRoom, lens = this.lens(v, mode, extras);
+        if (!R || !extras.room || !lens) return { fence: true, other: false };
+        const m = R.measure(extras.room, lens, v.hei || 1, this.finishes, 'fence', true);
+        return { fence: m.walls.some((w) => w.finish === 'fence'), other: m.walls.some((w) => w.finish === 'other') };
+      },
       groups(v, mode, extras, sel) {
+        const k = this.sideKinds(v, mode, extras), types = [];
+        if (k.fence || !k.other) types.push(sel.type);
+        if (k.other) types.push(sel.type2);
+        const out = {};
+        types.forEach((t) => { const g = this.groupsFor(v, mode, extras, Object.assign({}, sel, { type: t })); Object.keys(g).forEach((f) => { out[f] = out[f] || g[f]; }); });
+        out.second = k.other;
+        return out;
+      },
+      groupsFor(v, mode, extras, sel) {
         const t = sel.type;
         const screws = t === 'proflist' || t === 'picket' || t === 'picket2' || t === 'plank' || t === 'ranch' || t === 'louver';
         // Ворота и калитки: по самой сводке, а пока её нет — по введённым ширинам
@@ -2425,7 +2445,8 @@ const CALCS = {
           lagPiece: !noLags && sel.lagBuy !== 'meter', lagMeter: !noLags && sel.lagBuy === 'meter' };
       },
       // Сводка по забору: полезная длина, пролёты, столбы, проёмы — для обоих режимов
-      summary(v, mode, sel, extras) {
+      // only — считать только стороны с этой отделкой ('fence' / 'other'); без него — все с забором
+      summary(v, mode, sel, extras, only) {
         v = fenceV(v, sel || {});
         if (!(pos(v.hei) && pos(v.step))) return null;
         if (mode === 'line') {
@@ -2439,7 +2460,8 @@ const CALCS = {
         if (!lens && extras.plan) return { error: 'Контур участка пересекает сам себя — поправьте углы на плане.' };
         if (!R || !extras.room || !lens) return null;
         const m = R.measure(extras.room, lens, v.hei, this.finishes, 'fence', true);
-        const sides = m.walls.filter((w) => w.finish === 'fence');
+        const on = (w) => (only ? w.finish === only : w.finish !== 'none');
+        const sides = m.walls.filter(on);
         if (!sides.length) return { error: 'На всех сторонах выключен забор — включите хотя бы одну.' };
         let net = 0, sections = 0, posts = 0, gates = 0, wickets = 0, gateLen = 0;
         sides.forEach((w) => {
@@ -2450,7 +2472,7 @@ const CALCS = {
         });
         // Соседние огороженные стороны делят угловой столб
         const n = m.walls.length; let shared = 0;
-        for (let i = 0; i < n; i++) { const a = m.walls[i], b = m.walls[(i + 1) % n]; if (a.finish === 'fence' && b.finish === 'fence') shared++; }
+        for (let i = 0; i < n; i++) { const a = m.walls[i], b = m.walls[(i + 1) % n]; if (on(a) && on(b)) shared++; }
         posts -= shared;
         return { net, sections, posts, gates, wickets, gateLen, sides, corners: shared };
       },
@@ -2511,9 +2533,12 @@ const CALCS = {
               } else if (t === 'mesh3d') {
                 // 3D-панель: прутки 200 мм по горизонтали, гнутые рёбра жёсткости — двойной линией
                 const ph = panel3dH(hei), o = 0.04, ribsN = panel3dClamps(ph);
-                for (let x = a; x <= b + 1e-6; x += 0.2) line(r, x, z0, x, z0 + ph, o, col, 0.9);
+                // Издалека прутки реже — иначе сетка сливается в сплошную стену
+                const ms = close ? 0.2 : 0.5;
+                for (let x = a; x <= b + 1e-6; x += ms) line(r, x, z0, x, z0 + ph, o, col, close ? 0.9 : 0.6);
                 line(r, b, z0, b, z0 + ph, o, col, 0.9);
-                for (let z = z0; z <= z0 + ph + 1e-6; z += 0.2) line(r, a, z, b, z, o, col, 0.7);
+                if (close) for (let z = z0; z <= z0 + ph + 1e-6; z += 0.2) line(r, a, z, b, z, o, col, 0.7);
+                else { line(r, a, z0, b, z0, o, col, 0.8); line(r, a, z0 + ph, b, z0 + ph, o, col, 0.8); }
                 for (let k = 1; k <= ribsN; k++) { const z = z0 + ph * k / (ribsN + 1); line(r, a, z, b, z, o + 0.02, col, 1.6); }
               } else if (t === 'ranch') {
                 // Ранчо: доски поперёк столбов с зазором; у металла посередине пролёта шире 1,5 м — стойка
@@ -2524,7 +2549,7 @@ const CALCS = {
                 else { box(r, a - postW / 2, b + postW / 2, 0.05, 0.07, z0, hei, col); for (let i = 1; i < nR; i++) line(r, a - postW / 2, z0 + i * (rw + rg), b + postW / 2, z0 + i * (rw + rg), 0.072, 'rgba(0,0,0,.35)', 0.8); }
               } else if (t === 'chainlink') {
                 // Сетка ромбом на просвет: ячейка на схеме крупнее настоящей, иначе сольётся
-                const q = 0.25, H = top - z0;
+                const q = close ? 0.25 : 0.5, H = top - z0;
                 for (let c = a - H; c < b; c += q) {
                   [[c, z0, c + H, top], [c + H, z0, c, top]].forEach(([x1, y1, x2, y2]) => {
                     const cl = clipSeg(x1, y1, x2, y2, a, b); if (cl) line(r, cl[0], cl[1], cl[2], cl[3], 0.035, col, 0.7);
@@ -2570,7 +2595,7 @@ const CALCS = {
         return { prisms, lines, simple };
       },
       // Стороны забора с воротами: a — начало, d — направление, n — наружу, len, ops
-      runs(v, mode, extras) {
+      runs(v, mode, extras, only) {
         if (mode === 'line') {
           if (!pos(v.len)) return null;
           const gate = v.gate || 0, wicket = v.wicket || 0, ops = [];
@@ -2586,19 +2611,21 @@ const CALCS = {
         const area = g.edges.reduce((s2, e) => s2 + e.a[0] * e.b[1] - e.b[0] * e.a[1], 0), sg = area > 0 ? 1 : -1;
         const runs = [];
         g.edges.forEach((e, i) => {
-          const w = m.walls[i]; if (w.finish !== 'fence' || !(e.len > 0)) return;
+          const w = m.walls[i]; if (w.finish === 'none' || (only && w.finish !== only) || !(e.len > 0)) return;
           const d = [(e.b[0] - e.a[0]) / e.len, (e.b[1] - e.a[1]) / e.len];
-          runs.push({ a: e.a, d, n: [d[1] * sg, -d[0] * sg], len: e.len, ops: w.ops });
+          runs.push({ a: e.a, d, n: [d[1] * sg, -d[0] * sg], len: e.len, ops: w.ops, finish: w.finish });
         });
         return { runs, edges: g.edges };
       },
       draw(v, mode, box, view, extras) {
         const V = window.CalcViz; if (!V) return false;
-        const sel = this._sel || {}, t = sel.type;
+        const sel = this._sel || {}, t = sel.type, v0 = v;
+        const selB = Object.assign({}, sel, { type: sel.type2 || 'chainlink' }), kinds = this.sideKinds(v0, mode, extras);
+        // Без нужных размеров вида схему не рисуем (иначе циклы по пустому шагу)
+        const ready = (tt, vv) => pos(vv.hei) && pos(vv.step) && !(tt === 'louver' && !pos(vv.louverStep)) && !(tt === 'mesh3d' && !pos(vv.panelW)) && !(tt === 'ranch' && !pos(vv.ranchW)) &&
+          !(tt === 'picket' && !pos(vv.plankW)) && !(tt === 'picket2' && !pos(vv.plankW2)) && !(tt === 'plank' && !pos(vv.boardW));
         v = fenceV(v, sel);
-        if ((t === 'louver' && !pos(v.louverStep)) || (t === 'mesh3d' && !pos(v.panelW)) || (t === 'ranch' && !pos(v.ranchW))) return false;
-        if (!(pos(v.hei) && pos(v.step))) return false;
-        if ((t === 'picket' && !pos(v.plankW)) || (t === 'picket2' && !pos(v.plankW2)) || (t === 'plank' && !pos(v.boardW))) return false;
+        if (!ready(t, v) || (kinds.other && !ready(selB.type, fenceV(v0, selB)))) return false;
         // Нелепые размеры (сотни тысяч деталей) не рисуем — расчёт всё равно покажется
         if (v.hei > 10 || v.step < 0.3 || (v.lagRows || 0) > 8 || (mode === 'line' && v.len / v.step > 600)) return false;
         const opts = { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true };
@@ -2628,21 +2655,32 @@ const CALCS = {
         let dims;
         if (mode === 'line') dims = [{ from: [0, 0, 0], to: [v.len, 0, 0], label: 'длина ' + fmt(v.len) + ' м', offset: 24 }, { from: [0, 0, 0], to: [0, 0, v.hei], label: fmt(v.hei) + ' м', offset: -28 }];
         else dims = fr.edges.length <= 8 ? fr.edges.map((e, i) => ({ from: [e.a[0], e.a[1], 0], to: [e.b[0], e.b[1], 0], label: (i + 1) + ': ' + fmt(e.len) + ' м', offset: 22 })) : [];
-        const sc = this.scene(v, sel, runs), sm = this.summary(v, mode, sel, extras);
-        const cnt = sm && !sm.error ? ': ' + sm.sections + ' ' + plural(sm.sections, 'пролёт', 'пролёта', 'пролётов') + ', ' + sm.posts + ' ' + plural(sm.posts, 'столб', 'столба', 'столбов') : '';
-        V.iso(box, sc.prisms, dims, Object.assign(opts, { lines: sc.lines, caption: what + cname + cnt + (sc.simple ? '; штакетины полосами, крупно — «Один пролёт»' : '') + '. Потяните, чтобы повернуть.' }));
+        // Два материала: каждая сторона рисуется своим видом
+        const runsA = runs.filter((r) => r.finish !== 'other'), runsB = runs.filter((r) => r.finish === 'other');
+        const vB = fenceV(v0, selB), parts = [];
+        if (runsA.length) parts.push(this.scene(v, sel, runsA));
+        if (runsB.length) parts.push(this.scene(vB, selB, runsB));
+        const sc = { prisms: [].concat(...parts.map((q) => q.prisms)), lines: [].concat(...parts.map((q) => q.lines)), simple: parts.some((q) => q.simple) };
+        let cap;
+        if (runsA.length && runsB.length) {
+          const nameOf = (s2) => ({ proflist: 'профнастил', picket: 'штакетник', picket2: 'штакетник шахматкой', plank: 'доска', chainlink: 'сетка-рабица', block: 'кладка', ranch: 'ранчо', louver: 'жалюзи', mesh3d: '3D-сетка' })[s2.type];
+          cap = what + cname + ', а на остальных сторонах — ' + nameOf(selB);
+        } else {
+          const sm = this.summary(runsA.length ? v : vB, mode, runsA.length ? sel : selB, extras);
+          cap = (runsA.length ? what + cname : ({ proflist: 'Профнастил', picket: 'Штакетник', picket2: 'Штакетник шахматкой', plank: 'Доска', chainlink: 'Сетка-рабица', block: 'Кладка', ranch: 'Ранчо', louver: 'Жалюзи', mesh3d: '3D-сетка' })[selB.type] + (selB.type === 'block' ? '' : ', ' + fenceColorName(selB))) +
+            (sm && !sm.error ? ': ' + sm.sections + ' ' + plural(sm.sections, 'пролёт', 'пролёта', 'пролётов') + ', ' + sm.posts + ' ' + plural(sm.posts, 'столб', 'столба', 'столбов') : '');
+        }
+        V.iso(box, sc.prisms, dims, Object.assign(opts, { lines: sc.lines, caption: cap + (sc.simple ? '; штакетины полосами, крупно — «Один пролёт»' : '') + '. Потяните, чтобы повернуть.' }));
         return true;
       },
-      compute(v, mode, sel, extras) {
+      // Материальная часть одного вида забора по его сторонам (only): листы/штакетины/…, лаги, саморезы
+      fill(v, mode, sel, extras, only) {
         v = fenceV(v, sel);
-        const sm = this.summary(v, mode, sel, extras);
+        const sm = this.summary(v, mode, sel, extras, only);
         if (!sm) return null; if (sm.error) return sm;
-        const { net, sections, posts, gates, wickets, gateLen } = sm;
+        const { net, posts } = sm;
         const rows = [], cost = []; let main, unitCost = null, screws = 0, screwNote = '';
         const rowsL = v.lagRows == null ? 2 : v.lagRows;
-        const postLen = v.hei + (v.postDepth || 1);
-        const holes = posts * Math.PI * 0.1 * 0.1 * (v.postDepth || 1);
-        const cementBags = Math.ceil(holes * 1.1 * 286 / 50);
         const P = (n, a, b, c) => fmtInt(n) + ' ' + plural(n, a, b, c);
         const t = sel.type;
         if (t === 'proflist') {
@@ -2661,7 +2699,7 @@ const CALCS = {
           const board = t === 'plank', pw = t === 'picket' ? v.plankW : t === 'picket2' ? v.plankW2 : v.boardW;
           const gp = t === 'picket' ? (v.gap || 0) : t === 'picket2' ? (v.gap2 || 0) : (v.boardGap || 0);
           if (!pos(pw)) return null;
-          const fr = this.runs(v, mode, extras); if (!fr) return null;
+          const fr = this.runs(v, mode, extras, only); if (!fr) return null;
           // Металл режут в размер с шагом 1 см — список по сантиметру; дерево пилят сами — с запасом до 5 см
           const metal = !board && sel.picketKind && sel.picketKind !== 'wood', grid = metal ? 100 : 20;
           let planks = 0, sumLen = 0, sumH = 0, gMin = Infinity, gMax = 0, listed = true; const lens = new Map();
@@ -2695,7 +2733,7 @@ const CALCS = {
             : { label: 'Штакетник', amount: planks, unit: plural(planks, 'штакетина', 'штакетины', 'штакетин'), priceId: 'picket' };
         } else if (t === 'louver' || t === 'mesh3d' || t === 'ranch') {
           // Пролёты по кускам между воротами — те же, что на схеме
-          const fr = this.runs(v, mode, extras); if (!fr) return null;
+          const fr = this.runs(v, mode, extras, only); if (!fr) return null;
           const secs = [];
           fr.runs.forEach((r) => fenceSegs(r.len, r.ops).forEach(([a, b]) => fenceSecs(b - a, v, sel).forEach(([q0, q1]) => secs.push(q1 - q0))));
           const nS = secs.length, listOf = (m, unit) => [...m.entries()].sort((x, y) => x[0] - y[0]).map(([L, k]) => fmt(L) + ' ' + unit + ' — ' + k + ' шт').join('; ');
@@ -2767,7 +2805,46 @@ const CALCS = {
           if (mortarKg > 0) rows.push(['Раствор', fmtInt(mortarKg) + ' кг ≈ ' + fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' по 25 кг']);
           unitCost = { label: 'Блоки / кирпич', amount: blocks, unit: 'шт', priceId: 'block' };
         }
-        rows.push(['Пролётов', sections + ' по ' + fmt(v.step) + ' м (полезная длина ' + fmt(net) + ' м)']);
+        // Лаги — по этому материалу
+        let lagRow = null, lagPieces = 0;
+        if (t !== 'block' && t !== 'chainlink' && t !== 'louver' && t !== 'mesh3d' && t !== 'ranch') {
+          lagPieces = Math.ceil(rowsL * net / 6 - 1e-9);
+          // Деревянному забору выше 1,7 м — третья прожилина; металлу до 2 м хватает двух (Grand Line)
+          const wood = t === 'plank' || ((t === 'picket' || t === 'picket2') && sel.picketKind === 'wood'), lim = wood ? 1.7 : 2;
+          lagRow = ['Лаги', fmtInt(rowsL) + ' ' + plural(rowsL, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м → ' + fmtInt(lagPieces) + ' шт по 6 м' +
+            (v.hei > lim + 1e-9 && rowsL < 3 ? '. Забору ' + (wood ? 'из дерева ' : '') + 'выше ' + fmt(lim) + ' м нужен третий ряд: иначе полотно парусит и гуляет' : '')];
+        }
+        return { sm, v, t, mainItem: String(main).split(' · ')[0], matRows: rows, unitCost, matCost: cost, lagRow, lagPieces, screws, screwNote };
+      },
+      // Весь забор: материал (или два — основной и второй по сторонам) плюс общее — столбы, бетон, ворота
+      compute(v0, mode, sel, extras) {
+        const k = this.sideKinds(fenceV(v0, sel), mode, extras);
+        const selB = Object.assign({}, sel, { type: sel.type2 || 'chainlink' });
+        const parts = !k.other ? [[sel, null]] : !k.fence ? [[selB, null]] : [[sel, 'fence'], [selB, 'other']];
+        const fills = [];
+        for (const [s2, only] of parts) { const f = this.fill(v0, mode, s2, extras, only); if (!f) return null; if (f.error) return f; fills.push(f); }
+        const two = fills.length > 1, v = fills[0].v;
+        // Общая часть — по всем сторонам с забором: столб на стыке двух материалов один
+        let sm = fills[0].sm, posts = sm.posts, sections = sm.sections, net = sm.net;
+        if (two) {
+          sm = this.summary(fenceV(v0, sel), mode, sel, extras);
+          if (!sm || sm.error) return sm;
+          posts = fills.reduce((a, f) => a + f.sm.posts, 0) - (sm.corners - fills.reduce((a, f) => a + f.sm.corners, 0));
+          sections = fills.reduce((a, f) => a + f.sm.sections, 0); net = fills.reduce((a, f) => a + f.sm.net, 0);
+        }
+        const { gates, wickets, gateLen } = sm;
+        const P = (n, a, b, c) => fmtInt(n) + ' ' + plural(n, a, b, c);
+        const postLen = v.hei + (v.postDepth || 1);
+        const holes = posts * Math.PI * 0.1 * 0.1 * (v.postDepth || 1);
+        const cementBags = Math.ceil(holes * 1.1 * 286 / 50);
+        const typeName = (t) => (FENCE_TYPES.find((x) => x.id === t) || {}).label || t;
+        const rows = [], cost = [];
+        fills.forEach((f, i) => {
+          if (two) rows.push([i ? 'Второй материал' : 'Основной забор', typeName(f.t) + ': ' + (f.sm.sides || []).map((w) => 'сторона ' + (w.i + 1)).join(', ') + ' — ' + fmt(f.sm.net) + ' м']);
+          f.matRows.forEach((r) => rows.push(r));
+          if (two && f.lagRow) rows.push(f.lagRow);
+        });
+        rows.push(['Пролётов', sections + (two ? '' : ' по ' + fmt(v.step) + ' м') + ' (полезная длина ' + fmt(net) + ' м)']);
         rows.push(['Столбы', fmtInt(posts) + ' шт длиной ' + fmt(postLen) + ' м (' + fmt(v.postDepth || 1) + ' м в земле)' + (sm.corners ? ', угловые общие' : '')]);
         if (gates || wickets) {
           const gt = { swing: 'распашные', sliding: 'откатные', lift: 'подъёмные' }[sel.gateType];
@@ -2777,26 +2854,23 @@ const CALCS = {
           if (gates && sel.gateType === 'lift') note += '. Подъёмные: проём с жёсткой перемычкой сверху, обычно в гараж';
           rows.push(['Проёмы', note]);
         }
-        if (t !== 'block' && t !== 'chainlink' && t !== 'louver' && t !== 'mesh3d' && t !== 'ranch') {
-          const lagPieces = Math.ceil(rowsL * net / 6 - 1e-9);
-          rows.push(['Лаги', fmtInt(rowsL) + ' ' + plural(rowsL, 'ряд', 'ряда', 'рядов') + ' × ' + fmt(net) + ' м → ' + fmtInt(lagPieces) + ' шт по 6 м' +
-            (() => {
-              // Деревянному забору выше 1,7 м — третья прожилина; металлу до 2 м хватает двух (Grand Line)
-              const wood = t === 'plank' || ((t === 'picket' || t === 'picket2') && sel.picketKind === 'wood'), lim = wood ? 1.7 : 2;
-              return v.hei > lim + 1e-9 && rowsL < 3 ? '. Забору ' + (wood ? 'из дерева ' : '') + 'выше ' + fmt(lim) + ' м нужен третий ряд: иначе полотно парусит и гуляет' : '';
-            })()]);
-          cost.push(sel.lagBuy === 'meter'
-            ? { label: 'Лаги, ' + fmtInt(lagPieces) + ' шт по 6 м', amount: lagPieces * 6, unit: 'м', priceId: 'lagM' }
-            : { label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' });
-        }
+        if (!two && fills[0].lagRow) rows.push(fills[0].lagRow);
+        const lagPieces = fills.reduce((a, f) => a + f.lagPieces, 0);
+        const screws = fills.reduce((a, f) => a + f.screws, 0);
         if (screws > 0) {
           const pack = pos(v.screwPack) ? Math.round(v.screwPack) : 250, packs = Math.ceil(screws / pack);
-          rows.push(['Саморезы', '≈ ' + fmtInt(screws) + ' шт (' + screwNote + ') → ' + fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' по ' + pack]);
-          cost.push({ label: 'Саморезы', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' по ' + pack, priceId: 'screws' });
+          const notes = [...new Set(fills.filter((f) => f.screws > 0).map((f) => f.screwNote))].join('; ');
+          rows.push(['Саморезы', '≈ ' + fmtInt(screws) + ' шт (' + notes + ') → ' + fmtInt(packs) + ' ' + plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' по ' + pack]);
         }
         rows.push(['Бетон под столбы', fmt(holes) + ' м³ (лунки ⌀20 см) ≈ ' + fmtInt(cementBags) + ' ' + plural(cementBags, 'мешок', 'мешка', 'мешков') + ' цемента']);
-        if (sm.sides) sm.sides.forEach((w) => rows.push(['Сторона ' + (w.i + 1), fmt(w.len) + ' м' + (w.opLen ? ', проёмы ' + fmt(w.opLen) + ' м' : '')]));
-        cost.unshift(unitCost, { label: 'Столбы', amount: posts, unit: plural(posts, 'столб', 'столба', 'столбов'), priceId: 'post' });
+        if (sm.sides) sm.sides.forEach((w) => rows.push(['Сторона ' + (w.i + 1), fmt(w.len) + ' м' + (w.opLen ? ', проёмы ' + fmt(w.opLen) + ' м' : '') + (two ? ', ' + (() => { const nm = typeName(w.finish === 'other' ? selB.type : sel.type); return nm[0].toLowerCase() + nm.slice(1); })() : '')]));
+        fills.forEach((f) => cost.push(f.unitCost));
+        cost.push({ label: 'Столбы', amount: posts, unit: plural(posts, 'столб', 'столба', 'столбов'), priceId: 'post' });
+        fills.forEach((f) => f.matCost.forEach((c) => cost.push(c)));
+        if (lagPieces > 0) cost.push(sel.lagBuy === 'meter'
+          ? { label: 'Лаги, ' + fmtInt(lagPieces) + ' шт по 6 м', amount: lagPieces * 6, unit: 'м', priceId: 'lagM' }
+          : { label: 'Лаги', amount: lagPieces, unit: 'шт', priceId: 'lag' });
+        if (screws > 0) { const pack = pos(v.screwPack) ? Math.round(v.screwPack) : 250, packs = Math.ceil(screws / pack); cost.push({ label: 'Саморезы', amount: packs, unit: plural(packs, 'упаковка', 'упаковки', 'упаковок') + ' по ' + pack, priceId: 'screws' }); }
         cost.push({ label: 'Цемент под столбы', amount: cementBags, unit: plural(cementBags, 'мешок', 'мешка', 'мешков'), priceId: 'cement' });
         if (gates) {
           const gl = 'Ворота ' + { swing: 'распашные', sliding: 'откатные', lift: 'подъёмные' }[sel.gateType];
@@ -2805,8 +2879,9 @@ const CALCS = {
             : { label: gl, amount: gates, unit: 'шт', priceId: 'gate' });
         }
         if (wickets) cost.push({ label: 'Калитка', amount: wickets, unit: 'шт', priceId: 'wicket' });
-        return { main: { label: 'Нужно', value: main }, rows, cost,
-          note: 'Полезная длина = стороны с забором минус ворота и калитки. Столбы: пролёты + 1 на каждой стороне, угловые общие, плюс по одному на ворота и калитку. Бетон — лунки ⌀20 см на глубину столба, М200 с запасом 10%.' };
+        return { main: { label: 'Нужно', value: fills.map((f) => f.mainItem).join(' + ') + ' · ' + P(posts, 'столб', 'столба', 'столбов') }, rows, cost,
+          note: 'Полезная длина = стороны с забором минус ворота и калитки. Столбы: пролёты + 1 на каждой стороне, угловые общие, плюс по одному на ворота и калитку. Бетон — лунки ⌀20 см на глубину столба, М200 с запасом 10%.' +
+            (two ? ' Два материала: каждый считается по своим сторонам, столб на стыке — один.' : '') };
       },
     },
 

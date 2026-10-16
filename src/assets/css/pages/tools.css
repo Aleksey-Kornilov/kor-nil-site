@@ -154,6 +154,7 @@
 .room-svg { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-elevated); touch-action: none; }
 .room-wall { cursor: pointer; stroke: #8a8073; stroke-width: 1; fill: #e8e2d6; } /* без своего цвета — как стена под краску */
 .room-wall--fence { fill: #c9d3df; }
+.room-wall--other { fill: #b9d4bd; }
 .room-wall--paint { fill: #e8e2d6; }
 .room-wall--paper { fill: #d9c9a8; }
 .room-wall--lvt { fill: #d8c3a5; }
