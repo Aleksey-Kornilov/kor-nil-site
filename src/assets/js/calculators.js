@@ -3711,17 +3711,96 @@ const CALCS = {
       lens(v, mode, extras) {
         return (mode === 'wall' && pos(v.len) && pos(v.wid)) ? [v.len, v.wid, v.len, v.wid] : null;
       },
-      draw(v, mode, box) {
+      // Чертёж: перегородка и стены — вид спереди (листы со смещёнными стыками, стойки, направляющие, проёмы),
+      // потолок — сетка профилей на подвесах под листами
+      draw(v, mode, box, view, extras) {
         const V = window.CalcViz; if (!V) return false;
-        if (mode === 'ceiling' && pos(v.len) && pos(v.wid)) {
-          const step = (v.studStep || 600) / 1000;
-          V.shape(box, [[0, 0], [v.len, 0], [v.len, v.wid], [0, v.wid]], [
-            { from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 },
-            { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 },
-          ], { center: fmt(v.len * v.wid) + ' м²', title: 'Потолок', caption: 'Основные профили вдоль длинной стороны через ' + fmt(v.mainStep || 1) + ' м, поперечные через ' + fmt(step) + ' м' });
-          return true;
-        }
-        return false;
+        const step = (v.studStep || 0) / 1000, sw = (v.sheetW || 0) / 100, sh = (v.sheetL || 0) / 100;
+        if (!pos(step) || !pos(sw) || !pos(sh)) return false;
+        const items = [];
+        const sheetsOn = (x0, L, H, ops) => {
+          // Листы стоя колоннами по ширине листа; при высоте больше листа — добор, в соседних колоннах вразбежку
+          for (let x = 0, c = 0; x < L - 1e-6; x += sw, c++) {
+            const w = Math.min(sw, L - x), cuts = H > sh + 1e-6 ? (c % 2 ? [0, H - sh, H] : [0, sh, H]) : [0, H];
+            for (let k = 0; k + 1 < cuts.length; k++) items.push({ rect: [x0 + x, cuts[k], w, cuts[k + 1] - cuts[k]], kind: 'sheet' });
+          }
+          ops.forEach((o) => items.push({ rect: [x0 + o.x, o.y, o.w, o.h], kind: 'hole' }));
+        };
+        const frameOn = (x0, L, H, ops) => {
+          const xs = new Set();
+          for (let x = 0; x <= L + 1e-6; x += step) xs.add(Math.round(Math.min(x, L) * 1000) / 1000);
+          xs.add(L);
+          ops.forEach((o) => { if (o.y < 0.05) { xs.add(o.x); xs.add(o.x + o.w); } });
+          [...xs].forEach((x) => {
+            // Стойка не идёт сквозь дверь: над проёмом — только короткий кусок до перемычки
+            const door = ops.find((o) => o.y < 0.05 && x > o.x + 1e-6 && x < o.x + o.w - 1e-6);
+            items.push({ line: door ? [x0 + x, door.h, x0 + x, H] : [x0 + x, 0, x0 + x, H], kind: 'stud' });
+          });
+          items.push({ line: [x0, 0, x0 + L, 0], kind: 'track' }, { line: [x0, H, x0 + L, H], kind: 'track' });
+          ops.forEach((o) => { items.push({ line: [x0 + o.x, o.y + o.h, x0 + o.x + o.w, o.y + o.h], kind: 'track' }); if (o.y > 0.05) items.push({ line: [x0 + o.x, o.y, x0 + o.x + o.w, o.y], kind: 'track' }); });
+        };
+        let pts, dims, caption, title;
+        if (mode === 'partition') {
+          if (!pos(v.plen) || !pos(v.phei)) return false;
+          const L = v.plen, H = v.phei, n = Math.max(0, Math.round(v.pdoor || 0)), dw = v.pdoorW || 0, dh = Math.min(v.pdoorH || 0, H - 0.1);
+          const ops = [];
+          for (let i = 0; i < n; i++) ops.push({ x: Math.max(0.1, (i + 1) * L / (n + 1) - dw / 2), y: 0, w: dw, h: dh });
+          sheetsOn(0, L, H, ops); frameOn(0, L, H, ops);
+          pts = [[0, 0], [L, 0], [L, H], [0, H]];
+          dims = [{ from: [0, 0], to: [L, 0], label: fmt(L) + ' м', offset: 22 }, { from: [L, 0], to: [L, H], label: fmt(H) + ' м', offset: 22 }];
+          title = 'Перегородка'; caption = 'Листы ' + fmt(v.sheetL) + '×' + fmt(v.sheetW) + ' см, стойки через ' + fmt(step) + ' м и по краям проёмов';
+        } else if (mode === 'wall') {
+          const R = window.CalcRoom, lens = this.lens(v, mode, extras);
+          if (!R || !extras.room || !lens || !pos(v.hei)) return false;
+          const m = R.measure(extras.room, lens, v.hei, this.roomOpts.finishes, 'gkl'), H = v.hei;
+          let x0 = 0; dims = [];
+          m.walls.forEach((w) => {
+            if (w.finish !== 'gkl') return;
+            sheetsOn(x0, w.len, H, w.ops); frameOn(x0, w.len, H, w.ops);
+            dims.push({ from: [x0, 0], to: [x0 + w.len, 0], label: (w.i + 1) + ': ' + fmt(w.len) + ' м', offset: 22 });
+            items.push({ line: [x0, 0, x0, H], kind: 'corner' });
+            x0 += w.len;
+          });
+          if (!x0) return false;
+          pts = [[0, 0], [x0, 0], [x0, H], [0, H]];
+          dims.push({ from: [x0, 0], to: [x0, H], label: fmt(H) + ' м', offset: 22 });
+          title = 'Стены'; caption = 'Развёртка обшиваемых стен: листы вразбежку, стойки через ' + fmt(step) + ' м';
+        } else if (mode === 'ceiling') {
+          if (!pos(v.len) || !pos(v.wid) || !pos(v.mainStep)) return false;
+          const L = Math.max(v.len, v.wid), W = Math.min(v.len, v.wid);
+          // Листы рядами вдоль длинной стороны, торцы соседних рядов вразбежку
+          for (let y = 0, r = 0; y < W - 1e-6; y += sw, r++) {
+            const off = r % 2 ? sh / 2 : 0, cuts = [0];
+            for (let x = sh - off; x < L - 1e-6; x += sh) cuts.push(x);
+            cuts.push(L);
+            for (let k = 0; k + 1 < cuts.length; k++) items.push({ rect: [cuts[k], y, cuts[k + 1] - cuts[k], Math.min(sw, W - y)], kind: 'sheet' });
+          }
+          const mains = Math.max(1, Math.ceil(W / v.mainStep - 1e-9) - 1), cross = Math.max(1, Math.ceil(L / step - 1e-9) - 1);
+          for (let k = 1; k <= cross; k++) items.push({ line: [k * L / (cross + 1), 0, k * L / (cross + 1), W], kind: 'stud' });
+          for (let k = 1; k <= mains; k++) {
+            const y = k * W / (mains + 1);
+            items.push({ line: [0, y, L, y], kind: 'main' });
+            if (pos(v.hangerStep)) for (let x = v.hangerStep / 2; x < L; x += v.hangerStep) items.push({ dot: [x, y], kind: 'hanger' });
+          }
+          items.push({ line: [0, 0, L, 0], kind: 'track' }, { line: [L, 0, L, W], kind: 'track' }, { line: [L, W, 0, W], kind: 'track' }, { line: [0, W, 0, 0], kind: 'track' });
+          pts = [[0, 0], [L, 0], [L, W], [0, W]];
+          dims = [{ from: [0, 0], to: [L, 0], label: fmt(L) + ' м', offset: 22 }, { from: [L, 0], to: [L, W], label: fmt(W) + ' м', offset: 22 }];
+          title = 'Потолок'; caption = 'Основные профили на подвесах (точки) через ' + fmt(v.mainStep) + ' м, поперечные через ' + fmt(step) + ' м';
+        } else return false;
+        if (items.length > 3000) return false;
+        const ST = { stud: ['#3a86ff', 2], track: ['#1d5fd1', 3.2], main: ['#1d5fd1', 3], corner: ['#8a96a3', 1.5] };
+        const under = (svg, X, Y, el) => {
+          const P = (x, y) => [X([x, y]), Y([x, y])];
+          items.filter((it) => it.rect).forEach((it) => {
+            const [x, y, w, h] = it.rect, a = P(x, y), b = P(x + w, y + h);
+            svg.appendChild(el('rect', { x: Math.min(a[0], b[0]).toFixed(1), y: Math.min(a[1], b[1]).toFixed(1), width: Math.abs(b[0] - a[0]).toFixed(1), height: Math.abs(b[1] - a[1]).toFixed(1), class: it.kind === 'hole' ? 'viz-gkl-hole' : 'viz-gkl-sheet' }));
+          });
+          items.filter((it) => it.line).forEach((it) => { const [x1, y1, x2, y2] = it.line, a = P(x1, y1), b = P(x2, y2), st = ST[it.kind];
+            svg.appendChild(el('line', { x1: a[0].toFixed(1), y1: a[1].toFixed(1), x2: b[0].toFixed(1), y2: b[1].toFixed(1), stroke: st[0], 'stroke-width': st[1], 'stroke-linecap': 'round' })); });
+          items.filter((it) => it.dot).forEach((it) => { const a = P(it.dot[0], it.dot[1]); svg.appendChild(el('circle', { cx: a[0].toFixed(1), cy: a[1].toFixed(1), r: 3.2, fill: '#e4572e' })); });
+        };
+        V.shape(box, pts, dims, { title, under, caption });
+        return true;
       },
       compute(v, mode, sel, extras) {
         const layers = sel.layers === 'two' ? 2 : 1;
