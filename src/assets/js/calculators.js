@@ -3278,6 +3278,8 @@ const CALCS = {
       modes: [
         { id: 'rect', label: 'Прямоугольник', fields: [{ id: 'a', label: 'Длина', unit: 'м' }, { id: 'b', label: 'Ширина', unit: 'м' }] },
         { id: 'triangle', label: 'Треугольник', fields: [{ id: 'a', label: 'Основание', unit: 'м' }, { id: 'b', label: 'Высота', unit: 'м' }] },
+        { id: 'tri3', label: 'Треугольник по трём сторонам', fields: [{ id: 'ta', label: 'Сторона 1', unit: 'м' }, { id: 'tb', label: 'Сторона 2', unit: 'м' }, { id: 'tc', label: 'Сторона 3', unit: 'м' }] },
+        { id: 'poly', label: 'Свой многоугольник', plan: { simple: true, presetsKey: 'PLOT_PRESETS' }, fields: [] },
         { id: 'circle', label: 'Круг', fields: [{ id: 'a', label: 'Радиус', unit: 'м' }] },
         { id: 'trapezoid', label: 'Трапеция', fields: [{ id: 'a', label: 'Верхнее основание', unit: 'м' }, { id: 'b', label: 'Нижнее основание', unit: 'м' }, { id: 'c', label: 'Высота', unit: 'м' }] },
         { id: 'quad', label: 'Четыре стороны (не совсем прямоугольник)', fields: [
@@ -3289,9 +3291,31 @@ const CALCS = {
         ] },
       ],
       prices: [{ id: 'm2', label: 'Цена (земля, газон, плитка)', unit: '₽ за м²' }],
-      draw(v, mode, box) {
+      // Треугольник по трём сторонам — по формуле Герона; точки для схемы
+      tri3(v) {
+        const a = v.ta, b2 = v.tb, c = v.tc;
+        if (!(pos(a) && pos(b2) && pos(c))) return null;
+        const p = (a + b2 + c) / 2, q = p * (p - a) * (p - b2) * (p - c);
+        if (!(q > 1e-9)) return { error: 'Из таких сторон треугольник не сложить: самая длинная должна быть короче суммы двух других.' };
+        const x = (a * a + b2 * b2 - c * c) / (2 * a);
+        return { area: Math.sqrt(q), perimeter: a + b2 + c, pts: [[0, 0], [a, 0], [x, Math.sqrt(Math.max(0, b2 * b2 - x * x))]] };
+      },
+      // Свой многоугольник из редактора плана
+      poly(extras) {
+        const P = window.CalcPlan; if (!P || !extras || !extras.plan) return null;
+        const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+        if (!g.valid) return { error: 'Контур участка пересекает сам себя — поправьте углы на плане.' };
+        return { area: g.outerArea, perimeter: g.perimeter, pts: g.verts };
+      },
+      draw(v, mode, box, view, extras) {
         const V = window.CalcViz; if (!V) return false;
         const m = (x) => fmt(x) + ' м';
+        if (mode === 'tri3' || mode === 'poly') {
+          const g = mode === 'tri3' ? this.tri3(v) : this.poly(extras); if (!g || g.error) return false;
+          const dims = g.pts.length <= 8 ? g.pts.map((a, i) => { const q = g.pts[(i + 1) % g.pts.length]; return { from: a, to: q, label: m(Math.hypot(q[0] - a[0], q[1] - a[1])), offset: 20 }; }) : [];
+          V.shape(box, g.pts, dims, { center: fmt(g.area / 100) + ' сот.', title: 'Участок' });
+          return true;
+        }
         if (mode === 'rect' && pos(v.a) && pos(v.b)) {
           V.shape(box, [[0, 0], [v.a, 0], [v.a, v.b], [0, v.b]], [{ from: [0, 0], to: [v.a, 0], label: m(v.a), offset: 22 }, { from: [v.a, 0], to: [v.a, v.b], label: m(v.b), offset: 22 }], { center: fmt(v.a * v.b / 100) + ' сот.', title: 'Участок' });
           return true;
@@ -3321,13 +3345,18 @@ const CALCS = {
         }
         return false;
       },
-      compute(v, mode) {
+      compute(v, mode, sel, extras) {
         let area = null, perimeter = null;
+        if (mode === 'tri3' || mode === 'poly') {
+          const g = mode === 'tri3' ? this.tri3(v) : this.poly(extras);
+          if (!g) return null; if (g.error) return g;
+          area = g.area; perimeter = g.perimeter;
+        }
         if (mode === 'rect') { if (pos(v.a) && pos(v.b)) { area = v.a * v.b; perimeter = 2 * (v.a + v.b); } }
         else if (mode === 'triangle') { if (pos(v.a) && pos(v.b)) area = v.a * v.b / 2; }
         else if (mode === 'circle') { if (pos(v.a)) { area = Math.PI * v.a * v.a; perimeter = 2 * Math.PI * v.a; } }
         else if (mode === 'quad') { const q = this.quad(v); if (!q) return null; if (q.error) return q; area = q.area; perimeter = q.perimeter; }
-        else if (pos(v.a) && pos(v.b) && pos(v.c)) area = (v.a + v.b) / 2 * v.c;
+        else if (mode === 'trapezoid' && pos(v.a) && pos(v.b) && pos(v.c)) area = (v.a + v.b) / 2 * v.c;
         if (area == null) return null;
         const rows = [['В квадратных метрах', fmt(area) + ' м²'], ['В гектарах', fmt(area / 10000, 4) + ' га']];
         if (perimeter != null) rows.push(['Периметр (для забора)', fmt(perimeter) + ' м']);
