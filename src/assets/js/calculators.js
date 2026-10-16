@@ -3783,6 +3783,19 @@ const CALCS = {
           h('a', { href: 'https://www.rustore.ru/catalog/app/ru.sntchat.app', target: '_blank', rel: 'noopener', class: 'btn btn-primary btn-sm', text: 'Установить из RuStore →' }),
         ]),
       ]));
+      // --- Заказ: ссылка на расчёт уходит в форму заявки (sessionStorage, не в адрес — там могут быть чужие данные) ---
+      const zakaz = h('a', { href: '/uslugi/dom/#zayavka', class: 'btn btn-secondary btn-sm', text: 'Заказать проект или расчёт →' });
+      zakaz.addEventListener('click', () => {
+        try { sessionStorage.setItem('kn_zayavka', JSON.stringify({ ssylka: shareUrl(), chto: document.title.split(' — ')[0] })); } catch (e) { /* без хранилища — просто откроется форма */ }
+        if (window.ymGoal) window.ymGoal('calc_zakaz', { calc: key || 'unknown' });
+      });
+      result.appendChild(h('div', { class: 'app-cta app-cta--result calc-zakaz' }, [
+        h('div', { class: 'app-cta-body' }, [
+          h('p', { class: 'app-cta-title', text: 'Нужно под ключ?' }),
+          h('p', { class: 'app-cta-text', text: 'Сделаю проект дома с электрикой и водой или подробный расчёт по вашим размерам. Этот расчёт приложится к заявке сам.' }),
+          zakaz,
+        ]),
+      ]));
       renderCost(r);
       if (render.after) render.after();
     }

@@ -1,9 +1,9 @@
 ---
 layout: layouts/base.njk
 altUrl: /en/
-pageTitle: "Алексей Корнилов — Full-stack Flutter/Node.js разработчик и SEO-специалист"
-pageDescription: "Строю мультитенантные веб- и мобильные приложения на Flutter и Node.js. Оптимизирую сайты под поисковые системы. Автор проекта ЧатЯдро — платформы для локальных сообществ."
-pageKeywords: "flutter разработчик, node.js разработчик, full-stack, SEO продвижение, Самара, платформа для локальных сообществ, приложение для СНТ"
+pageTitle: "Алексей Корнилов — проекты домов, сайты и продвижение в Самаре"
+pageDescription: "Дизайн-проекты домов с электрикой и водой, бесплатные калькуляторы-конструкторы для стройки. Сайты с каталогом, продвижение в Яндексе, Метрика и группы ВК для бизнеса. Самара."
+pageKeywords: "дизайн-проект дома Самара, проект электрики дома, проект каркасного дома, калькуляторы для стройки, создание сайта Самара, продвижение в Яндексе, оформление группы ВК"
 eleventyNavigation:
   key: Home
   order: 1
@@ -11,63 +11,92 @@ eleventyNavigation:
 
 <section class="hero container">
   <div class="hero-content">
-    <p class="hero-eyebrow">Full-stack разработчик · SEO-специалист · Самара</p>
-    <h1 class="hero-title">Алексей Корнилов</h1>
+    <p class="hero-eyebrow">Алексей Корнилов · Самара</p>
+    <h1 class="hero-title">Программы, которые считают, рисуют и продают</h1>
     <p class="hero-lead">
-      Строю мультитенантные веб- и мобильные приложения на Flutter и Node.js.
-      Оптимизирую сайты под поисковые системы для органического роста.
+      Для дома — проекты, планировки и расчёты стройки.
+      Для бизнеса — сайты, продвижение и группы ВКонтакте.
     </p>
     <div class="hero-cta">
-      <a href="/contact/" class="btn btn-primary btn-lg">Написать мне</a>
-      <a href="/projects/chatyadro/" class="btn btn-secondary btn-lg">Смотреть проект →</a>
+      <a href="#zayavka" class="btn btn-primary btn-lg">Написать мне</a>
+      <a href="/projects/" class="btn btn-secondary btn-lg">Смотреть работы</a>
     </div>
   </div>
 </section>
 
 <section class="section container">
-  <h2 class="section-title">Что я делаю</h2>
-  <p class="section-lead">Два направления с общим фундаментом — глубокое понимание веба и производительности.</p>
-
-  <div class="grid grid-2">
-    <a href="/projects/chatyadro/" class="card card-link">
-      <div class="card-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-          <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-          <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-          <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-        </svg>
+  <div class="grid grid-2 dveri">
+    <a href="/uslugi/dom/" class="card card-link dver">
+      <div class="card-icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M9 22V12h6v10"></path></svg>
       </div>
-      <h3 class="card-title">Разработка приложений</h3>
-      <p class="card-description">
-        Flutter (Android + iOS + Web PWA), Node.js бэкенд, PostgreSQL, WebRTC-аудио,
-        real-time через Socket.IO. От архитектуры до продакшена — всё под ключ.
-      </p>
-      <div class="card-footer">Смотреть ЧатЯдро →</div>
+      <h2 class="card-title">Для дома и стройки</h2>
+      <p class="card-description">Пока стены открыты — расставим мебель и проведём электрику и воду на бумаге.</p>
+      <ul>
+        <li>Дизайн-проект дома с электрикой, водой и 3D</li>
+        <li>Только расстановка мебели или только инженерия</li>
+        <li>19 бесплатных калькуляторов-конструкторов</li>
+      </ul>
+      <div class="card-footer">Подробнее →</div>
     </a>
-
-    <a href="/seo/" class="card card-link">
-      <div class="card-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.35-4.35"></path>
-        </svg>
+    <a href="/uslugi/biznes/" class="card card-link dver">
+      <div class="card-icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path></svg>
       </div>
-      <h3 class="card-title">SEO-продвижение</h3>
-      <p class="card-description">
-        Технический аудит, оптимизация под ключевые запросы, работа с Core Web Vitals,
-        Schema.org, семантическая разметка. Опыт с cookai.ru и другими проектами.
-      </p>
-      <div class="card-footer">Смотреть кейсы →</div>
+      <h2 class="card-title">Для бизнеса</h2>
+      <p class="card-description">Чтобы вас находили в Яндексе, а вы видели, откуда приходят покупатели.</p>
+      <ul>
+        <li>Сайт с каталогом и админкой</li>
+        <li>Продвижение в Яндексе, Метрика и Вебмастер</li>
+        <li>Группа ВКонтакте, калькулятор на ваш сайт, боты</li>
+      </ul>
+      <div class="card-footer">Подробнее →</div>
     </a>
   </div>
 </section>
 
 <section class="section container">
+  <h2 class="section-title">Живые примеры</h2>
+  <p class="section-lead">Не картинки «для красоты», а то, что работает и считает.</p>
+  <div class="grid grid-2">
+    {%- for r in raboty.items %}{% if r.glavnaya %}
+    {% include "components/rabota.njk" %}
+    {%- endif %}{% endfor %}
+  </div>
+  <p class="section-more"><a href="/projects/" class="btn btn-secondary">Все работы</a></p>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Попробуйте сами</h2>
+  <p class="section-lead">Нарисуйте фундамент, забор или пол — и получите материалы, стоимость и схему. Бесплатно и без регистрации.</p>
+  <div class="grid grid-3">
+    {%- set popular = ["/tools/kalkulyator-betona/", "/tools/kalkulyator-kvarcvinila/", "/tools/kalkulyator-zabora/"] %}
+    {%- for href in popular %}{% for cat in tools.categories %}{% for t in cat.items %}{% if t.href == href %}
+    <a href="{{ t.href }}" class="card card-link tool-card">
+      <div class="card-icon tool-card-icon" aria-hidden="true">{{ t.icon }}</div>
+      <h3 class="card-title">{{ t.title }}</h3>
+      <p class="card-description">{{ t.text }}</p>
+    </a>
+    {%- endif %}{% endfor %}{% endfor %}{% endfor %}
+  </div>
+  <p class="section-more"><a href="/tools/" class="btn btn-secondary">Все конструкторы</a></p>
+</section>
+
+<section class="section container">
+  <h2 class="section-title">Как я работаю</h2>
+  <ol class="shagi shagi--4">
+    <li><h3>Пишете, что нужно</h3><p>Формой ниже, в Telegram или ВКонтакте — как удобнее.</p></li>
+    <li><h3>Созваниваемся</h3><p>Уточняю задачу, называю срок и цену.</p></li>
+    <li><h3>Делаю и показываю по шагам</h3><p>Заказчик проекта видит каждый вариант на сайте по своему паролю и оставляет замечания прямо там.</p></li>
+    <li><h3>Принимаете работу</h3><p>Работаю как самозанятый: договор и чек на каждую оплату.</p></li>
+  </ol>
+</section>
+
+<section class="section container">
   <h2 class="section-title">Из блога</h2>
   <p class="section-lead">Разборы из практики: что делал, что измерил, что получилось.</p>
-  <div class="grid grid-2">
-    {%- for post in collections.posts | head(4) %}
+  <div class="grid grid-3">
+    {%- for post in collections.posts | head(3) %}
     <a href="{{ post.url }}" class="card card-link">
       <p class="post-meta"><time datetime="{{ post.date | date('iso') }}">{{ post.date | date }}</time> · {{ post.templateContent | readingTime }} мин</p>
       <h3 class="card-title">{{ post.data.title }}</h3>
@@ -80,91 +109,15 @@ eleventyNavigation:
 </section>
 
 <section class="section container">
-  <h2 class="section-title">Калькуляторы-конструкторы</h2>
-  <p class="section-lead">Нарисуйте фундамент, комнату, дом или участок — и получите материалы, стоимость и схему. Те же расчёты есть в приложении ЧатЯдро.</p>
-  <div class="grid grid-3">
-    {%- for t in tools.categories[0].items %}
-    <a href="{{ t.href }}" class="card card-link tool-card">
-      <div class="card-icon tool-card-icon" aria-hidden="true">{{ t.icon }}</div>
-      <h3 class="card-title">{{ t.title }}</h3>
-      <p class="card-description">{{ t.text }}</p>
-    </a>
-    {%- endfor %}
-    <a href="/tools/kalkulyator-zabora/" class="card card-link tool-card">
-      <div class="card-icon tool-card-icon" aria-hidden="true">🪵</div>
-      <h3 class="card-title">Забор</h3>
-      <p class="card-description">Участок с воротами и калитками, профнастил, штакетник, доска, сетка или блоки: листы, столбы, лаги, бетон.</p>
-    </a>
+  <div class="glass vrezka">
+    <h2>Коротко обо мне</h2>
+    <p>17 лет управлял собственной компанией, поэтому знаю, как заказчик считает деньги и почему ему важен срок.
+      С 2026 года делаю программы: сам написал платформу <a href="/projects/chatyadro/">ЧатЯдро</a>
+      и этот сайт — от первой строчки до сервера. <a href="/about/">Подробнее обо мне →</a></p>
   </div>
-  <p class="section-more"><a href="/tools/" class="btn btn-secondary">Все калькуляторы</a></p>
 </section>
 
 <section class="section container">
-  <h2 class="section-title">Проекты</h2>
-
-  {#- Четыре карточки: в сетке на три колонки четвёртая оставалась одна
-      на второй строке, поэтому здесь grid-2 — ровно 2 × 2. -#}
-  <div class="grid grid-2">
-    <div class="card">
-      <div class="card-icon card-icon--app"><img src="/assets/images/chatyadro-icon-128.webp" width="48" height="48" alt="ЧатЯдро" loading="lazy"></div>
-      <h3 class="card-title">ЧатЯдро</h3>
-      <p class="card-description">
-        Мультитенантная платформа для локальных сообществ: 22 категории, роли,
-        модули, real-time чат, аудиозвонки, голосовые, лента, PWA.
-        Приложение опубликовано в RuStore.
-      </p>
-      <div class="card-footer">
-        <a href="https://sntchat.ru" target="_blank" rel="noopener">sntchat.ru →</a>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="16 18 22 12 16 6"></polyline>
-          <polyline points="8 6 2 12 8 18"></polyline>
-        </svg>
-      </div>
-      <h3 class="card-title">Разработка ботов</h3>
-      <p class="card-description">
-        Telegram-боты, VK-боты для бизнеса. Интеграция с CRM и нейросетями.
-      </p>
-    </div>
-
-    <div class="card">
-      <div class="card-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M2 12h20"></path>
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-        </svg>
-      </div>
-      <h3 class="card-title">SEO-кейсы</h3>
-      <p class="card-description">
-        cookai.ru — переработка рецептов под ключевые запросы, работа над структурой,
-        оптимизация контента.
-      </p>
-      <div class="card-footer">
-        <a href="/seo/">Смотреть все кейсы →</a>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 21h18"></path>
-          <path d="M5 21V8l7-5 7 5v13"></path>
-          <path d="M9 21v-6h6v6"></path>
-        </svg>
-      </div>
-      <h3 class="card-title">Летняя кухня 6 × 5 м</h3>
-      <p class="card-description">
-        Рабочая документация: трёхмерная модель, пять листов чертежей —
-        план, разрезы, кровля, узлы — и смета материалов.
-      </p>
-      <div class="card-footer">
-        <a href="/kuhnya/">Смотреть проект →</a>
-      </div>
-    </div>
-  </div>
+  {%- set zId = "zg" %}
+  {% include "components/zayavka.njk" %}
 </section>

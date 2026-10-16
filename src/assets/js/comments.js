@@ -47,8 +47,8 @@
   let replyTo = null;
 
   // --- Форма ---------------------------------------------------------------
-  const nameInput = h('input', { type: 'text', id: 'cm-name', name: 'name', maxlength: '60', autocomplete: 'nickname', placeholder: 'Как вас зовут', value: store.get('kn_comment_name', '') });
-  const bodyInput = h('textarea', { id: 'cm-body', name: 'body', rows: '4', maxlength: '2000', placeholder: 'Ваш комментарий' });
+  const nameInput = h('input', { type: 'text', id: 'cm-name', name: 'name', maxlength: '60', autocomplete: 'nickname', class: 'ym-disable-keys', placeholder: 'Как вас зовут', value: store.get('kn_comment_name', '') });
+  const bodyInput = h('textarea', { id: 'cm-body', name: 'body', rows: '4', maxlength: '2000', class: 'ym-disable-keys', placeholder: 'Ваш комментарий' });
   const replyNote = h('p', { class: 'comments-reply-note', hidden: '' });
   const submit = h('button', { type: 'submit', class: 'btn btn-primary', text: 'Отправить' });
   const form = h('form', { class: 'comments-form glass', novalidate: '' }, [
@@ -61,7 +61,10 @@
       h('label', { for: 'cm-company', text: 'Не заполняйте это поле' }),
       h('input', { type: 'text', id: 'cm-company', name: 'company', tabindex: '-1', autocomplete: 'off' }),
     ]),
-    h('div', { class: 'form-footer' }, [submit, h('p', { class: 'form-hint text-small text-muted', text: 'Без регистрации. Имя видят все, почту не спрашиваем. Свой комментарий можно поправить или удалить в течение суток.' })]),
+    h('div', { class: 'form-footer' }, [submit, h('p', { class: 'form-hint text-small text-muted' }, [
+      document.createTextNode('Без регистрации. Имя и комментарий видят все на этой странице — можно указать ник. Почту не спрашиваем. Свой комментарий можно поправить или удалить в течение суток. '),
+      h('a', { href: '/politika/', text: 'Как обрабатываются данные' }),
+    ])]),
     status,
   ]);
 

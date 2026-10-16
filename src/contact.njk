@@ -3,8 +3,8 @@ layout: layouts/base.njk
 altUrl: /en/contact/
 pageCrumb: "Контакты"
 pageTitle: "Контакты · Связаться с Алексеем Корниловым"
-pageDescription: "Свяжитесь со мной по вопросам разработки приложений или SEO-продвижения. Email, Telegram, MAX, VK, GitHub — выбирайте удобный канал."
-pageKeywords: "разработчик Самара контакты, flutter разработчик связаться, SEO услуги Самара"
+pageDescription: "Заявка на проект дома, сайт, продвижение или группу ВКонтакте. Почта, Telegram, ВКонтакте или форма на сайте — отвечаю в течение дня."
+pageKeywords: "дизайн-проект дома Самара контакты, заказать сайт Самара, SEO услуги Самара, Алексей Корнилов"
 pageSchema: |
   {
     "@type": "ContactPage",
@@ -19,13 +19,13 @@ pageSchema: |
   <p class="hero-eyebrow">Свяжитесь со мной</p>
   <h1>Готов обсудить проект</h1>
   <p class="section-lead">
-    Разработка приложений, SEO-продвижение, консультация — напишите удобным способом.
+    Проект дома, сайт, продвижение, группа ВКонтакте или программа — напишите удобным способом.
     Отвечаю в течение дня.
   </p>
 </section>
 
 <section class="section container">
-  <h2 class="section-title">Мессенджеры и почта</h2>
+  <h2 class="section-title">Почта, Telegram и ВКонтакте</h2>
 
   <div class="grid grid-3 contacts-grid">
     <a href="mailto:{{ site.contacts.email }}" class="card contact-card">
@@ -75,36 +75,6 @@ pageSchema: |
 </section>
 
 <section class="section container">
-  <div class="contact-form-wrap glass">
-    <h2>Написать сразу</h2>
-    <p class="text-muted">Заполните форму — я отвечу на почту в течение дня.</p>
-
-    <form class="contact-form" id="contact-form" data-telegram="{{ site.contacts.telegram }}" novalidate>
-      <div class="field">
-        <label for="cf-name">Ваше имя</label>
-        <input type="text" id="cf-name" name="name" required autocomplete="name" placeholder="Как к вам обращаться">
-      </div>
-      <div class="field">
-        <label for="cf-email">Email для ответа</label>
-        <input type="email" id="cf-email" name="email" required autocomplete="email" placeholder="you@example.com">
-      </div>
-      <div class="field">
-        <label for="cf-message">Сообщение</label>
-        <textarea id="cf-message" name="message" required rows="5" placeholder="Расскажите вкратце о проекте или задаче"></textarea>
-      </div>
-      {#- Honeypot: скрытое поле-приманка для спам-ботов. Люди его не видят и не
-         заполняют; если поле пришло непустым — сервер тихо отсеивает запрос. -#}
-      <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">
-        <label for="cf-company">Не заполняйте это поле</label>
-        <input type="text" id="cf-company" name="company" tabindex="-1" autocomplete="off">
-      </div>
-      <div class="form-footer">
-        <button type="submit" class="btn btn-primary btn-lg">Отправить</button>
-        <p class="form-hint text-small text-muted">Никакого спама. Данные используются только для ответа вам.</p>
-      </div>
-      <div class="form-status" id="cf-status" role="status" aria-live="polite"></div>
-    </form>
-  </div>
+  {%- set zId = "zk" %}{% set zZagolovok = "Написать сразу" %}
+  {% include "components/zayavka.njk" %}
 </section>
-
-<script src="/assets/js/contact-form.js" defer></script>

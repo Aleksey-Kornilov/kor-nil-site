@@ -1,0 +1,73 @@
+{#- Форма заявки — одна на весь сайт: главная, «Для дома», «Для бизнеса», контакты.
+    Перед include можно задать:
+      zTema      — что выбрано в «Что нужно» (dom, sajt, …), по умолчанию ничего;
+      zZagolovok — заголовок над формой.
+    Отправку делает assets/js/zayavka.js. Согласие на обработку ПД — отдельная галочка,
+    заранее не стоит (152-ФЗ, с 01.09.2025 согласие — отдельный документ /soglasie/). -#}
+{%- set zId = zId or "z" %}
+<div class="contact-form-wrap glass zayavka" id="zayavka">
+  <h2>{{ zZagolovok or "Оставить заявку" }}</h2>
+  <p class="text-muted">Отвечу в течение дня: позвоню или напишу туда, куда укажете.</p>
+
+  <form class="contact-form zayavka-form" novalidate data-telegram="{{ site.contacts.telegram }}">
+    <div class="field">
+      <label for="{{ zId }}-name">Как к вам обращаться</label>
+      <input type="text" id="{{ zId }}-name" name="name" required class="ym-disable-keys" autocomplete="name" maxlength="100">
+    </div>
+    <div class="field">
+      <label for="{{ zId }}-svyaz">Телефон, Telegram или почта</label>
+      <input type="text" id="{{ zId }}-svyaz" name="svyaz" required class="ym-disable-keys" autocomplete="tel" maxlength="120" placeholder="+7 … или @ник">
+    </div>
+    <div class="field">
+      <label for="{{ zId }}-tema">Что нужно</label>
+      <select id="{{ zId }}-tema" name="tema">
+        <option value="">— выберите —</option>
+        <optgroup label="Для дома">
+          <option value="dom" {% if zTema == "dom" %}selected{% endif %}>Проект дома целиком</option>
+          <option value="rasst" {% if zTema == "rasst" %}selected{% endif %}>Только расстановка и 3D</option>
+          <option value="inzh" {% if zTema == "inzh" %}selected{% endif %}>Электрика и вода по моей расстановке</option>
+        </optgroup>
+        <optgroup label="Для бизнеса">
+          <option value="sajt" {% if zTema == "sajt" %}selected{% endif %}>Сайт</option>
+          <option value="seo" {% if zTema == "seo" %}selected{% endif %}>Продвижение в Яндексе</option>
+          <option value="metrika" {% if zTema == "metrika" %}selected{% endif %}>Метрика и Вебмастер</option>
+          <option value="vk" {% if zTema == "vk" %}selected{% endif %}>Группа ВКонтакте</option>
+          <option value="kalk" {% if zTema == "kalk" %}selected{% endif %}>Калькулятор на свой сайт</option>
+          <option value="bot" {% if zTema == "bot" %}selected{% endif %}>Программа или бот</option>
+        </optgroup>
+        <option value="drugoe">Другое</option>
+      </select>
+    </div>
+    <div class="field zayavka-ploshchad" hidden>
+      <label for="{{ zId }}-ploshchad">Площадь дома, м² <span class="text-muted">— если знаете</span></label>
+      <input type="number" id="{{ zId }}-ploshchad" name="ploshchad" class="ym-disable-keys" min="1" max="5000" step="1" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label for="{{ zId }}-message">Пара слов о задаче</label>
+      <textarea id="{{ zId }}-message" name="message" class="ym-disable-keys" rows="4" maxlength="5000" placeholder="Например: каркасный дом 10 × 12, стены ещё открыты, нужна электрика"></textarea>
+    </div>
+
+    <label class="zayavka-check">
+      <input type="checkbox" name="soglasie_pd" value="1" required>
+      <span>Даю <a href="/soglasie/" target="_blank">согласие на обработку персональных данных</a>
+        и знаком(а) с <a href="/politika/" target="_blank">политикой</a>.</span>
+    </label>
+    <label class="zayavka-check">
+      <input type="checkbox" name="soglasie_reklama" value="1">
+      <span>Можно присылать мне новости об услугах (<a href="/soglasie-reklama/" target="_blank">согласие</a>). Необязательно.</span>
+    </label>
+
+    {#- Ловушка для спам-ботов: люди поле не видят, бот заполняет — сервер молча отсеивает. -#}
+    <div aria-hidden="true" class="zayavka-lovushka">
+      <label for="{{ zId }}-company">Не заполняйте это поле</label>
+      <input type="text" id="{{ zId }}-company" name="company" tabindex="-1" autocomplete="off">
+    </div>
+
+    <div class="form-footer">
+      <button type="submit" class="btn btn-primary btn-lg">Отправить</button>
+      <p class="form-hint text-small text-muted">Без спама. Контакты нужны только чтобы ответить вам.</p>
+    </div>
+    <div class="form-status" role="status" aria-live="polite"></div>
+  </form>
+</div>
+<script src="/assets/js/zayavka.js" defer></script>

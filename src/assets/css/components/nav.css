@@ -34,7 +34,7 @@
 
 .nav-menu {
   display: flex;
-  gap: var(--space-5);
+  gap: var(--space-1);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -46,6 +46,7 @@
   font-size: var(--fs-small);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
+  white-space: nowrap;
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 .nav-menu a:hover {
@@ -57,8 +58,8 @@
   background: var(--color-accent-subtle);
 }
 
-/* Мобильное меню (до 900px: семь пунктов в строку не помещаются) */
-@media (max-width: 900px) {
+/* Мобильное меню (до 1040px: восемь пунктов в строку не помещаются) */
+@media (max-width: 1040px) {
   .nav-toggle { display: block; order: 2; margin-left: auto; }
   .nav-menu {
     position: fixed;

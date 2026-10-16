@@ -1,0 +1,15 @@
+{#- Карточка работы. Перед include: set r = элемент из _data/raboty.json. -#}
+<article class="card rabota" data-napr="{{ r.napr }}">
+  {%- if r.img %}
+  <img class="rabota-img" src="/assets/images/raboty/{{ r.img }}-960.webp" srcset="/assets/images/raboty/{{ r.img }}-480.webp 480w, /assets/images/raboty/{{ r.img }}-960.webp 960w" sizes="(min-width: 720px) 50vw, 100vw" width="960" height="600" alt="{{ r.alt }}" loading="lazy" decoding="async">
+  {%- else %}
+  <div class="rabota-img rabota-img--net"><span>🔒 {{ r.zakryt }}</span></div>
+  {%- endif %}
+  <div class="rabota-telo">
+    <p class="rabota-teg">{{ r.teg }}</p>
+    <h3 class="card-title">{{ r.title }}</h3>
+    <p class="card-description">{{ r.text }}</p>
+    {%- if r.cifra %}<p class="rabota-cifra">{{ r.cifra }}</p>{% endif %}
+    {%- if r.href %}<div class="card-footer"><a href="{{ r.href }}">{{ r.ssylka }}</a></div>{% endif %}
+  </div>
+</article>

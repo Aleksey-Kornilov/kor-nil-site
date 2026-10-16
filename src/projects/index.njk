@@ -1,0 +1,39 @@
+---
+layout: layouts/base.njk
+pageCrumb: "Работы"
+pageTitle: "Работы — проекты домов, сайты, продвижение · Алексей Корнилов"
+pageDescription: "Живые примеры: летняя кухня и каркасный дом с электрикой и 3D, продвижение сайта в Яндексе, платформа ЧатЯдро. Что сделано и какой результат — в цифрах."
+pageKeywords: "дизайн-проект дома пример, проект летней кухни, проект электрики дома, кейс SEO, портфолио Самара"
+pageType: website
+---
+
+<section class="section container seo-hero">
+  <h1>Работы</h1>
+  <p class="section-lead">
+    Что сделано и какой получился результат — в цифрах и с живыми ссылками.
+    Проекты заказчиков показываю только с их согласия.
+  </p>
+  <div class="filtr" role="group" aria-label="Какие работы показать">
+    <button type="button" class="btn btn-secondary btn-sm" data-filtr="" aria-pressed="true">Все</button>
+    <button type="button" class="btn btn-secondary btn-sm" data-filtr="dom" aria-pressed="false">Для дома</button>
+    <button type="button" class="btn btn-secondary btn-sm" data-filtr="biznes" aria-pressed="false">Для бизнеса</button>
+  </div>
+</section>
+
+<section class="section container">
+  <div class="grid grid-2" id="raboty">
+    {%- for r in raboty.items %}
+    {% include "components/rabota.njk" %}
+    {%- endfor %}
+  </div>
+</section>
+
+<section class="section container">
+  <div class="glass vrezka vhod">
+    <h2>Заказчикам</h2>
+    <p>Ваш проект — на сайте по вашему паролю: варианты, чертежи, 3D и замечания.</p>
+    <a href="/dom/k/" class="btn btn-primary">Войти в свой проект →</a>
+  </div>
+</section>
+
+<script src="/assets/js/raboty-filtr.js" defer></script>
