@@ -3389,18 +3389,37 @@ const CALCS = {
           ['Мочевина', '10'], ['Селитра', '15'], ['Комплексное NPK', '20'],
         ] } },
       ],
+      // Состав — доля действующего вещества (N, P₂O₅, K₂O) по ГОСТ и упаковкам; у золы и органики — ориентир
+      selects: [{ id: 'fert', label: 'Удобрение', default: 'own', choices: [
+        { id: 'own', label: 'Своё', hint: 'норму и состав берите с упаковки' },
+        { id: 'urea', label: 'Мочевина', hint: 'азот 46%', npk: [46, 0, 0], sets: { rate: '20', conc: '10' } },
+        { id: 'an', label: 'Аммиачная селитра', hint: 'азот 34%', npk: [34, 0, 0], sets: { rate: '20', conc: '15' } },
+        { id: 'sp', label: 'Суперфосфат', hint: 'фосфор P₂O₅ 20%; в воде растворяется плохо — вносят в почву', npk: [0, 20, 0], sets: { rate: '40' } },
+        { id: 'sp2', label: 'Двойной суперфосфат', hint: 'фосфор P₂O₅ 46%', npk: [0, 46, 0], sets: { rate: '20' } },
+        { id: 'ks', label: 'Сульфат калия', hint: 'калий K₂O 50%, без хлора', npk: [0, 0, 50], sets: { rate: '20', conc: '15' } },
+        { id: 'nak', label: 'Нитроаммофоска', hint: 'N 16, P₂O₅ 16, K₂O 16 %', npk: [16, 16, 16], sets: { rate: '30', conc: '20' } },
+        { id: 'ash', label: 'Зола', hint: 'примерно P₂O₅ 3–5 %, K₂O 8–12 % — зависит от того, что жгли', npk: [0, 4, 10], sets: { rate: '150' } },
+      ] }],
       prices: [{ id: 'kg', label: 'Цена удобрения', unit: '₽ за килограмм' }],
-      compute(v, mode) {
+      compute(v, mode, sel) {
         let grams = null;
         if (mode === 'area') { if (pos(v.area) && pos(v.rate)) grams = v.area * v.rate; }
         else if (pos(v.conc) && pos(v.water)) grams = v.conc * v.water / 10;
         if (grams == null) return null;
         const amount = grams >= 1000 ? fmt(grams / 1000) + ' кг' : fmt(grams) + ' г';
+        const rows = mode === 'area'
+          ? [['На площадь', fmt(v.area) + ' м² по ' + fmt(v.rate) + ' г/м²'], ['На сотку', fmt(v.rate * 100 / 1000) + ' кг, на гектар ' + fmt(v.rate * 10000 / 1e6) + ' т']]
+          : [['Раствор', fmt(v.water) + ' л по ' + fmt(v.conc) + ' г на 10 л']];
+        // Сколько чистого азота, фосфора и калия получит грядка
+        const f = this.selects[0].choices.find((c) => c.id === sel.fert);
+        if (f && f.npk) {
+          const g = (pct) => { const x = grams * pct / 100; return x >= 1000 ? fmt(x / 1000) + ' кг' : fmt(x, x < 10 ? 1 : 0) + ' г'; };
+          const parts = [['азот N', f.npk[0]], ['фосфор P₂O₅', f.npk[1]], ['калий K₂O', f.npk[2]]].filter(([, x]) => x > 0).map(([nm, x]) => nm + ' ' + g(x));
+          rows.push(['Действующего вещества', parts.join(', ') + (mode === 'area' && pos(v.area) ? ' — это ' + [['N', f.npk[0]], ['P₂O₅', f.npk[1]], ['K₂O', f.npk[2]]].filter(([, x]) => x > 0).map(([nm, x]) => nm + ' ' + fmt(v.rate * x / 100, 1) + ' г/м²').join(', ') : '')]);
+        }
         return {
           main: { label: mode === 'area' ? 'Нужно удобрения' : 'Удобрения на раствор', value: amount },
-          rows: mode === 'area'
-            ? [['На площадь', fmt(v.area) + ' м² по ' + fmt(v.rate) + ' г/м²']]
-            : [['Раствор', fmt(v.water) + ' л по ' + fmt(v.conc) + ' г на 10 л']],
+          rows,
           note: mode === 'area'
             ? 'Нормы примерные — уточняйте на упаковке конкретного удобрения.'
             : 'Подкормку лучше делать по влажной почве, утром или вечером. Нормы примерные. Коровяк граммами не меряют: его настаивают с водой 1:5 и разводят 1:10 — около литра настоя на ведро.',
