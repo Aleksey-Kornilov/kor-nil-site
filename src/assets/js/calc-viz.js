@@ -28,8 +28,17 @@
   // Призма: poly [[x,y],…] (против часовой), z — низ, dz — высота. Брусок — частный случай.
   function toPrism(b) {
     if (b.poly) return b;
-    return { poly: [[b.x, b.y], [b.x + b.dx, b.y], [b.x + b.dx, b.y + b.dy], [b.x, b.y + b.dy]], z: b.z, dz: b.dz };
+    return { poly: [[b.x, b.y], [b.x + b.dx, b.y], [b.x + b.dx, b.y + b.dy], [b.x, b.y + b.dy]], z: b.z, dz: b.dz, color: b.color };
   }
+  // Свой цвет детали (#rrggbb): грани светлее/темнее по их стороне, как у серых брусков
+  const SHADE = { top: 1.12, side: 0.92, side2: 0.74, bottom: 0.6 };
+  function tint(hex, k) {
+    const n = parseInt(hex.slice(1), 16), c = (v) => Math.max(0, Math.min(255, Math.round(v * k)));
+    return 'rgb(' + c(n >> 16) + ',' + c((n >> 8) & 255) + ',' + c(n & 255) + ')';
+  }
+  // Мин/макс без разворота массива в аргументы: на тысячах деталей тот падает
+  const lo = (a) => { let m = Infinity; for (const x of a) if (x < m) m = x; return m; };
+  const hi = (a) => { let m = -Infinity; for (const x of a) if (x > m) m = x; return m; };
   function prismFaces(pr) {
     let poly = pr.poly;
     let a = 0; for (let i = 0; i < poly.length; i++) { const q = poly[i], r = poly[(i + 1) % poly.length]; a += q[0] * r[1] - r[0] * q[1]; }
@@ -54,7 +63,7 @@
   function iso(container, boxes, dims, opts) {
     opts = opts || {};
     // Тысячи деталей на схеме не разглядеть, а браузер на них падает — такую схему не рисуем
-    if (boxes.length > 1500) { const old = container.querySelector('svg'); if (old) old.remove(); return; }
+    if (boxes.length > 4000) { const old = container.querySelector('svg'); if (old) old.remove(); return; }
     const yaw = opts.yaw == null ? -0.6 : opts.yaw;
     const pitch = opts.pitch == null ? DEFAULT_PITCH : Math.max(0.12, Math.min(1.45, opts.pitch));
     const zoom = opts.zoom == null ? 1 : Math.max(0.4, Math.min(4, opts.zoom));
@@ -69,18 +78,19 @@
     const segs = [];
     (opts.lines || []).forEach((ln) => {
       for (let i = 1; i < ln.pts.length; i++) {
-        const a = ln.pts[i - 1], b = ln.pts[i], k = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.25));
+        const a = ln.pts[i - 1], b = ln.pts[i], k = ln.whole ? 1 : Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.25));
         for (let j = 0; j < k; j++) {
           const at = (f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
-          segs.push({ a: at(j / k), b: at((j + 1) / k), cls: ln.cls || 'viz-rail' });
+          segs.push({ a: at(j / k), b: at((j + 1) / k), cls: ln.cls || 'viz-rail', color: ln.color, width: ln.width, sort: ln.sort });
         }
       }
     });
     const lp = segs.flatMap((sg) => [sg.a, sg.b]);
     const xs = prs.flatMap((b) => b.poly.map((q) => q[0])).concat(lp.map((q) => q[0])), ys = prs.flatMap((b) => b.poly.map((q) => q[1])).concat(lp.map((q) => q[1])), zs = prs.flatMap((b) => [b.z, b.z + b.dz]).concat(lp.map((q) => q[2]));
-    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
-    const gm = opts.ground ? Math.max(0.6, (Math.max(...xs) - Math.min(...xs)) * 0.18) : 0;
-    const rx = (Math.max(...xs) - Math.min(...xs)) / 2 + gm, ry = (Math.max(...ys) - Math.min(...ys)) / 2 + gm, rz = (Math.max(...zs) - Math.min(...zs)) / 2;
+    const x0 = lo(xs), x1 = hi(xs), y0 = lo(ys), y1 = hi(ys), z0 = lo(zs), z1 = hi(zs);
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, cz = (z0 + z1) / 2;
+    const gm = opts.ground ? Math.max(0.6, (x1 - x0) * 0.18) : 0;
+    const rx = (x1 - x0) / 2 + gm, ry = (y1 - y0) / 2 + gm, rz = (z1 - z0) / 2;
     const radiusXY = Math.hypot(rx, ry);
     const W = 640, H = 400, pad = 64;
     const scale = Math.min((W - pad * 2) / (2 * radiusXY), (H - pad * 2) / (2 * (radiusXY * 1 + rz * 1))) * zoom;
@@ -96,26 +106,37 @@
     defs.appendChild(mk); svg.appendChild(defs);
 
     if (opts.ground) {
-      const g = [[Math.min(...xs) - gm, Math.min(...ys) - gm, 0], [Math.max(...xs) + gm, Math.min(...ys) - gm, 0], [Math.max(...xs) + gm, Math.max(...ys) + gm, 0], [Math.min(...xs) - gm, Math.max(...ys) + gm, 0]];
+      const g = [[x0 - gm, y0 - gm, 0], [x1 + gm, y0 - gm, 0], [x1 + gm, y1 + gm, 0], [x0 - gm, y1 + gm, 0]];
       svg.appendChild(el('polygon', { points: poly(g.map(pr)), fill: '#7cb083', 'fill-opacity': '0.28', stroke: '#5f9466', 'stroke-opacity': '0.5' }));
     }
 
     // Порядок рисования: бруски от дальних к ближним по центру, внутри бруска — только
     // видимые грани (отсечение задних по знаку площади на экране). Так соседние бруски
     // кольца не «протыкают» друг друга при повороте.
+    // Слои вдоль стенки (забор: дальний ряд штакетин, лаги, ближний ряд) — sort: { at, n, o }:
+    // глубина точки на оси стенки плюс сдвиг слоя в сторону зрителя. По центру детали длинная
+    // лага и узкая штакетина сортируются неверно, и лага вылезает поперёк штакетин.
+    const o0 = pr([0, 0, 0]).depth;
+    const layered = (st) => pr(st.at).depth + st.o * 50 * Math.sign(pr([st.n[0], st.n[1], 0]).depth - o0);
     const items = prs.map((b) => {
+      if (b.sort) return { b, depth: layered(b.sort) };
       const cx2 = b.poly.reduce((s, q) => s + q[0], 0) / b.poly.length, cy2 = b.poly.reduce((s, q) => s + q[1], 0) / b.poly.length;
       const c = pr([cx2, cy2, b.z + b.dz / 2]);
       return { b, depth: c.depth };
-    }).concat(segs.map((sg) => ({ sg, depth: pr([(sg.a[0] + sg.b[0]) / 2, (sg.a[1] + sg.b[1]) / 2, (sg.a[2] + sg.b[2]) / 2]).depth }))).sort((a, b) => a.depth - b.depth);
+    }).concat(segs.map((sg) => ({ sg, depth: sg.sort ? layered(sg.sort) : pr([(sg.a[0] + sg.b[0]) / 2, (sg.a[1] + sg.b[1]) / 2, (sg.a[2] + sg.b[2]) / 2]).depth }))).sort((a, b) => a.depth - b.depth);
     items.forEach(({ b, sg }) => {
-      if (sg) { const a = pr(sg.a), q = pr(sg.b); svg.appendChild(el('line', { x1: X(a).toFixed(1), y1: Y(a).toFixed(1), x2: X(q).toFixed(1), y2: Y(q).toFixed(1), class: sg.cls })); return; }
+      if (sg) {
+        const a = pr(sg.a), q = pr(sg.b), at = { x1: X(a).toFixed(1), y1: Y(a).toFixed(1), x2: X(q).toFixed(1), y2: Y(q).toFixed(1), class: sg.cls };
+        if (sg.color) at.stroke = sg.color; if (sg.width) at['stroke-width'] = sg.width;
+        svg.appendChild(el('line', at)); return;
+      }
       prismFaces(b).forEach((fc) => {
         const p = fc.pts.map(pr);
         // площадь со знаком: грань видна, если её обход на экране против часовой (с учётом порядка вершин)
         let area = 0;
         for (let i = 0; i < p.length; i++) { const a = p[i], q = p[(i + 1) % p.length]; area += a.sx * q.sy - q.sx * a.sy; }
         if (area <= 0) return;
+        if (b.color) { svg.appendChild(el('polygon', { points: poly(p), fill: tint(b.color, SHADE[fc.shade]), stroke: tint(b.color, 0.45), 'stroke-width': '0.5', 'stroke-opacity': '0.7' })); return; }
         const under = fc.z <= 0.0001;
         const fill = FILL[(under ? 'u' : '') + fc.shade];
         svg.appendChild(el('polygon', { points: poly(p), fill, 'fill-opacity': under ? '0.9' : '1', stroke: '#2b3440', 'stroke-width': '0.8', 'stroke-opacity': '0.6' }));
@@ -288,33 +309,6 @@
   }
 
   /* ---------- Забор: вид сбоку со столбами, воротами и калиткой ---------- */
-  function fence(container, len, H, step, gate, wicket, kind) {
-    const W = 680, PAD = 36, TOP = 30;
-    const scale = Math.min((W - PAD * 2) / len, 160 / H);
-    const hpx = H * scale, HH = TOP + hpx + 60;
-    const svg = el('svg', { viewBox: `0 0 ${W} ${HH}`, class: 'viz-svg', role: 'img', 'aria-label': 'Схема забора' });
-    const x0 = PAD + ((W - PAD * 2) - len * scale) / 2, ground = TOP + hpx;
-    svg.appendChild(el('line', { x1: PAD - 10, y1: ground, x2: W - PAD + 10, y2: ground, stroke: '#5f9466', 'stroke-width': 2 }));
-    // проёмы: ворота у начала, калитка сразу за ними
-    let x = x0;
-    const seg = (w, cls, label) => { svg.appendChild(el('rect', { x, y: TOP, width: w * scale, height: hpx, class: cls })); if (w * scale > 44) svg.appendChild(el('text', { x: x + w * scale / 2, y: TOP + hpx / 2 + 4, class: 'viz-small', 'text-anchor': 'middle' }, label)); x += w * scale; };
-    if (gate > 0) seg(gate, 'viz-door', 'ворота ' + f1(gate));
-    if (wicket > 0) seg(wicket, 'viz-door', 'калитка');
-    const net = len - gate - wicket;
-    const n = Math.ceil(net / step - 1e-9);
-    const fill = kind === 'chainlink' ? 'viz-window' : 'viz-wall';
-    for (let i = 0; i < n; i++) { const w = Math.min(step, net - i * step); svg.appendChild(el('rect', { x, y: TOP, width: w * scale, height: hpx, class: fill })); if (i < 2) svg.appendChild(el('text', { x: x + w * scale / 2, y: TOP + hpx + 16, class: 'viz-small', 'text-anchor': 'middle' }, f1(w) + ' м')); x += w * scale; }
-    // столбы
-    const posts = []; let px = x0; if (gate > 0) { posts.push(px); px += gate * scale; posts.push(px); } if (wicket > 0) { if (!gate) posts.push(px); px += wicket * scale; posts.push(px); }
-    if (!gate && !wicket) posts.push(px);
-    for (let i = 1; i <= n; i++) posts.push(x0 + (gate + wicket + Math.min(i * step, net)) * scale);
-    posts.forEach((p) => svg.appendChild(el('rect', { x: p - 3, y: TOP - 6, width: 6, height: hpx + 6 + 14, fill: '#4b5563' })));
-    svg.appendChild(el('text', { x: x0 - 10, y: TOP + hpx / 2, class: 'viz-label', 'text-anchor': 'end', transform: `rotate(-90 ${x0 - 10} ${TOP + hpx / 2})` }, f1(H) + ' м'));
-    svg.appendChild(el('text', { x: W / 2, y: HH - 8, class: 'viz-caption', 'text-anchor': 'middle' }, `Длина ${f1(len)} м · пролётов ${n} · столбов ${posts.length}`));
-    const old = container.querySelector('svg'); if (old) old.remove(); container.insertBefore(svg, container.firstChild);
-    container.classList.add('viz-flat');
-  }
-
   /* ---------- Кровля: скаты как наклонные многоугольники поверх коробки дома ----------
      faces: [[x,y,z], …] — вершины ската в метрах; walls — призма стен (необязательно). */
   function roof(container, faces, wallPrisms, dims, opts) {
@@ -375,5 +369,5 @@
     declutter(svg, W, H);
   }
 
-  window.CalcViz = { iso, rotatable, walls, shape, fence, roof };
+  window.CalcViz = { iso, rotatable, walls, shape, roof };
 })();

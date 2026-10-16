@@ -51,7 +51,6 @@
 
   const pos = (v) => v != null && v > 0;
   // Текущий тип забора для рисунка (draw не получает sel): сохраняется движком в def._sel
-  const state_type = (def) => (def._sel && def._sel.type) || 'proflist';
 
   /* ---------- Описания калькуляторов ---------- */
 
@@ -208,7 +207,51 @@
   // Ёлочка ставит короткие планки 60×12 — при возврате к обычной укладке возвращаем обычные 122×18,3
   const LVT_BACK = (vals) => ((parseNum(vals.plankL) || 0) <= 80 && (parseNum(vals.plankW) || 0) <= 15 ? { plankL: '122', plankW: '18.3', perPack: '10' } : {});
 
-  const CALCS = {
+  // Забор: свободные куски стороны между воротами и калитками
+function fenceSegs(len, ops) {
+  const cuts = ops.map((o) => [o.x, o.x + o.w]).sort((p, q) => p[0] - q[0]);
+  let at = 0; const out = [];
+  cuts.forEach(([c0, c1]) => { if (c0 > at + 1e-6) out.push([at, c0]); at = Math.max(at, c1); });
+  if (at < len - 1e-6) out.push([at, len]);
+  return out;
+}
+// Отрезок (x1,y1)–(x2,y2) обрезать по полосе a ≤ x ≤ b
+function clipSeg(x1, y1, x2, y2, a, b) {
+  const dx = x2 - x1; if (Math.abs(dx) < 1e-9) return x1 >= a && x1 <= b ? [x1, y1, x2, y2] : null;
+  let t0 = (a - x1) / dx, t1 = (b - x1) / dx; if (t0 > t1) [t0, t1] = [t1, t0];
+  t0 = Math.max(0, t0); t1 = Math.min(1, t1); if (t1 <= t0) return null;
+  return [x1 + dx * t0, y1 + (y2 - y1) * t0, x1 + dx * t1, y1 + (y2 - y1) * t1];
+}
+// Цвета забора на схеме: популярные RAL, оцинковка и дерево (оттенки чуть светлее эталона — иначе на экране чернеют)
+const FENCE_COLORS = [
+  { id: 'auto', label: 'По материалу', hint: 'профнастил — зелёный мох, штакетник и доска — дерево, рабица — оцинковка; цвет только для картинки' },
+  { id: '6005', label: 'Зелёный мох', hint: 'RAL 6005', swatch: '#1d5640' },
+  { id: '8017', label: 'Шоколад', hint: 'RAL 8017', swatch: '#5a3d33' },
+  { id: '3005', label: 'Вишня', hint: 'RAL 3005', swatch: '#6e2630' },
+  { id: '7024', label: 'Графит', hint: 'RAL 7024', swatch: '#4a4f57' },
+  { id: '5005', label: 'Синий', hint: 'RAL 5005', swatch: '#1f4f91' },
+  { id: '9003', label: 'Белый', hint: 'RAL 9003', swatch: '#eceeed' },
+  { id: '1014', label: 'Слоновая кость', hint: 'RAL 1014', swatch: '#ddc89a' },
+  { id: 'zinc', label: 'Оцинковка', hint: 'без покраски', swatch: '#b5bcc3' },
+  { id: 'wood', label: 'Дерево светлое', hint: 'сосна, лиственница', swatch: '#d2a873' },
+  { id: 'woodDark', label: 'Дерево тёмное', hint: 'морёное или под орех', swatch: '#8a5a35' },
+];
+function mixHex(a, b, k) {
+  const p = (h, i) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+  return '#' + [0, 1, 2].map((i) => Math.round(p(a, i) * (1 - k) + p(b, i) * k).toString(16).padStart(2, '0')).join('');
+}
+function fenceColor(sel) {
+  const c = FENCE_COLORS.find((x) => x.id === sel.color && x.swatch);
+  if (c) return c.swatch;
+  return { proflist: '#1d5640', picket: '#d2a873', picket2: '#d2a873', plank: '#c39462', chainlink: '#b5bcc3' }[sel.type] || '#1d5640';
+}
+function fenceColorName(sel) {
+  const c = FENCE_COLORS.find((x) => x.id === sel.color && x.swatch);
+  if (c) return c.label.toLowerCase() + (c.hint.startsWith('RAL') ? ' (' + c.hint + ')' : '');
+  return { proflist: 'зелёный мох (RAL 6005)', chainlink: 'оцинковка' }[sel.type] || 'дерево';
+}
+
+const CALCS = {
     /* --- Бетон / фундамент --- */
     concrete: {
       modeLabel: 'Что заливаем',
@@ -2216,6 +2259,11 @@
           { id: 'piece', label: 'За штуку', hint: 'профтруба по 6 м' },
           { id: 'meter', label: 'За метр', hint: 'цена погонного метра' },
         ] },
+        { id: 'color', label: 'Цвет на схеме', default: 'auto', group: 'color', choices: FENCE_COLORS },
+        { id: 'view', label: 'Схема', default: 'all', choices: [
+          { id: 'all', label: 'Весь забор', hint: 'потяните схему, чтобы повернуть' },
+          { id: 'span', label: 'Один пролёт крупно', hint: 'в масштабе: столбы, лаги, штакетины и зазоры' },
+        ] },
       ],
       common: [
         { id: 'sheetW', label: 'Рабочая ширина листа', unit: 'м', value: '1.15', group: 'proflist' },
@@ -2277,7 +2325,7 @@
         const sm = this.summary(v, mode, sel, extras), ok = sm && !sm.error;
         const gates = ok ? sm.gates > 0 : mode === 'plan' || (v.gate || 0) > 0;
         const wickets = ok ? sm.wickets > 0 : mode === 'plan' || (v.wicket || 0) > 0;
-        return { proflist: t === 'proflist', picket: t === 'picket', picket2: t === 'picket2', pickets: t === 'picket' || t === 'picket2', plank: t === 'plank', chainlink: t === 'chainlink', block: t === 'block', lags: t !== 'block' && t !== 'chainlink', screws,
+        return { color: t !== 'block', proflist: t === 'proflist', picket: t === 'picket', picket2: t === 'picket2', pickets: t === 'picket' || t === 'picket2', plank: t === 'plank', chainlink: t === 'chainlink', block: t === 'block', lags: t !== 'block' && t !== 'chainlink', screws,
           gates, gatePiece: gates && sel.gatePrice !== 'meter', gateMeter: gates && sel.gatePrice === 'meter', wickets,
           sheetPiece: t === 'proflist' && sel.sheetBuy !== 'm2', sheetM2: t === 'proflist' && sel.sheetBuy === 'm2',
           lagPiece: t !== 'block' && t !== 'chainlink' && sel.lagBuy !== 'meter', lagMeter: t !== 'block' && t !== 'chainlink' && sel.lagBuy === 'meter' };
@@ -2300,7 +2348,8 @@
         if (!sides.length) return { error: 'На всех сторонах выключен забор — включите хотя бы одну.' };
         let net = 0, sections = 0, posts = 0, gates = 0, wickets = 0, gateLen = 0;
         sides.forEach((w) => {
-          const sec = Math.ceil(w.netLen / v.step - 1e-9);
+          // Проём делит сторону: у каждого куска свои пролёты, как на схеме
+          const sec = fenceSegs(w.len, w.ops).reduce((s2, [a, b]) => s2 + Math.ceil((b - a) / v.step - 1e-9), 0);
           net += w.netLen; sections += sec; posts += sec + 1 + w.ops.length;
           w.ops.forEach((o) => { if (o.kind === 'wicket') wickets++; else { gates++; gateLen += o.w; } });
         });
@@ -2310,33 +2359,139 @@
         posts -= shared;
         return { net, sections, posts, gates, wickets, gateLen, sides, corners: shared };
       },
-      draw(v, mode, box, yaw, extras) {
-        const V = window.CalcViz; if (!V) return false;
-        if (mode === 'line') {
-          if (!(pos(v.len) && pos(v.hei) && pos(v.step))) return false;
-          V.fence(box, v.len, v.hei, v.step, v.gate || 0, v.wicket || 0, state_type(this));
-          return true;
-        }
-        const P = window.CalcPlan, R = window.CalcRoom; if (!P || !R || !extras.plan || !extras.room || !pos(v.hei)) return false;
-        const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 }); if (!g.valid) return false;
-        const m = R.measure(extras.room, g.edges.map((e) => e.len), v.hei, this.finishes, 'fence', true);
-        // Забор в объёме: тонкие призмы по каждой стороне, с разрывами под ворота и калитки
-        const prisms = [];
-        g.edges.forEach((e, i) => {
-          const w = m.walls[i]; if (w.finish !== 'fence') return;
-          const dx = (e.b[0] - e.a[0]) / e.len, dy = (e.b[1] - e.a[1]) / e.len, nx = -dy * 0.06, ny = dx * 0.06;
-          const cuts = w.ops.map((o) => [o.x, o.x + o.w]).sort((p, q) => p[0] - q[0]);
-          let pos0 = 0; const segs = [];
-          cuts.forEach(([c0, c1]) => { if (c0 > pos0) segs.push([pos0, c0]); pos0 = Math.max(pos0, c1); });
-          if (pos0 < e.len) segs.push([pos0, e.len]);
-          segs.forEach(([s0, s1]) => {
-            const a = [e.a[0] + dx * s0, e.a[1] + dy * s0], b = [e.a[0] + dx * s1, e.a[1] + dy * s1];
-            prisms.push({ poly: [[a[0] - nx, a[1] - ny], [b[0] - nx, b[1] - ny], [b[0] + nx, b[1] + ny], [a[0] + nx, a[1] + ny]], z: 0, dz: v.hei });
+      // Детали забора: столбы, лаги, заполнение по виду и створки. runs — стороны забора:
+      // a — начало, d — направление, n — наружу (на улицу), len, ops — ворота и калитки.
+      scene(v, sel, runs, close) {
+        const t = sel.type, hei = v.hei, rowsL = v.lagRows == null ? 2 : Math.max(0, Math.round(v.lagRows));
+        const col = fenceColor(sel), prisms = [], lines = [];
+        const map = (r, s2, o) => [r.a[0] + r.d[0] * s2 + r.n[0] * o, r.a[1] + r.d[1] * s2 + r.n[1] * o];
+        // sort — слой детали поперёк забора: схема рисует ряды по порядку, а не по центру деталей
+        const lay = (r, s2, o) => { const p2 = map(r, s2, 0); return { at: [p2[0], p2[1], 0], n: r.n, o }; };
+        const box = (r, s0, s1, o0, o1, z, dz, color) => prisms.push({ poly: [map(r, s0, o0), map(r, s1, o0), map(r, s1, o1), map(r, s0, o1)], z, dz, color, sort: lay(r, (s0 + s1) / 2, (o0 + o1) / 2) });
+        // Длинную деталь режем на куски: иначе соседние штакетины встают то перед ней, то за ней
+        const longBox = (r, s0, s1, o0, o1, z, dz, color, piece) => { const k = Math.max(1, Math.ceil((s1 - s0) / piece)); for (let i = 0; i < k; i++) box(r, s0 + (s1 - s0) * i / k, s0 + (s1 - s0) * (i + 1) / k, o0, o1, z, dz, color); };
+        const line = (r, s0, z0, s1, z1, o, color, width) => { const a = map(r, s0, o), b = map(r, s1, o); lines.push({ pts: [[a[0], a[1], z0], [b[0], b[1], z1]], cls: 'viz-fline', color, width, whole: true, sort: lay(r, (s0 + s1) / 2, o) }); };
+        const block = t === 'block', brick = block && v.perM2 > 20, wallT = !block ? 0 : brick ? (v.perM2 > 70 ? 0.25 : 0.12) : 0.19;
+        const postW = block ? 0.38 : 0.06, z0 = block ? 0 : 0.05, top = hei + z0;
+        const pitch = t === 'picket' ? v.plankW + (v.gap || 0) : t === 'picket2' ? v.plankW2 + (v.gap2 || 0) : t === 'plank' ? v.boardW + (v.boardGap || 0) : 0;
+        const pw = t === 'picket' ? v.plankW : t === 'picket2' ? v.plankW2 : v.boardW;
+        // Сколько штакетин/досок выйдет — на тысячах деталей рисуем пролёт полосами
+        const total = runs.reduce((s2, r) => s2 + fenceSegs(r.len, r.ops).reduce((s3, [a, b]) => s3 + (pitch > 0 ? Math.ceil((b - a) / pitch) : 0), 0), 0) * (t === 'picket2' ? 2 : 1);
+        const simple = total > 1100;
+        const posts = new Map();
+        const postAt = (r, s2) => { const p = map(r, s2, 0), k = Math.round(p[0] * 50) + ',' + Math.round(p[1] * 50); if (!posts.has(k)) posts.set(k, { r, s: s2 }); };
+        const ribs = t === 'proflist' ? runs.reduce((s2, r) => s2 + r.len, 0) / 0.115 : 0;
+        const courseH = brick ? 0.077 : 0.2, seams = block ? runs.reduce((s2, r) => s2 + r.len, 0) / 2.5 * (hei / courseH) : 0;
+        runs.forEach((r) => {
+          r.ops.forEach((o) => { postAt(r, o.x); postAt(r, o.x + o.w); });
+          fenceSegs(r.len, r.ops).forEach(([sa, sb]) => {
+            const n = Math.max(1, Math.ceil((sb - sa) / v.step - 1e-9)), st = (sb - sa) / n;
+            for (let i = 0; i <= n; i++) postAt(r, sa + i * st);
+            for (let i = 0; i < n; i++) {
+              const a = sa + i * st + postW / 2, b = sa + (i + 1) * st - postW / 2;
+              if (b <= a) continue;
+              if (block) {
+                box(r, a, b, -wallT / 2, wallT / 2, 0, hei, brick ? '#a5533b' : '#bdb6a8');
+                if (seams < 1600) for (let z = courseH; z < hei - 1e-6; z += courseH) { line(r, a, z, b, z, wallT / 2 + 0.003, 'rgba(255,255,255,.45)', 0.6); line(r, a, z, b, z, -wallT / 2 - 0.003, 'rgba(255,255,255,.45)', 0.6); }
+              } else if (t !== 'chainlink') {
+                const levels = rowsL === 1 ? [hei / 2] : Array.from({ length: rowsL }, (_, k) => z0 + 0.2 + k * Math.max(0, hei - 0.4) / Math.max(1, rowsL - 1));
+                levels.forEach((z) => longBox(r, a - postW / 2, b + postW / 2, 0.03, 0.05, z - 0.02, 0.04, '#5b6169', 0.5));
+              }
+              if (t === 'proflist') {
+                longBox(r, a - postW / 2, b + postW / 2, 0.05, 0.058, z0, hei, col, v.sheetW || 1.15);
+                // Рёбра видно только крупно; издалека — стыки листов, иначе забор сливается в тёмное
+                const rp = close || ribs < 130 ? 0.115 : Math.max(0.3, v.sheetW || 1.15);
+                for (let x = a - postW / 2 + rp / 2; x < b + postW / 2; x += rp) line(r, x, z0, x, top, 0.062, 'rgba(0,0,0,.3)', 0.8);
+              } else if (t === 'chainlink') {
+                // Сетка ромбом на просвет: ячейка на схеме крупнее настоящей, иначе сольётся
+                const q = 0.25, H = top - z0;
+                for (let c = a - H; c < b; c += q) {
+                  [[c, z0, c + H, top], [c + H, z0, c, top]].forEach(([x1, y1, x2, y2]) => {
+                    const cl = clipSeg(x1, y1, x2, y2, a, b); if (cl) line(r, cl[0], cl[1], cl[2], cl[3], 0.035, col, 0.7);
+                  });
+                }
+                line(r, a, top, b, top, 0.035, col, 1.2); line(r, a, z0, b, z0, 0.035, col, 1.2);
+              }
+            }
+            if (pitch > 0) {
+              const th = 0.02;
+              const row = (start, o0, skipPosts) => {
+                if (simple) { longBox(r, sa, sb, o0, o0 + th, z0, hei, col, 0.5); for (let x = start + pw; x < sb && total < 6000; x += pitch) line(r, x, z0, x, top, o0 + th + 0.002, 'rgba(0,0,0,.28)', 0.7); return; }
+                for (let x = start; x < sb - 0.005 && pitch > 0.01; x += pitch) {
+                  const e = Math.min(sb, x + pw);
+                  if (skipPosts && [...Array(n + 1).keys()].some((k) => Math.abs((x + e) / 2 - (sa + k * st)) < postW / 2 + (e - x) / 2)) continue;
+                  box(r, x, e, o0, o0 + th, z0, hei, col);
+                }
+              };
+              row(sa, 0.05, false);
+              if (t === 'picket2') row(sa + pitch / 2, 0.01, true);
+            }
+          });
+          // Ворота и калитки: створки с рамой
+          r.ops.forEach((o) => {
+            const leaves = o.kind !== 'wicket' && sel.gateType === 'swing' ? [[o.x + 0.03, o.x + o.w / 2 - 0.01], [o.x + o.w / 2 + 0.01, o.x + o.w - 0.03]] : [[o.x + 0.03, o.x + o.w - 0.03]];
+            // Створка светлее забора, с рамой и укосиной — чтобы ворота не сливались с пролётами
+            const lc = block ? '#5d636b' : mixHex(col, '#ffffff', 0.22);
+            leaves.forEach(([a, b]) => {
+              if (b <= a) return;
+              box(r, a, b, -0.02, 0.02, 0.05, hei, lc);
+              const f = '#23272d', hz = hei + 0.05;
+              [0.022, -0.022].forEach((oo) => {
+                line(r, a, 0.05, b, 0.05, oo, f, 1.8); line(r, b, 0.05, b, hz, oo, f, 1.8); line(r, b, hz, a, hz, oo, f, 1.8); line(r, a, hz, a, 0.05, oo, f, 1.8);
+                line(r, a, 0.05, b, hz, oo, f, 1.4);
+              });
+            });
           });
         });
-        if (!prisms.length) return false;
-        const dims = g.edges.length <= 8 ? g.edges.map((e, i) => ({ from: [e.a[0], e.a[1], 0], to: [e.b[0], e.b[1], 0], label: (i + 1) + ': ' + fmt(e.len) + ' м', offset: 22 })) : [];
-        V.iso(box, prisms, dims, { yaw: yaw.yaw, pitch: yaw.pitch, zoom: yaw.zoom, ground: true, caption: 'Забор по участку: разрывы — ворота и калитки. Потяните, чтобы повернуть.' });
+        posts.forEach(({ r, s: s2 }) => box(r, s2 - postW / 2, s2 + postW / 2, -postW / 2, postW / 2, 0, hei + 0.1, block ? '#8e4632' : '#3c4148'));
+        return { prisms, lines, simple };
+      },
+      draw(v, mode, box, view, extras) {
+        const V = window.CalcViz; if (!V) return false;
+        const sel = this._sel || {}, t = sel.type;
+        if (!(pos(v.hei) && pos(v.step))) return false;
+        if ((t === 'picket' && !pos(v.plankW)) || (t === 'picket2' && !pos(v.plankW2)) || (t === 'plank' && !pos(v.boardW))) return false;
+        // Нелепые размеры (сотни тысяч деталей) не рисуем — расчёт всё равно покажется
+        if (v.hei > 10 || v.step < 0.3 || (v.lagRows || 0) > 8 || (mode === 'line' && v.len / v.step > 600)) return false;
+        const opts = { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true };
+        const what = { proflist: 'Профнастил', picket: 'Штакетник', picket2: 'Штакетник шахматкой', plank: 'Доска', chainlink: 'Сетка-рабица', block: 'Кладка' }[t] || 'Забор';
+        const cname = t === 'block' ? '' : ', ' + fenceColorName(sel);
+        if (sel.view === 'span') {
+          // Один пролёт в масштабе: видно, из чего забор и как он собран
+          const r = { a: [0, 0], d: [1, 0], n: [0, 1], len: v.step, ops: [] };
+          const sc = this.scene(v, sel, [r], true);
+          const dims = [{ from: [0, 0, 0], to: [v.step, 0, 0], label: 'пролёт ' + fmt(v.step) + ' м', offset: 24 }, { from: [0, 0, 0], to: [0, 0, v.hei], label: 'высота ' + fmt(v.hei) + ' м', offset: -28 }];
+          const pw = t === 'picket' ? v.plankW : t === 'picket2' ? v.plankW2 : v.boardW, gp = t === 'picket' ? (v.gap || 0) : t === 'picket2' ? (v.gap2 || 0) : (v.boardGap || 0);
+          const extra = t === 'picket' || t === 'picket2' || t === 'plank' ? ': ' + (t === 'plank' ? 'доска ' : 'штакетина ') + fmtInt(pw * 100) + ' см, зазор ' + fmtInt(gp * 100) + ' см' : '';
+          V.iso(box, sc.prisms, dims, Object.assign(opts, { zoom: view.zoom * 1.7, lines: sc.lines, caption: what + cname + extra + '. Потяните, чтобы повернуть.' }));
+          return true;
+        }
+        let runs = [], dims = [];
+        if (mode === 'line') {
+          if (!pos(v.len)) return false;
+          const gate = v.gate || 0, wicket = v.wicket || 0, ops = [];
+          if (gate > 0) ops.push({ x: 0, w: gate, kind: 'gate' });
+          if (wicket > 0) ops.push({ x: gate, w: wicket, kind: 'wicket' });
+          if (gate + wicket >= v.len) return false;
+          runs = [{ a: [0, 0], d: [1, 0], n: [0, 1], len: v.len, ops }];
+          dims = [{ from: [0, 0, 0], to: [v.len, 0, 0], label: 'длина ' + fmt(v.len) + ' м', offset: 24 }, { from: [0, 0, 0], to: [0, 0, v.hei], label: fmt(v.hei) + ' м', offset: -28 }];
+        } else {
+          const P = window.CalcPlan, R = window.CalcRoom; if (!P || !R || !extras.plan || !extras.room) return false;
+          const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 }); if (!g.valid) return false;
+          const m = R.measure(extras.room, g.edges.map((e) => e.len), v.hei, this.finishes, 'fence', true);
+          // Наружу — от центра участка: по знаку площади контура
+          const area = g.edges.reduce((s2, e) => s2 + e.a[0] * e.b[1] - e.b[0] * e.a[1], 0), sg = area > 0 ? 1 : -1;
+          g.edges.forEach((e, i) => {
+            const w = m.walls[i]; if (w.finish !== 'fence' || !(e.len > 0)) return;
+            const d = [(e.b[0] - e.a[0]) / e.len, (e.b[1] - e.a[1]) / e.len];
+            runs.push({ a: e.a, d, n: [d[1] * sg, -d[0] * sg], len: e.len, ops: w.ops });
+          });
+          if (!runs.length || runs.reduce((s2, r) => s2 + r.len, 0) / v.step > 600) return false;
+          dims = g.edges.length <= 8 ? g.edges.map((e, i) => ({ from: [e.a[0], e.a[1], 0], to: [e.b[0], e.b[1], 0], label: (i + 1) + ': ' + fmt(e.len) + ' м', offset: 22 })) : [];
+        }
+        const sc = this.scene(v, sel, runs), sm = this.summary(v, mode, sel, extras);
+        const cnt = sm && !sm.error ? ': ' + sm.sections + ' ' + plural(sm.sections, 'пролёт', 'пролёта', 'пролётов') + ', ' + sm.posts + ' ' + plural(sm.posts, 'столб', 'столба', 'столбов') : '';
+        V.iso(box, sc.prisms, dims, Object.assign(opts, { lines: sc.lines, caption: what + cname + cnt + (sc.simple ? '; штакетины полосами, крупно — «Один пролёт»' : '') + '. Потяните, чтобы повернуть.' }));
         return true;
       },
       compute(v, mode, sel, extras) {
@@ -3397,7 +3552,8 @@
       const input = h('input', { type: 'radio', name, id, value: it.id });
       if (it.id === current) input.checked = true;
       input.addEventListener('change', () => onChange(it.id));
-      wrap.appendChild(h('div', { class: 'calc-chip' }, [input, h('label', { for: id, text: it.label })]));
+      const lab = it.swatch ? h('label', { for: id }, [h('span', { class: 'calc-swatch', style: 'background:' + it.swatch }), document.createTextNode(it.label)]) : h('label', { for: id, text: it.label });
+      wrap.appendChild(h('div', { class: 'calc-chip' }, [input, lab]));
     });
     return wrap;
   }
