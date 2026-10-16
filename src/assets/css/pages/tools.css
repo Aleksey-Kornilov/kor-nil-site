@@ -32,6 +32,10 @@
 .calc-chip input:checked + label { background: var(--color-accent); border-color: var(--color-accent); color: white; }
 [data-theme="dark"] .calc-chip input:checked + label { color: #0e1621; }
 .calc-chip input:focus-visible + label { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.calc-qr { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-2); }
+.calc-qr-img { width: 168px; height: 168px; flex: none; background: #fff; border-radius: 8px; padding: 4px; }
+.calc-qr-img svg { width: 100%; height: 100%; display: block; }
+.calc-qr p { font-size: var(--fs-small); color: var(--color-text-muted); margin: 0; }
 .calc-swatch { display: inline-block; width: 0.9em; height: 0.9em; border-radius: 50%; margin-right: 0.4em; vertical-align: -0.12em; border: 1px solid rgba(0, 0, 0, 0.3); }
 .calc-hint { font-size: var(--fs-small); color: var(--color-text-muted); margin-top: var(--space-2); }
 

@@ -4595,7 +4595,22 @@ const CALCS = {
       link.addEventListener('click', () => { if (window.ymGoal) window.ymGoal('calc_share', { how: 'link' }); navigator.clipboard.writeText(shareUrl()).then(() => flash(link, 'Ссылка скопирована ✓')); });
       const pdf = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Скачать PDF' });
       pdf.addEventListener('click', () => { if (window.ymGoal) window.ymGoal('calc_share', { how: 'pdf' }); result.dataset.printDate = new Date().toLocaleDateString('ru-RU'); window.print(); });
-      actions.appendChild(share); actions.appendChild(copy); actions.appendChild(link); actions.appendChild(pdf);
+      // QR-код на расчёт: посчитал на компьютере — навёл телефон и унёс расчёт в магазин. Библиотеку грузим по нажатию
+      const qr = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'QR-код' });
+      qr.addEventListener('click', () => {
+        const old = actions.querySelector('.calc-qr');
+        if (old) { old.remove(); return; }
+        if (window.ymGoal) window.ymGoal('calc_share', { how: 'qr' });
+        const show = () => {
+          const q = window.qrcode(0, 'L'); q.addData(shareUrl()); q.make();
+          const box = h('div', { class: 'calc-qr' }, [h('div', { class: 'calc-qr-img', html: q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) }), h('p', { text: 'Наведите камеру телефона — расчёт откроется на нём со всеми размерами.' })]);
+          actions.appendChild(box);
+        };
+        if (window.qrcode) { show(); return; }
+        const sc = document.createElement('script'); sc.src = '/assets/js/vendor/qrcode.min.js';
+        sc.onload = show; sc.onerror = () => flash(qr, 'Не загрузилось'); document.head.appendChild(sc);
+      });
+      actions.appendChild(share); actions.appendChild(copy); actions.appendChild(link); actions.appendChild(pdf); actions.appendChild(qr);
       // Первый готовый расчёт — мягко подсвечиваем, что делать дальше
       if (!render.hadResult) {
         render.hadResult = true;
@@ -4686,8 +4701,22 @@ const CALCS = {
 
     // Расчёт по ссылке: всё введённое лежит в #c=… — получатель открывает те же цифры и рисунок
     function encodeState() {
-      const obj = { c: key, m: state.mode, v: state.values, s: state.sel, y: Math.round(state.yaw * 100) / 100, p: Math.round(state.pitch * 100) / 100, z: Math.round(state.zoom * 100) / 100,
-        x: { plan: state.extras.plan, room: state.extras.room, openings: state.extras.openings } };
+      // В ссылку — только то, что человек поменял: значения по умолчанию при открытии подставятся сами
+      // (поле без значения берёт своё value). Так ссылка короче, а QR-код с неё читается телефоном
+      const fieldsNow = ((def.modes.find((md) => md.id === state.mode) || {}).fields || []).concat(def.common || []);
+      const v = {};
+      fieldsNow.forEach((f) => { const x = state.values[f.id]; if (x != null && String(x) !== String(f.value == null ? '' : f.value)) v[f.id] = x; });
+      const sl = {};
+      (def.selects || []).forEach((sd) => { if (state.sel[sd.id] !== sd.default) sl[sd.id] = state.sel[sd.id]; });
+      const obj = { c: key, m: state.mode, v, s: sl };
+      if (Math.abs(state.yaw + 0.6) > 1e-6) obj.y = Math.round(state.yaw * 100) / 100;
+      if (Math.abs(state.pitch - 32 * Math.PI / 180) > 1e-3) obj.p = Math.round(state.pitch * 100) / 100;
+      if (Math.abs(state.zoom - 1) > 1e-6) obj.z = Math.round(state.zoom * 100) / 100;
+      const x = {};
+      if (state.extras.plan) x.plan = state.extras.plan;
+      if (state.extras.room) x.room = state.extras.room;
+      if (state.extras.openings && state.extras.openings.length) x.openings = state.extras.openings;
+      if (Object.keys(x).length) obj.x = x;
       return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
     function decodeState(code) {
