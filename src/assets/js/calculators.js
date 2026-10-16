@@ -1571,6 +1571,9 @@ const CALCS = {
 
     /* --- Кварцвинил: пол и стены, раскладка планок ряд за рядом --- */
     lvt: {
+      // Слова и цены — свои у кварцвинила и у ламината (ламинат наследует этот калькулятор)
+      words: { title: 'Раскладка кварцвинила', name: 'Кварцвинил', priceId: 'lvtM2', one: 'планка', few: 'планки', many: 'планок', Many: 'Планок',
+        underlay: 'только тонкая 1–1,5 мм: на толстой замки ломаются', gap: 'замковый кварцвинил плавающий' },
       modeLabel: 'Где кладём',
       modes: [
         { id: 'rect', label: 'Пол: прямоугольная комната', fields: [
@@ -1729,7 +1732,7 @@ const CALCS = {
           ? [{ from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 }]
           : pts.map((a, i) => { const b = pts[(i + 1) % pts.length]; return { from: a, to: b, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 20 }; });
         const under = plankUnder(fl);
-        V.shape(box, pts, dims, { title: 'Раскладка кварцвинила', under, center: under ? null : fmt(fl.area) + ' м²',
+        V.shape(box, pts, dims, { title: this.words.title, under, center: under ? null : fmt(fl.area) + ' м²',
           caption: under ? 'Светлые — целые, тёмные — отпиленные, зелёные — из обрезков' : 'Ёлочка считается по площади с запасом 15%' });
         return true;
       },
@@ -1762,17 +1765,18 @@ const CALCS = {
         if (herring && planks % 2) planks++;
         const packs = Math.ceil(planks / v.perPack);
         const spare = packs * v.perPack - planks;
-        rows.push(['Планок', fmtInt(planks) + ' шт ' + fmt(P) + '×' + fmt(w) + ' см' + (lay ? ' — по раскладке' : ' — с запасом ' + pct + '%') + (herring ? ', поровну A и B' : '')]);
-        rows.push(['Упаковок', fmtInt(packs) + ' по ' + fmtInt(v.perPack) + ' шт (' + fmt(packA) + ' м²)' + (spare ? ', ' + fmtInt(spare) + ' ' + plural(spare, 'планка останется', 'планки останутся', 'планок останется') + ' в запас' : '')]);
+        const W = this.words;
+        rows.push([W.Many, fmtInt(planks) + ' шт ' + fmt(P) + '×' + fmt(w) + ' см' + (lay ? ' — по раскладке' : ' — с запасом ' + pct + '%') + (herring ? ', поровну A и B' : '')]);
+        rows.push(['Упаковок', fmtInt(packs) + ' по ' + fmtInt(v.perPack) + ' шт (' + fmt(packA) + ' м²)' + (spare ? ', ' + fmtInt(spare) + ' ' + plural(spare, W.one + ' останется', W.few + ' останутся', W.many + ' останется') + ' в запас' : '')]);
         if (lay) {
           const b = lay.bandsInfo;
           let rowsTxt = fmtInt(b.n) + ' ' + plural(b.n, 'ряд', 'ряда', 'рядов') + ' по ' + fmt(w) + ' см';
           if (b.balanced) rowsTxt += '; ' + (floor ? 'первый и последний' : 'нижний и верхний') + ' режут вдоль, по ' + fmt(b.edge, 1) + ' см: иначе последний вышел бы полоской ' + fmt(b.last, 1) + ' см';
-          else if (b.n > 1 && b.last < w - 0.05) rowsTxt += '; последний — ' + fmt(b.last, 1) + ' см, планки режут вдоль';
+          else if (b.n > 1 && b.last < w - 0.05) rowsTxt += '; последний — ' + fmt(b.last, 1) + ' см, ' + W.few + ' режут вдоль';
           rows.push(['Рядов', rowsTxt]);
           rows.push(['Стыки', sel.pattern === 'free' ? 'соседние ряды не ближе ' + fmt(Math.min(v.shift || 0, P / 2)) + ' см друг к другу, кусок у стены не короче ' + fmt(Math.min(v.minPiece || 0, P / 2)) + ' см'
             : 'каждый ряд сдвинут на ' + fmt(P / (sel.pattern === 'half' ? 2 : 3), 1) + ' см; сетку стыков калькулятор сдвинул так, чтобы у стен не было узких кусков']);
-          if (lay.reused) rows.push(['Из обрезков', fmtInt(lay.reused) + ' ' + plural(lay.reused, 'кусок', 'куска', 'кусков') + ' взяты из обрезков прошлых рядов — новых планок на них не ушло']);
+          if (lay.reused) rows.push(['Из обрезков', fmtInt(lay.reused) + ' ' + plural(lay.reused, 'кусок', 'куска', 'кусков') + ' взяты из обрезков прошлых рядов — новых ' + W.many + ' на них не ушло']);
           const waste = planks * plankA - area;
           rows.push(['Отход', fmt(Math.max(0, waste)) + ' м², ' + fmt(Math.max(0, waste) / area * 100, 1) + '% от площади' + (click ? ' (с полосой зазора у стен)' : '')]);
           const left = lay.pools.starts.length + lay.pools.ends.length;
@@ -1780,14 +1784,14 @@ const CALCS = {
           if (lay.forced) rows.push(['⚠ Смещение', 'в ' + fmtInt(lay.forced) + ' ' + plural(lay.forced, 'ряду', 'рядах', 'рядах') + ' не вышло выдержать смещение и длину куска — уменьшите их или выберите смещение на треть']);
         }
         rows.push(['Площадь', fmt(area) + ' м²' + (wm ? ': ' + fmtInt(wm.by.lvt.n) + ' ' + plural(wm.by.lvt.n, 'стена', 'стены', 'стен') + ' до ' + fmt(v.hei) + ' м' + (wm.openings ? ', проёмы ' + fmt(wm.openings) + ' м² вычтены' : '') : '') + (per ? ', периметр ' + fmt(per) + ' м' : '')]);
-        cost.push({ label: 'Кварцвинил, ' + fmtInt(packs) + ' упак.', amount: Math.round(packs * packA * 100) / 100, unit: 'м²', priceId: 'lvtM2' });
+        cost.push({ label: W.name + ', ' + fmtInt(packs) + ' упак.', amount: Math.round(packs * packA * 100) / 100, unit: 'м²', priceId: W.priceId });
         if (click) {
           if (pos(v.underlay)) {
             const rolls = Math.ceil(area / v.underlay);
-            rows.push(['Подложка', fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.underlay) + ' м², только тонкая 1–1,5 мм: на толстой замки ломаются']);
+            rows.push(['Подложка', fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов') + ' по ' + fmt(v.underlay) + ' м², ' + W.underlay]);
             cost.push({ label: 'Подложка', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'underlay' });
           }
-          rows.push(['Зазор у стен', fmt(v.gap || 0) + ' мм по периметру, его закроет плинтус: замковый кварцвинил плавающий']);
+          rows.push(['Зазор у стен', fmt(v.gap || 0) + ' мм по периметру, его закроет плинтус: ' + W.gap]);
         } else {
           const glueKg = area * (v.glueRate || 0);
           if (glueKg > 0) {
@@ -3856,6 +3860,48 @@ const CALCS = {
     },
 
   };
+
+  // Ламинат: раскладка досок кварцвинила, только пол и только замковый — свои размеры, слова и цены
+  const LAM_BACK = (vals) => ((parseNum(vals.plankL) || 0) <= 80 ? { plankL: '138', plankW: '19.3', perPack: '8' } : {});
+  CALCS.laminate = Object.assign(Object.create(CALCS.lvt), {
+    words: { title: 'Раскладка ламината', name: 'Ламинат', priceId: 'lamM2', one: 'доска', few: 'доски', many: 'досок', Many: 'Досок',
+      underlay: 'под ламинат 2–3 мм, хвойная или XPS; под тёплый пол — тонкая', gap: 'ламинат плавающий, от влажности он расширяется' },
+    modeLabel: 'Комната',
+    modes: CALCS.lvt.modes.filter((md) => md.id !== 'walls').map((md) => Object.assign({}, md, { label: md.label.replace('Пол: ', '').replace(/^./, (c) => c.toUpperCase()) })),
+    common: [
+      { id: 'plankL', label: 'Длина доски', unit: 'см', value: '138' },
+      { id: 'plankW', label: 'Ширина доски', unit: 'см', value: '19.3' },
+      { id: 'perPack', label: 'Досок в упаковке', unit: 'шт', value: '8', int: true },
+      { id: 'shift', label: 'Смещение стыков соседних рядов', unit: 'см, не меньше', value: '40', group: 'free' },
+      { id: 'minPiece', label: 'Самый короткий кусок в ряду', unit: 'см', value: '30', group: 'rows' },
+      { id: 'gap', label: 'Зазор у стен', unit: 'мм', value: '10' },
+      { id: 'underlay', label: 'Подложка в рулоне', unit: 'м², 0 = без подложки', value: '10' },
+      { id: 'skirting', label: 'Плинтус: длина планки', unit: 'м, 0 = без плинтуса', value: '2.5' },
+      { id: 'doorways', label: 'Дверных проёмов', unit: 'шт: порожки и минус из плинтуса', value: '1', int: true },
+    ],
+    selects: [
+      { id: 'pattern', label: 'Укладка', default: 'free', choices: [
+        { id: 'free', label: 'Вразбежку', hint: 'обрезок с конца ряда начинает следующий ряд — отхода меньше всего', sets: (vals) => LAM_BACK(vals) },
+        { id: 'third', label: 'Со смещением на треть', hint: 'стыки «лесенкой»: каждый ряд сдвинут на 1/3 доски', sets: (vals) => LAM_BACK(vals) },
+        { id: 'half', label: 'Со смещением на половину', hint: 'как кирпичная кладка: стык посередине соседней доски', sets: (vals) => LAM_BACK(vals) },
+        { id: 'herring', label: 'Ёлочка', hint: 'специальный ламинат «ёлочка» двух видов, A и B; запас 15%', sets: (vals) => ((parseNum(vals.plankL) || 0) > 80 ? { plankL: '60', plankW: '10', perPack: '24' } : {}) },
+      ] },
+      { id: 'dir', label: 'Доски', default: 'long', group: 'dir', choices: [
+        { id: 'long', label: 'Вдоль длинной стены', hint: 'стыков меньше, комната кажется длиннее; или по свету из окна' },
+        { id: 'short', label: 'Поперёк', hint: 'визуально расширяет узкую комнату' },
+      ] },
+    ],
+    prices: [
+      { id: 'lamM2', label: 'Ламинат', unit: '₽ за м²' },
+      { id: 'underlay', label: 'Подложка', unit: '₽ за рулон', group: 'underlayP' },
+      { id: 'skirt', label: 'Плинтус', unit: '₽ за планку', group: 'skirtP' },
+      { id: 'threshold', label: 'Порожек', unit: '₽ за шт', group: 'thr' },
+    ],
+    // Ламинат всегда замковый: подставляем это в общий расчёт кварцвинила
+    groups(v, mode, extras, sel) { return CALCS.lvt.groups.call(this, v, mode, extras, Object.assign({}, sel, { type: 'click' })); },
+    floorLayout(v, mode, extras, sel, noLayout) { return CALCS.lvt.floorLayout.call(this, v, mode, extras, Object.assign({}, sel, { type: 'click' }), noLayout); },
+    compute(v, mode, sel, extras) { return CALCS.lvt.compute.call(this, v, mode, Object.assign({}, sel, { type: 'click' }), extras); },
+  });
 
   /* ---------- Рендер ---------- */
 
