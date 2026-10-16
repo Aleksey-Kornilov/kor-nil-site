@@ -1963,6 +1963,8 @@ const CALCS = {
         { id: 'insulPack', label: 'Объём упаковки утеплителя', unit: 'м³, написан на упаковке', value: '0.3', group: 'insulPack' },
         { id: 'rafterW', label: 'Стропило: толщина', unit: 'мм', value: '50', group: 'woodCube' },
         { id: 'rafterH', label: 'Стропило: ширина', unit: 'мм', value: '150', group: 'woodCube' },
+        { id: 'mauerW', label: 'Мауэрлат: сечение', unit: 'мм, брус 150×150 или 100×150 — сторона', value: '150' },
+        { id: 'mauerH', label: 'Мауэрлат: высота бруса', unit: 'мм', value: '150' },
         { id: 'battenW', label: 'Обрешётка: толщина', unit: 'мм', value: '25', group: 'battenCube' },
         { id: 'battenH', label: 'Обрешётка: ширина', unit: 'мм', value: '100', group: 'battenCube' },
         { id: 'plankL', label: 'Длина доборной планки', unit: 'м (конёк, ветровая, карнизная)', value: '2' },
@@ -2002,6 +2004,11 @@ const CALCS = {
         { id: 'battenM3', label: 'Обрешётка (доска)', unit: '₽ за м³', group: 'battenCube' },
         { id: 'rafter', label: 'Стропило', unit: '₽ за метр', group: 'woodM' },
         { id: 'rafterM3', label: 'Стропило (доска или брус)', unit: '₽ за м³', group: 'woodCube' },
+        { id: 'counter', label: 'Контробрешётка (брусок 50×50)', unit: '₽ за метр', group: 'woodM' },
+        { id: 'counterM3', label: 'Контробрешётка (брусок 50×50)', unit: '₽ за м³', group: 'woodCube' },
+        { id: 'mauer', label: 'Мауэрлат', unit: '₽ за метр', group: 'woodM' },
+        { id: 'mauerM3', label: 'Мауэрлат (брус)', unit: '₽ за м³', group: 'woodCube' },
+        { id: 'stud', label: 'Шпилька с анкером под мауэрлат', unit: '₽ за штуку' },
         { id: 'film', label: 'Плёнки (гидро- и пароизоляция)', unit: '₽ за м²' },
         { id: 'insul', label: 'Утеплитель', unit: '₽ за м³', group: 'insulCube' },
         { id: 'insulPackP', label: 'Утеплитель', unit: '₽ за упаковку', group: 'insulPack' },
@@ -2179,6 +2186,22 @@ const CALCS = {
             rows.push(['Стропила в кубах', fmtInt(Math.ceil(rafterLen)) + ' м × ' + fmt(v.rafterW, 0) + '×' + fmt(v.rafterH, 0) + ' мм = ' + fmt(m3, 3) + ' м³']);
             cost.push({ label: 'Стропила, ' + fmtInt(Math.ceil(rafterLen)) + ' м', amount: Math.round(m3 * 1000) / 1000, unit: 'м³', priceId: 'rafterM3' });
           } else cost.push({ label: 'Стропила', amount: Math.ceil(rafterLen), unit: 'м', priceId: 'rafter' });
+          // Контробрешётка: брусок 50×50 по каждому стропилу поверх плёнки — зазор, чтобы под кровлей проветривалось
+          const cb = Math.ceil(rafterLen);
+          rows.push(['Контробрешётка', 'брусок 50×50 мм по каждому стропилу поверх плёнки — ' + fmtInt(cb) + ' м: даёт зазор 5 см, под кровлей проветривается и не копится конденсат']);
+          if (sel.woodBuy === 'cube') cost.push({ label: 'Контробрешётка, ' + fmtInt(cb) + ' м', amount: Math.round(cb * 0.0025 * 1000) / 1000, unit: 'м³', priceId: 'counterM3' });
+          else cost.push({ label: 'Контробрешётка', amount: cb, unit: 'м', priceId: 'counter' });
+          // Запил стропила на мауэрлат: по углу ската, глубина не больше трети высоты стропила
+          if (pos(v.rafterH)) rows.push(['Запил стропил', 'под углом ' + fmt(g.angle) + '° к горизонту; глубина не больше трети высоты стропила — до ' + fmtInt(v.rafterH / 3) + ' мм, иначе стропило ослабнет']);
+        }
+        // Мауэрлат — брус на стенах, на которые опираются стропила: у двух- и односкатной — две длинные стены, у вальмы — все четыре
+        {
+          const ml = mode === 'hip' ? 2 * (v.len + v.wid) : 2 * v.len;
+          const bars = Math.ceil(ml / 6 - 1e-9), studs = (mode === 'hip' ? 4 : 2) + Math.ceil(ml / 1.2 - 1e-9);
+          rows.push(['Мауэрлат', fmt(ml) + ' м бруса ' + fmt(v.mauerW || 150, 0) + '×' + fmt(v.mauerH || 150, 0) + ' мм' + (mode === 'hip' ? ' по всем четырём стенам' : ' по двум длинным стенам') + ' → ' + fmtInt(bars) + ' шт по 6 м, шпилек с анкером ' + fmtInt(studs) + ' (через 1–1,2 м и у каждого края)']);
+          if (sel.woodBuy === 'cube') cost.push({ label: 'Мауэрлат, ' + fmt(ml) + ' м', amount: Math.round(bars * 6 * (v.mauerW || 150) * (v.mauerH || 150) / 1e6 * 1000) / 1000, unit: 'м³', priceId: 'mauerM3' });
+          else cost.push({ label: 'Мауэрлат', amount: bars * 6, unit: 'м', priceId: 'mauer' });
+          cost.push({ label: 'Шпильки под мауэрлат', amount: studs, unit: 'шт', priceId: 'stud' });
         }
         // Доборы: планки внахлёст, полезная длина каждой = длина − нахлёст. Считаем по каждому
         // отрезку отдельно (каждый карниз, торец, ребро): обрезок с одной стороны на другую не перенести
