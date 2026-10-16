@@ -2280,6 +2280,9 @@ const CALCS = {
         { id: 'bagKg', label: 'Мешок раствора', unit: 'кг', value: '25' },
         { id: 'meshStep', label: 'Армирование через каждые', unit: 'рядов, 0 = без сетки', value: '4', int: true },
         { id: 'palletN', label: 'Кирпичей на поддоне', unit: 'шт', value: '480', int: true, group: 'pallet' },
+        { id: 'gableH', label: 'Высота фронтона', unit: 'м: при ширине дома 8 м и уклоне 30° ≈ 2,3', value: '2.3', group: 'gable' },
+        { id: 'beltH', label: 'Высота армопояса', unit: 'см', value: '25', group: 'belt' },
+        { id: 'beltD', label: 'Арматура пояса, диаметр', unit: 'мм, 4 прутка и хомуты ⌀8 через 40 см', value: '12', group: 'belt' },
       ],
       presets: [{ label: 'Расход смеси', fieldId: 'mortar', unit: 'кг/м³', items: [['Клей для блоков', '25'], ['Кирпич полуторный', '330'], ['Кирпич одинарный', '400']] }],
       selects: [{ id: 'unit', label: 'Из чего кладём', default: 'gas', choices: [
@@ -2296,6 +2299,14 @@ const CALCS = {
         { id: 'brickBuy', label: 'Кирпич продают', default: 'piece', group: 'bricks', choices: [
           { id: 'piece', label: 'За штуку', hint: 'магазины и небольшие партии' },
           { id: 'pallet', label: 'За поддон', hint: 'заводы и базы: целыми поддонами' },
+        ] },
+        { id: 'gables', label: 'Фронтоны', default: 'no', group: 'gableSel', choices: [
+          { id: 'no', label: 'Нет', hint: 'крыша вальмовая или фронтоны зашьют каркасом' },
+          { id: 'two', label: 'Два, из того же блока', hint: 'треугольники на коротких стенах под двускатную крышу' },
+        ] },
+        { id: 'belt', label: 'Армопояс', default: 'no', choices: [
+          { id: 'no', label: 'Не нужен', hint: 'кирпич под лёгкую крышу' },
+          { id: 'yes', label: 'Залить по верху стен', hint: 'монолитный пояс под перекрытие или мауэрлат: газоблок без него трескается' },
         ] }],
       // Кирпич или блок; и в чём его цена: штука, куб блоков, поддон кирпича
       buy(sel) {
@@ -2304,7 +2315,7 @@ const CALCS = {
       },
       groups(v, mode, extras, sel) {
         const u = sel.unit, b = this.buy(sel), brick = u === 'brick' || u === 'brick15';
-        const out = { blocks: !brick, bricks: brick, pallet: brick && b === 'pallet', glue: u === 'gas' || u === 'foam', mortar: u !== 'gas' && u !== 'foam' };
+        const out = { gableSel: mode === 'rect', gable: mode === 'rect' && sel.gables === 'two', belt: sel.belt === 'yes', blocks: !brick, bricks: brick, pallet: brick && b === 'pallet', glue: u === 'gas' || u === 'foam', mortar: u !== 'gas' && u !== 'foam' };
         ['gas', 'foam', 'brick', 'brick15', 'ceramo'].forEach((k) => { out[k] = u === k && b === 'piece'; out[k + '_alt'] = u === k && b !== 'piece'; });
         return out;
       },
@@ -2325,6 +2336,9 @@ const CALCS = {
         { id: 'mortar', label: 'Кладочный раствор', unit: '₽ за мешок', group: 'mortar' },
         { id: 'mesh', label: 'Кладочная сетка', unit: '₽ за метр' },
         { id: 'lintel', label: 'Перемычка', unit: '₽ за метр' },
+        { id: 'beltConcrete', label: 'Бетон на армопояс', unit: '₽ за м³', group: 'belt' },
+        { id: 'beltRebar', label: 'Арматура на армопояс', unit: '₽ за тонну', group: 'belt' },
+        { id: 'beltBoard', label: 'Доска на опалубку пояса', unit: '₽ за м³', group: 'belt' },
       ],
       roomOpts: {
         finishes: { wall: 'Кладка', none: 'Без кладки (уже есть, соседняя)' }, defaultFinish: 'wall', wallWord: 'Стена',
@@ -2396,7 +2410,13 @@ const CALCS = {
             corners += Math.sign(cross) === sgn ? 1 : -1;  // выпуклый угол: минус кусок, внутренний: плюс
           }
         }
-        const areaOuter = Math.max(0, walls.area - corners * t * v.hei); // за вычетом проёмов и двойных углов
+        const areaWalls = Math.max(0, walls.area - corners * t * v.hei); // за вычетом проёмов и двойных углов
+        // Фронтоны: треугольники на коротких стенах (2-я и 4-я у прямоугольного дома), если их кладём
+        let gableA = 0;
+        if (mode === 'rect' && sel.gables === 'two' && pos(v.gableH)) [1, 3].forEach((i) => { if (m.walls[i] && m.walls[i].finish === 'wall') gableA += v.wid * v.gableH / 2; });
+        // Армопояс по осевой линии стен: его высота вычитается из кладки
+        const beltOn = sel.belt === 'yes' && pos(v.beltH), beltLen = Math.max(0, walls.len - corners * t), beltH = beltOn ? v.beltH / 100 : 0;
+        const areaOuter = Math.max(0, areaWalls + gableA - beltLen * beltH);
         const area = areaOuter + areaInner;
         const volume = areaOuter * t + areaInner * ti;
         const per = this.perM3(sel.unit);
@@ -2417,8 +2437,11 @@ const CALCS = {
             ? 'наружные ' + fmt(areaOuter) + ' м² × ' + fmt(t) + ' м + перегородки ' + fmt(areaInner) + ' м² × ' + fmt(ti) + ' м = ' + fmt(volume) + ' м³'
             : fmt(area) + ' м² × ' + fmt(t) + ' м = ' + fmt(volume) + ' м³') + (corners ? ', углы не задвоены' : '')],
           ['В кубометре', fmt(per) + ' шт, запас ' + fmt(v.waste || 0) + '%'],
-          ['Рядов по высоте', fmtInt(rowsTotal) + ' (высота ряда ' + fmt(rowH * 100) + ' см)'],
         ];
+        if (gableA > 0) rows.push(['Фронтоны', '2 × (' + fmt(v.wid) + ' × ' + fmt(v.gableH) + ' ÷ 2) = ' + fmt(gableA) + ' м², уже в кладке; блоки у ската подрезают — запас лучше поднять до 10%']);
+        if (beltOn) rows.push(['Кладка под пояс', 'высота армопояса ' + fmt(v.beltH) + ' см по ' + fmt(beltLen) + ' м стен вычтена из кладки']);
+        rows.push(
+          ['Рядов по высоте', fmtInt(rowsTotal) + ' (высота ряда ' + fmt(rowH * 100) + ' см)']);
         const UNIT_NAME = { gas: 'Газоблок', foam: 'Пеноблок', brick: 'Кирпич одинарный', brick15: 'Кирпич полуторный', ceramo: 'Керамоблок' };
         const uName = UNIT_NAME[sel.unit] || 'Блоки или кирпич', buy = this.buy(sel);
         let cost;
@@ -2444,6 +2467,19 @@ const CALCS = {
         if (lintel > 0) {
           rows.push(['Перемычки', fmtInt(ops.length) + ' ' + plural(ops.length, 'проём', 'проёма', 'проёмов') + ' → ' + fmt(lintel) + ' м (ширина + 25 см опоры с каждой стороны)']);
           cost.push({ label: 'Перемычки', amount: Math.ceil(lintel), unit: 'м', priceId: 'lintel' });
+        }
+        if (beltOn) {
+          // Пояс шириной в стену минус 10 см (под утеплитель снаружи), не уже 15 см; 4 прутка и хомуты ⌀8 через 40 см
+          const bw = Math.max(0.15, t - 0.1), vol = beltLen * bw * beltH, order = Math.ceil(vol * 1.05 * 10) / 10;
+          const d = pos(v.beltD) ? v.beltD : 12, kgm = (dd) => 0.00617 * dd * dd;
+          const mainM = 4 * beltLen * 1.1, clampN = Math.ceil(beltLen / 0.4) + 1, clampM = clampN * (2 * (bw - 0.1) + 2 * (beltH - 0.1) + 0.2);
+          const kg = mainM * kgm(d) + clampM * kgm(8), formA = 2 * beltLen * beltH, boardM3 = Math.round(formA * 1.1 * 0.025 * 100) / 100;
+          rows.push(['Армопояс', fmt(beltLen) + ' м × ' + fmtInt(bw * 100) + '×' + fmt(v.beltH) + ' см: бетон ' + fmt(vol) + ' м³ (заказать ' + fmt(order, 1) + ' м³)']);
+          rows.push(['Арматура пояса', '4 прутка ⌀' + fmt(d, 0) + ' — ' + fmtInt(mainM) + ' м, хомуты ⌀8 — ' + fmtInt(clampN) + ' шт (' + fmtInt(clampM) + ' м); всего ' + fmtInt(kg) + ' кг']);
+          rows.push(['Опалубка пояса', fmt(formA) + ' м² щитов с двух сторон → доска ' + fmt(boardM3, 2) + ' м³; снаружи вместо доски часто ставят U-блок или доборный блок 100 мм']);
+          cost.push({ label: 'Бетон на армопояс', amount: order, unit: 'м³', priceId: 'beltConcrete' });
+          cost.push({ label: 'Арматура на армопояс', amount: Math.round(kg) / 1000, unit: 'т', priceId: 'beltRebar' });
+          cost.push({ label: 'Доска на опалубку пояса', amount: boardM3, unit: 'м³', priceId: 'beltBoard' });
         }
         m.walls.forEach((w) => rows.push(['Стена ' + (w.i + 1) + ' · ' + this.finishes[w.finish], fmt(w.net) + ' м²' + (w.count ? ' (проёмов ' + w.count + ')' : '')]));
         return { main: { label: 'Нужно', value: fmtInt(units) + ' ' + plural(units, 'штука', 'штуки', 'штук') + ' · ' + fmt(volume) + ' м³ кладки' }, rows, cost,
