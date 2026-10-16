@@ -217,6 +217,42 @@ function plankUnder(fl) {
     svg.appendChild(el('rect', { x: Math.min(x1, x2).toFixed(1), y: Math.min(y1, y2).toFixed(1), width: Math.abs(x2 - x1).toFixed(1), height: Math.abs(y2 - y1).toFixed(1), class: 'viz-plank viz-plank--' + p.kind }));
   });
 }
+// Тёплый пол: пути трубы/кабеля в зоне [x0,x1]×[y0,y1] (метры).
+// Змейка — проходы вдоль длинной стороны зоны через шаг s; улитка — прямоугольная спираль внутрь
+// с шагом 2s (подача), а обратка идёт между её витками наружу.
+function snakePath(x0, y0, x1, y1, s) {
+  const pts = [], alongX = x1 - x0 >= y1 - y0;
+  const a0 = alongX ? y0 : x0, a1 = alongX ? y1 : x1;
+  let k = 0;
+  for (let c = a0 + s / 2; c <= a1 - s / 2 + 1e-6; c += s, k++) {
+    const p = alongX ? [[x0, c], [x1, c]] : [[c, y0], [c, y1]];
+    if (k % 2) p.reverse();
+    pts.push(p[0], p[1]);
+  }
+  return pts;
+}
+function spiralPath(x0, y0, x1, y1, pitch, off) {
+  let a = x0 + off, b = y0 + off, c = x1 - off, d = y1 - off;
+  const pts = [[a, b]];
+  while (c - a > 1e-6 && d - b > 1e-6) {
+    pts.push([c, b], [c, d], [a, d]);
+    if (d - b <= pitch) break;
+    pts.push([a, b + pitch]);
+    a += pitch; b += pitch; c -= pitch; d -= pitch;
+    if (c - a <= 1e-6) break;
+  }
+  return pts;
+}
+// Точки пересечения горизонтали y с многоугольником, парами — куски внутри
+function scanX(poly, y) {
+  const xs = [];
+  poly.forEach((a, i) => { const b = poly[(i + 1) % poly.length]; if ((a[1] <= y) !== (b[1] <= y)) xs.push(a[0] + (y - a[1]) / (b[1] - a[1]) * (b[0] - a[0])); });
+  xs.sort((p, q) => p - q);
+  const out = []; for (let i = 0; i + 1 < xs.length; i += 2) out.push([xs[i], xs[i + 1]]);
+  return out;
+}
+const LOOP_COLORS = ['#e4572e', '#3a86ff', '#2a9d8f', '#f4a261', '#8338ec', '#ff006e', '#06d6a0', '#8d6e63'];
+
 // Забор: свободные куски стороны между воротами и калитками
 function fenceSegs(len, ops) {
   const cuts = ops.map((o) => [o.x, o.x + o.w]).sort((p, q) => p[0] - q[0]);
@@ -3888,6 +3924,14 @@ const CALCS = {
         rows.push(['Терморегулятор', fmtInt(zones) + ' шт' + (zones > 1 ? ', по одному на зону' : ' на комнату') + ', ' + sensor]);
         cost.push({ label: 'Терморегулятор', amount: zones, unit: 'шт', priceId: 'thermo' });
       },
+      // Контуры водяного пола: подводка идёт к каждому, поэтому число подбирается вместе с ней
+      loops(v, H) {
+        const step = (v.step || 0) / 1000; if (!pos(step)) return null;
+        const supply = (v.supply || 0) * 2, field = H / step;
+        let loops = 1;
+        if (pos(v.loopMax)) { if (supply >= v.loopMax) return { error: true }; while (field / loops + supply > v.loopMax && loops < 40) loops++; }
+        return { step, supply, field, loops, pipe: field + supply * loops };
+      },
       heated(v, sh) {
         if (!sh) return null;
         const e = v.edge || 0;
@@ -3903,10 +3947,83 @@ const CALCS = {
         const dims = mode === 'rect'
           ? [{ from: [0, 0], to: [v.len, 0], label: fmt(v.len) + ' м', offset: 22 }, { from: [v.len, 0], to: [v.len, v.wid], label: fmt(v.wid) + ' м', offset: 22 }]
           : sh.pts.map((a, i) => { const b = sh.pts[(i + 1) % sh.pts.length]; return { from: a, to: b, label: fmt(Math.hypot(b[0] - a[0], b[1] - a[1])) + ' м', offset: 20 }; });
-        const H = this.heated(v, sh);
-        V.shape(box, sh.pts, dims, { center: fmt(H) + ' м²', title: 'Обогрев',
-          caption: 'Пол ' + fmt(sh.area) + ' м², греем ' + fmt(H) + ' м² (отступ от стен ' + fmt(v.edge || 0) + ' м)' });
+        const H = this.heated(v, sh), sel = this._sel || {};
+        const lay = H > 0 ? this.layoutPaths(v, sel, sh, H) : null;
+        if (!lay) {
+          V.shape(box, sh.pts, dims, { center: fmt(H) + ' м²', title: 'Обогрев',
+            caption: 'Пол ' + fmt(sh.area) + ' м², греем ' + fmt(H) + ' м² (отступ от стен ' + fmt(v.edge || 0) + ' м)' });
+          return true;
+        }
+        const under = (svg, X, Y, el) => {
+          const pt = (q) => X(q).toFixed(1) + ',' + Y(q).toFixed(1);
+          // wm — ширина полосы в метрах (мат), иначе толщина линии в пикселях
+          lay.paths.forEach((p) => p.rect ? (() => { const [x, y, w2, h2] = p.rect, a = [X([x, y]), Y([x, y])], b = [X([x + w2, y + h2]), Y([x + w2, y + h2])];
+            svg.appendChild(el('rect', { x: Math.min(a[0], b[0]).toFixed(1), y: Math.min(a[1], b[1]).toFixed(1), width: Math.abs(b[0] - a[0]).toFixed(1), height: Math.abs(b[1] - a[1]).toFixed(1), fill: p.color, 'fill-opacity': 0.55, stroke: p.color })); })() : svg.appendChild(el('polyline', { points: p.pts.map(pt).join(' '), fill: 'none', stroke: p.color, 'stroke-width': p.wm ? Math.abs(X([p.wm, 0]) - X([0, 0])).toFixed(1) : (p.w || 1.6), 'stroke-linejoin': p.wm ? 'miter' : 'round', 'stroke-linecap': p.wm ? 'butt' : 'round', opacity: p.op || 1 })));
+          if (lay.collector) {
+            const [cx, cy] = lay.collector, a = X([cx - 0.2, cy]), b = X([cx + 0.2, cy]), yy = Y([cx, cy]);
+            svg.appendChild(el('rect', { x: Math.min(a, b).toFixed(1), y: (yy - 5).toFixed(1), width: Math.abs(b - a).toFixed(1), height: 10, rx: 2, fill: '#5b6169' }));
+            svg.appendChild(el('text', { x: ((a + b) / 2).toFixed(1), y: (yy + 18).toFixed(1), class: 'viz-small', 'text-anchor': 'middle' }, 'коллектор'));
+          }
+        };
+        V.shape(box, sh.pts, dims, { title: 'Схема укладки', under, caption: lay.caption });
         return true;
+      },
+      // Пути на схеме: водяной — по контурам (зоны вдоль длинной стороны), кабель — змейкой, мат — полосами
+      layoutPaths(v, sel, sh, H) {
+        const e = Math.max(0, v.edge || 0), pts = sh.pts;
+        const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+        const minX = Math.min(...xs) + e, maxX = Math.max(...xs) - e, minY = Math.min(...ys) + e, maxY = Math.max(...ys) - e;
+        if (!(maxX > minX && maxY > minY)) return null;
+        const rect = pts.length === 4 && pts.every((q) => (Math.abs(q[0] - Math.min(...xs)) < 1e-6 || Math.abs(q[0] - Math.max(...xs)) < 1e-6) && (Math.abs(q[1] - Math.min(...ys)) < 1e-6 || Math.abs(q[1] - Math.max(...ys)) < 1e-6));
+        const paths = [];
+        // Змейка в многоугольнике: горизонтали через шаг, куски внутри контура с отступом от стен
+        const polySnake = (x0, x1, s, color) => {
+          let k = 0, run = [];
+          for (let y = minY + s / 2; y <= maxY - s / 2 + 1e-6; y += s, k++) {
+            const iv = scanX(pts, y).map(([a, b]) => [Math.max(a + e, x0), Math.min(b - e, x1)]).filter(([a, b]) => b - a > s);
+            if (!iv.length) { if (run.length) paths.push({ pts: run, color }); run = []; continue; }
+            const [a, b] = iv[0], seg = k % 2 ? [[b, y], [a, y]] : [[a, y], [b, y]];
+            // Ряд сместился (ниша, выступ) — не тянем косую перемычку, начинаем новый кусок
+            if (run.length && Math.abs(run[run.length - 1][0] - seg[0][0]) > 2 * s) { paths.push({ pts: run, color }); run = []; }
+            run.push(seg[0], seg[1]);
+            iv.slice(1).forEach(([c, d]) => paths.push({ pts: [[c, y], [d, y]], color }));
+          }
+          if (run.length) paths.push({ pts: run, color });
+        };
+        if (sel.type === 'water') {
+          const lp = this.loops(v, H); if (!lp || lp.error) return null;
+          const n = lp.loops, alongX = maxX - minX >= maxY - minY;
+          // На схеме шаг не мельче 6 см — иначе витки сливаются; это только рисунок
+          const s = Math.max(lp.step, Math.max(maxX - minX, maxY - minY) / 70);
+          const snail = sel.layout !== 'snake' && rect;
+          for (let i = 0; i < n; i++) {
+            const color = LOOP_COLORS[i % LOOP_COLORS.length];
+            const z = alongX ? [minX + (maxX - minX) * i / n, minY, minX + (maxX - minX) * (i + 1) / n, maxY] : [minX, minY + (maxY - minY) * i / n, maxX, minY + (maxY - minY) * (i + 1) / n];
+            if (!rect) { polySnake(z[0], z[2], s, color); continue; }
+            if (snail) {
+              const sup = spiralPath(z[0], z[1], z[2], z[3], 2 * s, s / 2), ret = spiralPath(z[0], z[1], z[2], z[3], 2 * s, 1.5 * s);
+              paths.push({ pts: sup, color }, { pts: ret, color, op: 0.55 }, { pts: [sup[sup.length - 1], ret[ret.length - 1]], color });
+            } else paths.push({ pts: snakePath(z[0], z[1], z[2], z[3], s), color });
+            // Подводка вдоль стены к коллектору у первого угла
+            const start = paths[paths.length - (snail ? 3 : 1)].pts[0];
+            paths.push({ pts: [start, [start[0], minY - e / 2], [minX + 0.25, minY - e / 2]], color, w: 1.2, op: 0.8 });
+          }
+          const per = Math.round(lp.pipe / n);
+          return { paths, collector: [minX + 0.25, minY - e / 2],
+            caption: n + ' ' + plural(n, 'контур', 'контура', 'контуров') + ' по ≈ ' + per + ' м, ' + (snail ? 'улиткой' : 'змейкой') + ', шаг ' + fmt(v.step) + ' мм' + (s > lp.step + 1e-6 ? ' (на схеме реже)' : '') + (sel.layout !== 'snake' && !rect ? '; сложная форма показана змейкой' : '') };
+        }
+        if (sel.type === 'cable') {
+          if (!pos(v.power) || !pos(v.cableW)) return null;
+          const st = v.cableW / v.power, s = Math.max(st, Math.max(maxX - minX, maxY - minY) / 70);
+          if (rect) paths.push({ pts: snakePath(minX, minY, maxX, maxY, s), color: '#e4572e' }); else polySnake(minX, maxX, s, '#e4572e');
+          return { paths, caption: 'Кабель змейкой, шаг ≈ ' + fmtInt(st * 1000) + ' мм' + (s > st + 1e-6 ? ' (на схеме реже)' : '') };
+        }
+        // Мат — полосы по 0,5 м поперёк комнаты, в развороте сетку режут, кабель не трогают
+        for (let y = minY; y < maxY - 0.05; y += 0.5) {
+          const h = Math.min(0.46, maxY - y);
+          scanX(pts, y + h / 2).forEach(([a, b]) => { if (b - a - 2 * e > 0.1) paths.push({ rect: [a + e, y, b - a - 2 * e, h], color: '#f4a261' }); });
+        }
+        return { paths, caption: 'Мат полосами по 0,5 м, разворот — разрезом сетки, не кабеля' };
       },
       compute(v, mode, sel, extras) {
         const sh = this.shape(v, mode, extras);
@@ -3927,15 +4044,9 @@ const CALCS = {
         if (sel.type === 'water') {
           const step = (v.step || 0) / 1000;
           if (!pos(step)) return null;
-          const supply = (v.supply || 0) * 2;   // до коллектора и обратно, на каждый контур
-          const field = H / step;               // труба в самом полу, без подводки
-          // Подводка идёт к каждому контуру, поэтому число контуров подбираем с ней заодно
-          let loops = 1;
-          if (pos(v.loopMax)) {
-            if (supply >= v.loopMax) return { error: 'Подводка до коллектора длиннее предела контура — коллектор стоит слишком далеко.' };
-            while (field / loops + supply > v.loopMax && loops < 40) loops++;
-          }
-          const pipe = field + supply * loops;
+          const lp = this.loops(v, H);
+          if (lp.error) return { error: 'Подводка до коллектора длиннее предела контура — коллектор стоит слишком далеко.' };
+          const { supply, field, loops, pipe } = lp;
           const perLoop = pipe / loops;
           if (pos(v.loopMax) && perLoop > v.loopMax) return { error: 'Не получается уложиться в длину контура — увеличьте шаг укладки или поставьте коллектор ближе.' };
           // Контур кладут одним куском — сращивать трубу в стяжке нельзя, поэтому бухты считаем
