@@ -38,7 +38,7 @@
 
 {#- Плашка про cookie Метрики: один раз, «Понятно» запоминается в браузере. -#}
 <div class="cookie-plashka" role="region" aria-label="{% if lang == "ru" %}Cookie{% else %}Cookies{% endif %}" hidden>
-  <p>{% if lang == "ru" %}Сайт собирает статистику посещений через Яндекс Метрику и использует для этого cookie. <a href="/politika/">Подробнее</a>{% else %}This site uses Yandex Metrica cookies for visit statistics. <a href="/politika/">Details</a> (in Russian){% endif %}</p>
+  <p>{% if lang == "ru" %}Сайт использует cookie Яндекс Метрики для статистики. <a href="/politika/">Подробнее</a>{% else %}This site uses Yandex Metrica cookies for visit statistics. <a href="/politika/">Details</a> (in Russian){% endif %}</p>
   <button type="button" class="btn btn-primary btn-sm">{% if lang == "ru" %}Понятно{% else %}OK{% endif %}</button>
 </div>
 <script src="/assets/js/cookie.js" defer></script>
