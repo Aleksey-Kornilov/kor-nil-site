@@ -386,6 +386,15 @@ const CALCS = {
           { id: 'no', label: 'Не считать', hint: 'только бетон' },
           { id: 'yes', label: 'Посчитать', hint: 'плита — сетки, лента и столбы — каркас из прутков и хомутов' },
         ] },
+        { id: 'form', label: 'Опалубка', default: 'no', choices: [
+          { id: 'no', label: 'Не считать', hint: 'опалубка уже есть или заливаете в грунт' },
+          { id: 'board', label: 'Доска 25 мм', hint: 'обрезная 150×25 мм по 6 м; после заливки доска идёт в дело' },
+          { id: 'ply', label: 'Фанера 18 мм', hint: 'ламинированная 1,22×2,44 м: ровная поверхность, служит много заливок' },
+        ] },
+        { id: 'formH', label: 'Опалубка ленты по высоте', default: 'full', group: 'formStrip', choices: [
+          { id: 'full', label: 'На всю высоту', hint: 'грунт сыплется или траншея шире ленты' },
+          { id: 'above', label: 'Цоколь и 10 см в землю', hint: 'плотный грунт сам держит стенки траншеи — щиты нужны только над землёй' },
+        ] },
       ],
       prices: [
         { id: 'cement', label: 'Цемент М400', unit: '₽ за мешок 50 кг', group: 'mix' },
@@ -394,10 +403,15 @@ const CALCS = {
         { id: 'ready', label: 'Готовый бетон', unit: '₽ за м³', group: 'ready' },
         { id: 'rebar', label: 'Арматура', unit: '₽ за тонну', group: 'rebar' },
         { id: 'wire', label: 'Вязальная проволока', unit: '₽ за кг', group: 'rebar' },
+        { id: 'formBoard', label: 'Доска на опалубку', unit: '₽ за м³', group: 'formBoard' },
+        { id: 'formPly', label: 'Фанера на опалубку', unit: '₽ за лист 1,22×2,44', group: 'formPly' },
+        { id: 'formBar', label: 'Брус 50×50 на стойки и подкосы', unit: '₽ за метр', group: 'formBars' },
       ],
       groups(v, mode, extras, sel) {
         const rb = sel.rebar === 'yes';
-        return { mix: sel.source !== 'ready', ready: sel.source === 'ready', rebar: rb,
+        const fm = sel.form && sel.form !== 'no';
+        return { formStrip: fm && (mode === 'strip' || mode === 'plan'), formBoard: sel.form === 'board', formPly: sel.form === 'ply', formBars: fm && mode !== 'columns',
+          mix: sel.source !== 'ready', ready: sel.source === 'ready', rebar: rb,
           rebarSlab: rb && mode === 'slab', rebarRods: rb && mode !== 'slab' };
       },
       // Арматура обычной схемой: плита — сетки (две при толщине от 15 см), лента и столбы —
@@ -513,6 +527,34 @@ const CALCS = {
         }
         return false;
       },
+      // Опалубка: щиты по боковым граням бетона. faces — [длина грани, высота щита]; у ленты — наружная и
+      // внутренняя стороны каждого отрезка, у плиты — края на толщину, у столбов — короб на 4 стороны
+      formwork(v, mode, sel, extras) {
+        const faces = [], cm2 = (x) => (x || 0) / 100;
+        const hStrip = (depth, above) => (sel.formH === 'above' ? above + 0.1 : depth + above);
+        if (mode === 'slab') {
+          if (!(pos(v.len) && pos(v.wid) && pos(v.thick))) return null;
+          faces.push([2 * (v.len + v.wid), cm2(v.thick)]);
+        } else if (mode === 'strip') {
+          const L = v.hLen, W = v.hWid, w = cm2(v.sWid);
+          if (!(pos(L) && pos(W) && pos(w) && pos(v.sDepth)) || !(2 * w < L && 2 * w < W)) return null;
+          const h = hStrip(cm2(v.sDepth), cm2(v.sAbove));
+          faces.push([2 * (L + W), h], [2 * (L + W) - 8 * w, h]);
+          if (pos(v.sInner)) faces.push([2 * v.sInner, h]);
+        } else if (mode === 'plan') {
+          const P = window.CalcPlan; if (!P || !extras.plan || !pos(v.pW) || !pos(v.pDepth)) return null;
+          const g = P.geometry(extras.plan, { w: v.pW, depth: v.pDepth, above: v.pAbove || 0 });
+          if (!g.valid) return null;
+          g.edges.forEach((e) => { const h = hStrip(e.depth, g.above); faces.push([e.len, h], [Math.hypot(e.ib[0] - e.ia[0], e.ib[1] - e.ia[1]), h]); });
+          g.inners.forEach((e) => faces.push([2 * e.len, hStrip(e.h - g.above, g.above)]));
+        } else {
+          if (!(pos(v.cSide) && pos(v.cHei) && pos(v.cCount))) return null;
+          faces.push([4 * cm2(v.cSide) * Math.round(v.cCount), v.cHei]);
+        }
+        const area = faces.reduce((a, [l, h]) => a + l * h, 0), run = faces.reduce((a, [l]) => a + l, 0);
+        const hMax = faces.reduce((a, [, h]) => Math.max(a, h), 0);
+        return { area, run, hMax };
+      },
       compute(v, mode, sel, extras) {
         let volume = null;
         if (mode === 'plan') {
@@ -593,6 +635,26 @@ const CALCS = {
           res.note += ' Арматура — обычная схема для частного дома' + (mode === 'slab' ? ' (вторая сетка при толщине от 15 см)' : '') + ', не проект.';
           res.cost.push({ label: 'Арматура', amount: tons, unit: 'т', priceId: 'rebar' });
           res.cost.push({ label: 'Вязальная проволока', amount: wireKg, unit: 'кг', priceId: 'wire' });
+        }
+        const fw = sel.form && sel.form !== 'no' ? this.formwork(v, mode, sel, extras) : null;
+        if (fw && fw.area > 0) {
+          const A = fw.area * 1.1;   // +10% на подрезку и нахлёсты
+          if (sel.form === 'board') {
+            const m3 = A * 0.025, pcs = Math.ceil(A / (6 * 0.15) - 1e-9);
+            res.rows.push(['Опалубка', fmt(fw.area) + ' м² щитов → доска 150×25 мм: ' + fmt(m3, 2) + ' м³, это ' + fmtInt(pcs) + ' ' + plural(pcs, 'доска', 'доски', 'досок') + ' по 6 м (+10%)']);
+            res.cost.push({ label: 'Доска на опалубку', amount: Math.round(m3 * 100) / 100, unit: 'м³', priceId: 'formBoard' });
+          } else {
+            const sheets = Math.ceil(A / (1.22 * 2.44) - 1e-9);
+            res.rows.push(['Опалубка', fmt(fw.area) + ' м² щитов → ' + fmtInt(sheets) + ' ' + plural(sheets, 'лист', 'листа', 'листов') + ' фанеры 1,22×2,44 м (+10%)']);
+            res.cost.push({ label: 'Фанера на опалубку', amount: sheets, unit: plural(sheets, 'лист', 'листа', 'листов'), priceId: 'formPly' });
+          }
+          if (mode !== 'columns') {
+            // Стойки через метр по каждой стороне щитов, на 30 см в грунт, и подкос к каждой
+            const posts = Math.ceil(fw.run / 1 - 1e-9), bar = posts * (fw.hMax + 0.3 + fw.hMax * 1.4);
+            res.rows.push(['Брус 50×50', fmtInt(posts) + ' стоек через 1 м и столько же подкосов — ' + fmt(bar, 1) + ' м']);
+            res.cost.push({ label: 'Брус на стойки и подкосы', amount: Math.ceil(bar), unit: 'м', priceId: 'formBar' });
+          } else res.rows.push(['Короба', 'на каждый столб короб из 4 щитов, стянутый струбцинами или хомутами из бруска']);
+          if ((mode === 'strip' || mode === 'plan') && fw.hMax > 0.5) res.note += ' Щиты ленты выше 50 см стягивают шпильками через 0,8–1 м или распирают изнутри, иначе бетон их выдавит.';
         }
         return res;
       },
