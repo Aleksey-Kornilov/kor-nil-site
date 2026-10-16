@@ -3389,6 +3389,7 @@ const CALCS = {
         { id: 'thick', label: 'Средняя толщина слоя', unit: 'мм', value: '20' },
         { id: 'rateMm', label: 'Расход смеси', unit: 'кг/м² на 1 мм слоя', value: '1', group: 'own' },
         { id: 'bag', label: 'Мешок смеси', unit: 'кг', value: '30' },
+        { id: 'reserve', label: 'Запас', unit: '%, на неровности и замесы', value: '10' },
         { id: 'primerRate', label: 'Расход грунтовки', unit: 'л/м²', value: '0.15', group: 'primer' },
         { id: 'primerCan', label: 'Канистра грунтовки', unit: 'л', value: '10', group: 'primer' },
         { id: 'beaconStep', label: 'Шаг маяков', unit: 'м (правило минус 20–30 см)', value: '1.2', group: 'beacon' },
@@ -3475,7 +3476,8 @@ const CALCS = {
 
         const perM2 = rate * v.thick;              // кг на квадратный метр при этой толщине
         const kg = area * perM2;
-        const bags = pos(v.bag) ? Math.ceil(kg * 1.1 / v.bag) : null;
+        const res = v.reserve == null ? 10 : Math.max(0, v.reserve), RK = 1 + res / 100;
+        const bags = pos(v.bag) ? Math.ceil(kg * RK / v.bag) : null;
         const rows = [
           ['Площадь', fmt(area) + ' м²' + (m && m.openings ? ', проёмы ' + fmt(m.openings) + ' м² вычтены' : '')],
           ['Расход при ' + fmt(v.thick) + ' мм', fmt(perM2) + ' кг/м² (' + fmt(rate) + ' кг/м² на 1 мм)'],
@@ -3483,7 +3485,7 @@ const CALCS = {
         ];
         const cost = [];
         if (bags != null) {
-          rows.push(['Мешков по ' + fmt(v.bag) + ' кг', fmtInt(bags) + ' шт (запас 10%)']);
+          rows.push(['Мешков по ' + fmt(v.bag) + ' кг', fmtInt(bags) + ' шт (запас ' + fmt(res) + '%)']);
           cost.push({ label: 'Смесь', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'bag' });
         }
         if (sel.primer === 'yes' && pos(v.primerRate)) {
@@ -3505,7 +3507,7 @@ const CALCS = {
         note += 'Толщину считают по средней: замерьте перепад стены правилом и возьмите половину плюс минимальный слой 5 мм.';
 
         return {
-          main: { label: 'Нужно штукатурки', value: bags != null ? fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' (' + fmtInt(kg * 1.1) + ' кг)' : fmtInt(kg) + ' кг' },
+          main: { label: 'Нужно штукатурки', value: bags != null ? fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' (' + fmtInt(kg * RK) + ' кг)' : fmtInt(kg) + ' кг' },
           rows, note, cost,
         };
       },
@@ -3527,6 +3529,7 @@ const CALCS = {
       common: [
         { id: 'thick', label: 'Толщина стяжки', unit: 'мм', value: '50' },
         { id: 'readyRate', label: 'Расход смеси', unit: 'кг/м² на 1 см слоя', value: '20', group: 'ready' },
+        { id: 'reserve', label: 'Запас', unit: '%, на замесы и перепады основания', value: '5' },
         { id: 'readyBag', label: 'Мешок пескобетона', unit: 'кг', value: '40', group: 'ready' },
         { id: 'cemPerM3', label: 'Цемента на 1 м³ раствора', unit: 'кг', value: '490', group: 'cps' },
         { id: 'sandPerM3', label: 'Песка на 1 м³ раствора', unit: 'кг', value: '1450', group: 'cps' },
@@ -3593,6 +3596,7 @@ const CALCS = {
         return true;
       },
       compute(v, mode, sel, extras) {
+        const res = v.reserve == null ? 5 : Math.max(0, v.reserve), RK = 1 + res / 100;
         const sh = this.shape(v, mode, extras);
         if (mode === 'plan' && !sh && extras.plan) return { error: 'Контур помещения пересекает сам себя — поправьте углы на плане.' };
         if (!sh || !pos(v.thick)) return null;
@@ -3606,21 +3610,21 @@ const CALCS = {
         if (sel.mix === 'ready') {
           if (!pos(v.readyRate)) return null;
           const perM2 = v.readyRate * v.thick / 10, kg = area * perM2;
-          const bags = pos(v.readyBag) ? Math.ceil(kg * 1.05 / v.readyBag) : null;
+          const bags = pos(v.readyBag) ? Math.ceil(kg * RK / v.readyBag) : null;
           rows.push(['Расход при ' + fmt(v.thick) + ' мм', fmt(perM2) + ' кг/м²']);
           rows.push(['Смеси', fmtInt(kg) + ' кг без запаса']);
           if (bags != null) {
-            rows.push(['Мешков по ' + fmt(v.readyBag) + ' кг', fmtInt(bags) + ' шт (запас 5%)']);
+            rows.push(['Мешков по ' + fmt(v.readyBag) + ' кг', fmtInt(bags) + ' шт (запас ' + fmt(res) + '%)']);
             main = fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' пескобетона';
             cost.push({ label: 'Пескобетон', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'readyBag' });
           } else main = fmtInt(kg) + ' кг смеси';
         } else if (sel.mix === 'cps') {
           if (!pos(v.cemPerM3) || !pos(v.sandPerM3)) return null;
           const cem = vol * v.cemPerM3, sand = vol * v.sandPerM3;
-          const cemBags = pos(v.cemBag) ? Math.ceil(cem * 1.05 / v.cemBag) : null;
-          const sandT = sand * 1.05 / 1000;
+          const cemBags = pos(v.cemBag) ? Math.ceil(cem * RK / v.cemBag) : null;
+          const sandT = sand * RK / 1000;
           rows.push(['Цемент М400', fmtInt(cem) + ' кг' + (cemBags != null ? ' ≈ ' + fmtInt(cemBags) + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' по ' + fmt(v.cemBag) + ' кг' : '')]);
-          rows.push(['Песок', fmt(sandT) + ' т с запасом 5% (≈ ' + fmt(sandT / MATERIALS.sand.density) + ' м³)']);
+          rows.push(['Песок', fmt(sandT) + ' т с запасом ' + fmt(res) + '% (≈ ' + fmt(sandT / MATERIALS.sand.density) + ' м³)']);
           rows.push(['Вода', '≈ ' + fmtInt(cem * 0.45) + ' л, доливать по консистенции']);
           main = (cemBags != null ? fmtInt(cemBags) + ' ' + plural(cemBags, 'мешок', 'мешка', 'мешков') + ' цемента' : fmtInt(cem) + ' кг цемента') + ' · ' + fmt(sandT) + ' т песка';
           if (cemBags != null) cost.push({ label: 'Цемент', amount: cemBags, unit: plural(cemBags, 'мешок', 'мешка', 'мешков'), priceId: 'cem' });
@@ -3631,11 +3635,11 @@ const CALCS = {
         } else {
           if (!pos(v.selfRate)) return null;
           const perM2 = v.selfRate * v.thick, kg = area * perM2;
-          const bags = pos(v.selfBag) ? Math.ceil(kg * 1.05 / v.selfBag) : null;
+          const bags = pos(v.selfBag) ? Math.ceil(kg * RK / v.selfBag) : null;
           rows.push(['Расход при ' + fmt(v.thick) + ' мм', fmt(perM2) + ' кг/м²']);
           rows.push(['Смеси', fmtInt(kg) + ' кг без запаса']);
           if (bags != null) {
-            rows.push(['Мешков по ' + fmt(v.selfBag) + ' кг', fmtInt(bags) + ' шт (запас 5%)']);
+            rows.push(['Мешков по ' + fmt(v.selfBag) + ' кг', fmtInt(bags) + ' шт (запас ' + fmt(res) + '%)']);
             main = fmtInt(bags) + ' ' + plural(bags, 'мешок', 'мешка', 'мешков') + ' наливного пола';
             cost.push({ label: 'Наливной пол', amount: bags, unit: plural(bags, 'мешок', 'мешка', 'мешков'), priceId: 'selfBag' });
           } else main = fmtInt(kg) + ' кг смеси';
