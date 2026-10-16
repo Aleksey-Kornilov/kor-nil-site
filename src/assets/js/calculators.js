@@ -207,7 +207,18 @@
   // Ёлочка ставит короткие планки 60×12 — при возврате к обычной укладке возвращаем обычные 122×18,3
   const LVT_BACK = (vals) => ((parseNum(vals.plankL) || 0) <= 80 && (parseNum(vals.plankW) || 0) <= 15 ? { plankL: '122', plankW: '18.3', perPack: '10' } : {});
 
-  // Доски/планки раскладки на плане пола: целые, отпиленные и из обрезков — разным цветом
+  // Набор банок краски без лишнего: банки 9, 2,7 и 0,9 л (самые ходовые объёмы); меньше всего лишних
+// литров, при равенстве — меньше банок
+function canSet(liters) {
+  let best = null;
+  for (let a = 0; a <= Math.ceil(liters / 9); a++) for (let b = 0; b <= Math.ceil(liters / 2.7); b++) {
+    const c = Math.max(0, Math.ceil((liters - a * 9 - b * 2.7) / 0.9 - 1e-9)), vol = a * 9 + b * 2.7 + c * 0.9, n = a + b + c;
+    if (!best || vol < best.vol - 1e-9 || (Math.abs(vol - best.vol) < 1e-9 && n < best.n)) best = { a, b, c, vol, n };
+  }
+  const parts = [[best.a, '9'], [best.b, '2,7'], [best.c, '0,9']].filter(([k]) => k).map(([k, l]) => k + ' × ' + l + ' л');
+  return parts.join(' + ') + ' = ' + fmt(best.vol) + ' л';
+}
+// Доски/планки раскладки на плане пола: целые, отпиленные и из обрезков — разным цветом
 function plankUnder(fl) {
   if (!fl || !fl.pieces) return null;
   const toM = (x, y) => (fl.tr ? [fl.minX + y / 100, fl.minY + x / 100] : [fl.minX + x / 100, fl.minY + y / 100]);
@@ -748,11 +759,15 @@ const CALCS = {
         return null;
       },
       // Какие группы полей показывать: по отделке стен
+      selects: [{ id: 'match', label: 'Стыковка рисунка', default: 'straight', group: 'paperMatch', choices: [
+        { id: 'straight', label: 'Прямая', hint: 'рисунок соседних полос на одной высоте' },
+        { id: 'offset', label: 'Со смещением', hint: 'рисунок соседней полосы сдвинут на полраппорта — на каждую полосу ещё полраппорта' },
+      ] }],
       groups(v, mode, extras) {
         const R = window.CalcRoom; const lens = this.lens(v, mode, extras);
         if (!R || !extras.room || !lens) return { paint: true, paper: false };
         const m = R.measure(extras.room, lens, v.hei || 0, R.FINISH, extras.room.defaultFinish);
-        return { paint: m.paint.n > 0, paper: m.paper.n > 0 };
+        return { paint: m.paint.n > 0, paper: m.paper.n > 0, paperMatch: m.paper.n > 0 && pos(v.rapport) };
       },
       draw(v, mode, box) {
         const V = window.CalcViz; if (!V) return false;
@@ -778,6 +793,7 @@ const CALCS = {
           if (!p) return null;
           const rows = [['Без запаса', fmt(p.liters) + ' л'], ['Площадь окраски', fmt(area) + ' м² × ' + fmt(coats) + ' сл.']];
           if (p.cans != null) rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + fmtInt(p.cans) + ' шт']);
+          rows.push(['Набор без лишнего', canSet(p.reserve) + ' — если в магазине есть банки разного объёма']);
           return { main: { label: 'Нужно краски (с запасом 10%)', value: fmt(p.reserve) + ' л' }, rows,
             note: 'Расход указан на банке (обычно 8–12 м²/л). Для тёмного по светлому может понадобиться больше слоёв.',
             cost: p.cans != null ? [{ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }] : [] };
@@ -793,7 +809,8 @@ const CALCS = {
         if (m.paper.n > 0) {
           const effW = (v.rollW || 0) - (v.overlap || 0) / 100;
           let stripLen = v.hei + (v.trim || 0) / 100;
-          if (pos(v.rapport)) { const r = v.rapport / 100; stripLen = Math.ceil(stripLen / r - 1e-9) * r; }
+          // Раппорт: полоса кратна повтору рисунка; со смещением на каждую полосу ещё полраппорта, чтобы попасть в рисунок соседней
+          if (pos(v.rapport)) { const r = v.rapport / 100; stripLen = Math.ceil(stripLen / r - 1e-9) * r + (sel.match === 'offset' ? r / 2 : 0); }
           if (pos(effW) && pos(v.rollL)) {
             const strips = m.paper.walls.reduce((s2, w) => s2 + Math.ceil(w.len / effW - 1e-9), 0);
             const perRoll = Math.floor(v.rollL / stripLen + 1e-9);
@@ -803,7 +820,7 @@ const CALCS = {
               const glue = pos(v.glue) ? Math.ceil(m.paper.area / v.glue) : null;
               mains.push('обои ' + fmtInt(rolls) + ' ' + plural(rolls, 'рулон', 'рулона', 'рулонов'));
               rows.push(['Обои: стен', fmtInt(m.paper.n) + ' ' + plural(m.paper.n, 'стена', 'стены', 'стен') + ', ' + fmt(m.paper.area) + ' м² (с проёмами ' + fmt(m.paper.len * v.hei) + ')']);
-              rows.push(['Полос', strips + ' по ' + fmt(stripLen) + ' м' + (pos(v.rapport) ? ' (с подгонкой рисунка)' : '')]);
+              rows.push(['Полос', strips + ' по ' + fmt(stripLen) + ' м' + (pos(v.rapport) ? (sel.match === 'offset' ? ' (с подгонкой рисунка со смещением)' : ' (с подгонкой рисунка)') : '')]);
               rows.push(['Полос из рулона', String(perRoll)]);
               if (glue != null) rows.push(['Клей', fmtInt(glue) + ' ' + plural(glue, 'пачка', 'пачки', 'пачек') + ' (на ' + fmt(m.paper.area) + ' м²)']);
               cost.push({ label: 'Обои', amount: rolls, unit: plural(rolls, 'рулон', 'рулона', 'рулонов'), priceId: 'roll' });
@@ -820,6 +837,7 @@ const CALCS = {
             rows.push(['Краска: стен', fmtInt(m.paint.n) + ' ' + plural(m.paint.n, 'стена', 'стены', 'стен') + ', ' + fmt(m.paint.area) + ' м² × ' + fmt(coats) + ' сл.']);
             rows.push(['Без запаса', fmt(p.liters) + ' л']);
             if (p.cans != null) { rows.push(['Банок по ' + fmt(v.can) + ' л', '≈ ' + fmtInt(p.cans) + ' шт']); cost.push({ label: 'Краска', amount: p.cans, unit: plural(p.cans, 'банка', 'банки', 'банок'), priceId: 'can' }); }
+            rows.push(['Набор без лишнего', canSet(p.reserve) + ' — если в магазине есть банки разного объёма']);
           }
         }
         if (!mains.length) return null;
