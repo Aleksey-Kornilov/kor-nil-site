@@ -1010,6 +1010,7 @@ const CALCS = {
         ] },
       ],
       common: [
+        { id: 'winders', label: 'Забежных ступеней в повороте', unit: 'шт, 2–4', value: '3', int: true, group: 'winder' },
         { id: 'thick', label: 'Толщина ступени', unit: 'мм', value: '40', group: 'steps' },
         { id: 'slabT', label: 'Толщина плиты марша', unit: 'см, под ступенями', value: '15', group: 'concrete' },
         { id: 'rebarRate', label: 'Арматуры на 1 м³ бетона', unit: 'кг', value: '90', group: 'concrete' },
@@ -1026,6 +1027,10 @@ const CALCS = {
         { id: 'risers', label: 'Подступенки', default: 'yes', group: 'steps', choices: [
           { id: 'yes', label: 'Есть', hint: 'вертикальные доски между ступенями закрывают лестницу' },
           { id: 'no', label: 'Открытая лестница', hint: 'без подступенков: легче и светлее' },
+        ] },
+        { id: 'turnKind', label: 'Поворот', default: 'landing', group: 'turnSel', choices: [
+          { id: 'landing', label: 'Площадка', hint: 'квадрат в ширину марша: удобно и безопасно, места больше' },
+          { id: 'winder', label: 'Забежные ступени', hint: 'ступени-клинья в повороте вместо площадки: лестница короче на ступень, но у внутреннего угла узко' },
         ] },
         { id: 'rails', label: 'Перила', default: 'inner', choices: [
           { id: 'inner', label: 'С одной стороны', hint: 'у лестницы с поворотом — по внутренней стороне, там поручень короче' },
@@ -1048,19 +1053,21 @@ const CALCS = {
       ],
       groups(v, mode, extras, sel) {
         const m = sel.material, wooden = m !== 'concrete';
-        return { wood: m === 'wood', metal: m === 'metal', concrete: m === 'concrete', steps: wooden,
-          riser: wooden && sel.risers === 'yes', landing: wooden && mode !== 'straight' };
+        const wind = mode === 'turn' && sel.turnKind === 'winder';
+        return { wood: m === 'wood', metal: m === 'metal', concrete: m === 'concrete', steps: wooden, turnSel: mode === 'turn', winder: wind,
+          riser: wooden && sel.risers === 'yes', landing: wooden && mode !== 'straight' && !wind };
       },
       // Марши: сколько ступеней, длина по полу и высота подъёма каждого — для косоуров, каркаса и бетона
       flights(c, v, mode) {
         const r = c.riser / 100, t = v.tread / 100;
         const one = (k, rises) => ({ treads: k, run: k * t, rise: rises * r, len: Math.hypot(k * t, rises * r) });
         if (mode === 'straight') return [one(c.steps, c.n)];
-        return [one(c.split, c.split + 1), one(c.upper, c.n - c.split - 1)];
+        return [one(c.split, c.split + 1), one(c.upper, c.n - c.split - c.occ)];
       },
       // Глубина площадки поперёк хода: у Г — ширина марша, у П — два марша и просвет между ними
       landD(v, mode) { const w = v.width || 0.9; return mode === 'u' ? 2 * w + Math.max(0, v.well || 0) : w; },
-      calc(v, mode) {
+      calc(v, mode, sel) {
+        sel = sel || this._sel || {};
         if (!pos(v.height) || !pos(v.riser) || !pos(v.tread)) return null;
         const H = v.height * 100;                       // высота этажа в см
         const n = Math.max(2, Math.round(H / v.riser));  // число подъёмов
@@ -1069,9 +1076,22 @@ const CALCS = {
         const run = steps * v.tread;                     // длина по полу, см
         const comfort = 2 * riser + v.tread;             // формула удобного шага, 60–65 см
         const angle = Math.atan2(riser, v.tread) * 180 / Math.PI;
-        // С поворотом одна «ступень» на высоте площадки — это сама площадка, в верхнем марше хотя бы одна ступень
-        const split = Math.max(1, Math.min(steps - 2, Math.round(pos(v.split) ? v.split : Math.ceil(steps / 2))));
-        return { n, riser, steps, run: run / 100, comfort, angle, H, split, upper: steps - split - 1 };
+        // Поворот занимает occ ступеней: площадка — одну, забежные — по числу клиньев; в верхнем марше хотя бы одна
+        const wind = mode === 'turn' && sel.turnKind === 'winder' ? Math.max(2, Math.min(4, Math.round(v.winders || 3))) : 0, occ = wind || 1;
+        const split = Math.max(1, Math.min(steps - occ - 1, Math.round(pos(v.split) ? v.split : Math.ceil((steps - occ + 1) / 2))));
+        return { n, riser, steps, run: run / 100, comfort, angle, H, split, wind, occ, upper: steps - split - occ };
+      },
+      // Забежные ступени в квадрате поворота: лучи из внутреннего угла (px, w) делят 90° поровну.
+      // Клин j — между лучами j и j+1; если между ними наружный угол квадрата, он входит в клин
+      winderPolys(px, w, k) {
+        const hit = (a) => { const c = Math.cos(a), s = -Math.sin(a); return c * w <= s * w + 1e-9 ? [px + (s > 1e-9 ? w * c / s : w), 0] : [px + w, w - w * s / c]; };
+        const ang = (j) => -Math.PI / 2 + j * Math.PI / 2 / k, out = [];
+        for (let j = 0; j < k; j++) {
+          const a = hit(ang(j)), b = hit(ang(j + 1)), poly = [[px, w], a];
+          if (a[1] < 1e-9 && b[0] > px + w - 1e-9 && b[1] > 1e-9) poly.push([px + w, 0]);
+          poly.push(b); out.push(poly);
+        }
+        return out;
       },
       // Линии поручня по кромкам ступеней — одни и те же для схемы и для расчёта.
       // С поворотом внешний поручень обходит площадку по двум краям, внутренний
@@ -1081,6 +1101,16 @@ const CALCS = {
         const build = (outer) => {
           if (mode === 'straight') { const y = outer ? 0 : w; return [[0, y, r], [c.steps * t, y, H]]; }
           const px = c.split * t, landZ = (c.split + 1) * r, up = c.upper;
+          if (c.wind) {
+            // Забежные: снаружи поручень поднимается по краю клиньев, внутри — у опорного столба одним подъёмом
+            const k = c.wind, tops = landZ + k * r;
+            if (outer) {
+              const ws = this.winderPolys(px, w, k), pts = [[0, 0, r], [px, 0, landZ]];
+              ws.forEach((poly, j) => { if (poly.length === 4) pts.push([px + w, 0, landZ + (j + 0.5) * r]); pts.push([poly[poly.length - 1][0], poly[poly.length - 1][1], landZ + (j + 1) * r]); });
+              return pts.concat(up > 0 ? [[px + w, w + up * t, H]] : []);
+            }
+            return [[0, w, r], [px, w, landZ], [px, w, tops]].concat(up > 0 ? [[px, w + up * t, H]] : []);
+          }
           if (mode === 'u') {
             // П: верхний марш идёт обратно; внутренний поручень переходит колодец по краю площадки,
             // внешний обходит площадку по трём краям
@@ -1110,7 +1140,7 @@ const CALCS = {
       },
       draw(v, mode, box, view) {
         const V = window.CalcViz; const c = this.calc(v, mode);
-        if (!V || !c || !pos(v.width) || (mode !== 'straight' && c.steps < 3)) return false;
+        if (!V || !c || !pos(v.width) || (mode !== 'straight' && c.steps < c.occ + 2)) return false;
         const t = (v.tread || 0) / 100, r = c.riser / 100, w = v.width, th = (v.thick || 40) / 1000;
         const prisms = [];
         if (mode === 'straight') {
@@ -1121,16 +1151,17 @@ const CALCS = {
           for (let i = 0; i < split; i++) prisms.push({ poly: [[i * t, 0], [(i + 1) * t, 0], [(i + 1) * t, w], [i * t, w]], z: (i + 1) * r - th, dz: th });
           // Площадка: у Г — квадрат в ширину марша, у П — на оба марша и просвет
           const px = split * t, D = this.landD(v, mode);
-          prisms.push({ poly: [[px, 0], [px + w, 0], [px + w, D], [px, D]], z: (split + 1) * r - th, dz: th });
-          for (let i = 0; i < c.steps - split - 1; i++) {
+          if (c.wind) this.winderPolys(px, w, c.wind).forEach((poly, j) => prisms.push({ poly, z: (split + 1 + j) * r - th, dz: th }));
+          else prisms.push({ poly: [[px, 0], [px + w, 0], [px + w, D], [px, D]], z: (split + 1) * r - th, dz: th });
+          for (let i = 0; i < c.upper; i++) {
             if (mode === 'u') {
               // П: верхний марш идёт обратно вдоль X, рядом с нижним через просвет
               const x = px - (i + 1) * t;
-              prisms.push({ poly: [[x, D - w], [x + t, D - w], [x + t, D], [x, D]], z: (split + 2 + i) * r - th, dz: th });
+              prisms.push({ poly: [[x, D - w], [x + t, D - w], [x + t, D], [x, D]], z: (split + 1 + c.occ + i) * r - th, dz: th });
             } else {
               // Г: верхний марш уходит вбок под 90° вдоль Y от дальнего края площадки
               const y = w + i * t;
-              prisms.push({ poly: [[px, y], [px + w, y], [px + w, y + t], [px, y + t]], z: (split + 2 + i) * r - th, dz: th });
+              prisms.push({ poly: [[px, y], [px + w, y], [px + w, y + t], [px, y + t]], z: (split + 1 + c.occ + i) * r - th, dz: th });
             }
           }
         }
@@ -1150,20 +1181,21 @@ const CALCS = {
           if (mode === 'u') dims.push({ from: [px + w, 0, 0], to: [px + w, this.landD(v, mode), 0], label: 'ширина ' + fmt(this.landD(v, mode)) + ' м', offset: -24 });
           else dims.push({ from: [px + w, 0, 0], to: [px + w, w + upper, 0], label: 'верхний ' + fmt(upper) + ' м', offset: -24 });
         }
-        V.iso(box, prisms, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, lines, caption: (mode === 'straight' ? c.steps : c.steps - 1) + ' ' + plural(mode === 'straight' ? c.steps : c.steps - 1, 'ступень', 'ступени', 'ступеней') + (mode === 'straight' ? '' : ' и площадка') + ' по ' + fmt(c.riser) + ' см, уклон ' + fmt(c.angle) + '°. Потяните, чтобы повернуть.' });
+        V.iso(box, prisms, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, lines, caption: (mode === 'straight' || c.wind ? c.steps : c.steps - 1) + ' ' + plural(mode === 'straight' || c.wind ? c.steps : c.steps - 1, 'ступень', 'ступени', 'ступеней') + (mode === 'straight' ? '' : c.wind ? ', из них ' + c.wind + ' забежных' : ' и площадка') + ' по ' + fmt(c.riser) + ' см, уклон ' + fmt(c.angle) + '°. Потяните, чтобы повернуть.' });
         return true;
       },
       compute(v, mode, sel) {
-        const c = this.calc(v, mode);
+        const c = this.calc(v, mode, sel);
         if (!c) return null;
         if (c.riser < 12 || c.riser > 22) return { error: 'Высота ступени получилась ' + fmt(c.riser) + ' см. Удобный диапазон 15–19 см, допустимо 12–22. Измените желаемую высоту ступени.' };
-        if (mode !== 'straight' && c.steps < 3) return { error: 'Высота ' + fmt(v.height) + ' м — это всего ' + c.n + ' ' + plural(c.n, 'подъём', 'подъёма', 'подъёмов') + ', а двум маршам с площадкой нужно хотя бы 4. Здесь подойдёт прямая лестница.' };
+        if (mode !== 'straight' && c.steps < c.occ + 2) return { error: 'Высота ' + fmt(v.height) + ' м — это всего ' + c.n + ' ' + plural(c.n, 'подъём', 'подъёма', 'подъёмов') + ', а двум маршам с площадкой нужно хотя бы 4. Здесь подойдёт прямая лестница.' };
         const rows = [], cost = [];
         const turn = mode !== 'straight';
-        const treads = turn ? c.steps - 1 : c.steps;   // с поворотом одну ступень заменяет площадка
+        const wind = c.wind, landing = turn && !wind;
+        const treads = landing ? c.steps - 1 : c.steps;   // площадка заменяет одну ступень, забежные — сами ступени
         const W = v.width || 0.9, U = mode === 'u', LD = this.landD(v, mode);
         rows.push(['Подъёмов', c.n + ' по ' + fmt(c.riser) + ' см (задавали ' + fmt(v.riser) + ')']);
-        rows.push(['Ступеней', fmtInt(treads) + ' шт' + (turn ? ' и площадка' : '') + ': верхняя ступень — это пол второго этажа']);
+        rows.push(['Ступеней', fmtInt(treads) + ' шт' + (landing ? ' и площадка' : wind ? ', из них ' + wind + ' забежных' : '') + ': верхняя ступень — это пол второго этажа']);
         rows.push(['Уклон', fmt(c.angle) + '° ' + (c.angle > 42 ? '— круто, для дома лучше до 40°' : c.angle < 25 ? '— полого, займёт много места' : '— в норме для дома')]);
         rows.push(['Формула удобства', '2 × ' + fmt(c.riser) + ' + ' + fmt(v.tread) + ' = ' + fmt(c.comfort) + ' см ' + (c.comfort >= 60 && c.comfort <= 65 ? '(в норме 60–65)' : '(норма 60–65: подберите глубину ступени)')]);
         if (mode === 'straight') rows.push(['Займёт по полу', fmt(c.run) + ' м при ширине марша ' + fmt(v.width || 0.9) + ' м']);
@@ -1171,44 +1203,52 @@ const CALCS = {
           const split = c.split, stW = (k) => fmtInt(k) + ' ' + plural(k, 'ступень', 'ступени', 'ступеней');
           const asked = pos(v.split) && Math.round(v.split) !== split ? ' (задали ' + fmt(v.split) + ', при ' + c.steps + ' ступенях больше ' + (c.steps - 2) + ' не получится)' : '';
           rows.push(['Нижний марш', stW(split) + ', ' + fmt(split * v.tread / 100) + ' м' + asked]);
-          rows.push(['Площадка', fmt(W) + ' × ' + fmt(LD) + ' м на высоте ' + fmt((split + 1) * c.riser / 100) + ' м' + (U ? ': на оба марша' + (v.well > 0 ? ' и просвет ' + fmt(v.well) + ' м' : '') : '')]);
+          if (wind) {
+            // Глубина забежной по линии хода: 50 см от внутреннего края (на узком марше — посередине)
+            const rW = Math.min(0.5, W / 2), dW = rW * Math.PI / 2 / wind * 100;
+            rows.push(['Забежные ступени', wind + ' шт в повороте ' + fmt(W) + ' × ' + fmt(W) + ' м: по линии хода (' + fmt(rW) + ' м от внутреннего края) глубина ≈ ' + fmt(dW, 0) + ' см, у обычных ' + fmt(v.tread) + ' см. У внутреннего угла клинья сходятся к опорному столбу: узкую часть обычно делают не меньше 10 см, поэтому столб берут сечением 15–20 см']);
+            if (dW < 0.75 * v.tread || dW > 1.3 * v.tread) rows.push(['⚠ Шаг в повороте', 'глубина ' + fmt(dW, 0) + ' см сильно отличается от обычной ступени — нога собьётся. ' + (dW < 0.75 * v.tread ? 'Возьмите меньше забежных или марш шире' : 'Возьмите больше забежных')]);
+          } else rows.push(['Площадка', fmt(W) + ' × ' + fmt(LD) + ' м на высоте ' + fmt((split + 1) * c.riser / 100) + ' м' + (U ? ': на оба марша' + (v.well > 0 ? ' и просвет ' + fmt(v.well) + ' м' : '') : '')]);
           rows.push(['Верхний марш', stW(c.upper) + ', ' + fmt(c.upper * v.tread / 100) + ' м' + (U ? ', идёт обратно рядом с нижним' : '')]);
           rows.push(['Займёт в плане', U ? fmt(Math.max(split, c.upper) * v.tread / 100 + W) + ' × ' + fmt(LD) + ' м' : fmt(split * v.tread / 100 + W) + ' × ' + fmt(W + c.upper * v.tread / 100) + ' м']);
         }
         const mat = sel.material || 'wood', fl = this.flights(c, v, mode);
-        const landH = turn ? (c.split + 1) * c.riser / 100 : 0;
+        const landH = turn ? (c.split + (wind || 1)) * c.riser / 100 : 0;
         if (mat !== 'concrete') {
-          rows.push(['Размер ступени', fmt(v.tread) + '×' + fmt(W * 100) + ' см, толщина ' + fmt(v.thick || 40) + ' мм' + (turn ? '; площадка — щит ' + fmt(W) + '×' + fmt(LD) + ' м' : '')]);
+          rows.push(['Размер ступени', fmt(v.tread) + '×' + fmt(W * 100) + ' см, толщина ' + fmt(v.thick || 40) + ' мм' + (landing ? '; площадка — щит ' + fmt(W) + '×' + fmt(LD) + ' м' : wind ? '; забежные — клинья под шаблон по месту' : '')]);
           cost.push({ label: 'Ступени', amount: treads, unit: 'шт', priceId: 'step' });
           if (sel.risers === 'yes') {
             rows.push(['Подступенки', fmtInt(c.n) + ' шт ' + fmt(c.riser) + '×' + fmt(W * 100) + ' см']);
             cost.push({ label: 'Подступенки', amount: c.n, unit: 'шт', priceId: 'riser' });
           }
-          if (turn) cost.push({ label: 'Щит площадки', amount: Math.round(W * LD * 100) / 100, unit: 'м²', priceId: 'landing' });
+          if (landing) cost.push({ label: 'Щит площадки', amount: Math.round(W * LD * 100) / 100, unit: 'м²', priceId: 'landing' });
         }
         const flTxt = fl.map((f) => fmt(f.len)).join(' и ');
         if (mat === 'wood') {
           // Два косоура на каждый марш, площадку держат четыре стойки
-          const len = 2 * fl.reduce((s2, f) => s2 + f.len, 0) + (turn ? 4 * landH : 0);
-          rows.push(['Косоуры', '2 на ' + (turn ? 'каждый марш по ' + flTxt + ' м' : 'марш по ' + flTxt + ' м') + (turn ? ', и 4 стойки площадки по ' + fmt(landH) + ' м' : '') + ' — всего ' + fmt(len) + ' м бруса']);
+          // Площадку держат 4 стойки; забежные — опорный столб у внутреннего угла и косоур по наружному углу (2 стороны квадрата с подъёмом)
+          const extraL = landing ? 4 * landH : wind ? landH + 2 * Math.hypot(W, wind * c.riser / 200) : 0;
+          const len = 2 * fl.reduce((s2, f) => s2 + f.len, 0) + extraL;
+          rows.push(['Косоуры', '2 на ' + (turn ? 'каждый марш по ' + flTxt + ' м' : 'марш по ' + flTxt + ' м') + (landing ? ', и 4 стойки площадки по ' + fmt(landH) + ' м' : wind ? ', опорный столб ' + fmt(landH) + ' м и косоур по наружному углу забежных' : '') + ' — всего ' + fmt(len) + ' м бруса']);
           cost.push({ label: 'Брус на косоуры' + (turn ? ' и стойки' : ''), amount: Math.ceil(len * 10) / 10, unit: 'м', priceId: 'stringer' });
         } else if (mat === 'metal') {
           // Каркас: два косоура из трубы на марш, поперечина под каждую ступень; у площадки рама, перемычка и четыре ноги
-          const strL = 2 * fl.reduce((s2, f) => s2 + f.len, 0), crossL = treads * W, landL = turn ? 2 * (W + LD) + W + 4 * landH : 0;
+          const strL = 2 * fl.reduce((s2, f) => s2 + f.len, 0), crossL = treads * W, landL = landing ? 2 * (W + LD) + W + 4 * landH : wind ? 2 * W + landH : 0;
           const len = strL + crossL + landL;
-          rows.push(['Каркас из трубы', 'косоуры ' + fmt(strL) + ' м + поперечины под ступени ' + fmt(crossL) + ' м' + (turn ? ' + площадка ' + fmt(landL) + ' м' : '') + ' = ' + fmt(len) + ' м']);
+          rows.push(['Каркас из трубы', 'косоуры ' + fmt(strL) + ' м + поперечины под ступени ' + fmt(crossL) + ' м' + (landing ? ' + площадка ' + fmt(landL) + ' м' : wind ? ' + столб и наружный угол забежных ' + fmt(landL) + ' м' : '') + ' = ' + fmt(len) + ' м']);
           cost.push({ label: 'Профильная труба', amount: Math.ceil(len * 10) / 10, unit: 'м', priceId: 'tube' });
         } else {
           // Монолит: наклонная плита под каждым маршем, сверху треугольники ступеней, площадка — плита
           if (!pos(v.slabT)) return null;
           const ts = v.slabT / 100, r = c.riser / 100, t = v.tread / 100;
           const volF = fl.reduce((s2, f) => s2 + W * f.len * ts + f.treads * (r * t / 2) * W, 0);
-          const vol = volF + (turn ? W * LD * ts : 0);
+          // Забежные в монолите: плита под квадратом поворота и ступени-клинья (в среднем половина их подъёма)
+          const vol = volF + (landing ? W * LD * ts : wind ? W * W * (ts + wind * r / 2) : 0);
           const rebar = vol * (v.rebarRate || 0);
           // Опалубка: дно маршей и площадки, щиты на подступенки, боковины с двух сторон
           const form = fl.reduce((s2, f) => s2 + W * f.len + 2 * (f.len * ts + f.treads * r * t / 2), 0) + c.n * r * W + (turn ? W * LD + (W + LD) * ts : 0);
           const sheets = Math.ceil(form * 1.15 / (1.22 * 2.44) - 1e-9);
-          rows.push(['Бетон', fmt(vol) + ' м³: плита ' + fmt(v.slabT) + ' см под ' + (turn ? 'маршами' : 'маршем') + ' и ступени' + (turn ? ', площадка' : '')]);
+          rows.push(['Бетон', fmt(vol) + ' м³: плита ' + fmt(v.slabT) + ' см под ' + (turn ? 'маршами' : 'маршем') + ' и ступени' + (landing ? ', площадка' : wind ? ', забежные' : '')]);
           if (rebar > 0) rows.push(['Арматура', fmtInt(rebar) + ' кг (' + fmt(v.rebarRate) + ' кг на м³)']);
           rows.push(['Опалубка', fmt(form) + ' м² → ' + fmtInt(sheets) + ' ' + plural(sheets, 'лист', 'листа', 'листов') + ' фанеры 1,22×2,44 м (+15% на подрезку)']);
           cost.push({ label: 'Бетон', amount: Math.round(vol * 100) / 100, unit: 'м³', priceId: 'concrete' });
@@ -1235,18 +1275,18 @@ const CALCS = {
             let k = 0; for (let i = 1; i <= c.steps; i++) if (need(i)) k++;
             txt = k ? 'примерно ' + fmt(k * t) + ' × ' + fmt(W) + ' м: над ' + (k === 1 ? 'последней ступенью' : 'последними ' + k + ' ступенями') : 'не нужен, просвет и так есть';
           } else {
-            let up = 0; for (let i = 0; i < c.upper; i++) if (need(c.split + 2 + i)) up++;
+            let up = 0; for (let i = 0; i < c.upper; i++) if (need(c.split + c.occ + 1 + i)) up++;
             let low = 0; for (let i = 1; i <= c.split; i++) if (need(i)) low++;
-            const land = need(c.split + 1);
+            let land = false; for (let j = 1; j <= c.occ; j++) if (need(c.split + j)) land = true;
             const parts = [];
             if (up) parts.push('над верхним маршем ' + fmt(up * t) + ' м');
-            if (land) parts.push('над площадкой ' + fmt(W) + ' × ' + fmt(LD) + ' м');
+            if (land) parts.push((wind ? 'над забежными ' : 'над площадкой ') + fmt(W) + ' × ' + fmt(LD) + ' м');
             if (low) parts.push('над нижним маршем ' + fmt(low * t) + ' м');
             txt = parts.length ? parts.join(', ') + ', ширина ' + fmt(W) + ' м' : 'не нужен, просвет и так есть';
           }
           rows.push(['Проём в перекрытии', txt + ' (просвет ' + fmt(v.headroom) + ' м, перекрытие ' + fmt(v.slab || 0) + ' м)']);
         }
-        return { main: { label: 'Лестница', value: fmtInt(treads) + ' ' + plural(treads, 'ступень', 'ступени', 'ступеней') + (turn ? ' и площадка' : '') + ' по ' + fmt(c.riser) + ' см' }, rows, cost,
+        return { main: { label: 'Лестница', value: fmtInt(treads) + ' ' + plural(treads, 'ступень', 'ступени', 'ступеней') + (landing ? ' и площадка' : wind ? ', ' + wind + ' забежных' : '') + ' по ' + fmt(c.riser) + ' см' }, rows, cost,
           note: 'Число подъёмов = высота этажа ÷ желаемую высоту ступени с округлением, дальше высота выравнивается: все ступени должны быть одинаковыми. Формула удобного шага: два подъёма плюс проступь = 60–65 см. Для дома уклон до 40°, ширина марша от 90 см. ' + ({
             wood: 'Косоуры обычно из бруса или доски 50×300 мм; длина считается по маршу, к покупке берите с запасом на запилы.',
             metal: 'Каркас обычно из трубы 80×40 или 60×40 мм; длина посчитана без отходов на резку, крепёж и покраска — отдельно.',
