@@ -4,7 +4,7 @@ permalink: /en/contact/
 altUrl: /contact/
 pageCrumb: "Contact"
 pageTitle: "Contact · Aleksey Kornilov"
-pageDescription: "Get in touch about app development or SEO: email, Telegram, VK, GitHub, or the form on this page. I reply within a day."
+pageDescription: "Get in touch about app development or SEO: email, Telegram, VK, or GitHub. I reply within a day."
 pageKeywords: "contact flutter developer, hire full-stack developer remote"
 pageSchema: |
   {
@@ -28,7 +28,7 @@ pageSchema: |
 <section class="section container">
   <h2 class="section-title">Email and social</h2>
 
-  <div class="grid grid-3 contacts-grid">
+  <div class="grid grid-2 contacts-grid">
     <a href="mailto:{{ site.contacts.email }}" class="card contact-card">
       <div class="card-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -74,42 +74,3 @@ pageSchema: |
     </a>
   </div>
 </section>
-
-<section class="section container">
-  <div class="contact-form-wrap glass">
-    <h2>Write to me now</h2>
-    <p class="text-muted">Fill in the form and I will reply by email within a day.</p>
-
-    <form class="contact-form" id="contact-form" data-telegram="{{ site.contacts.telegram }}" novalidate
-          data-msg-fill="Please fill in all fields."
-          data-msg-sending="Sending…"
-          data-msg-ok="Thank you! Your message has been sent. I will reply by email within a day."
-          data-msg-fail="Could not send. Please message me on Telegram: @"
-          data-msg-send="Send">
-      <div class="field">
-        <label for="cf-name">Your name</label>
-        <input type="text" id="cf-name" name="name" required autocomplete="name" placeholder="How should I address you">
-      </div>
-      <div class="field">
-        <label for="cf-email">Email for the reply</label>
-        <input type="email" id="cf-email" name="email" required autocomplete="email" placeholder="you@example.com">
-      </div>
-      <div class="field">
-        <label for="cf-message">Message</label>
-        <textarea id="cf-message" name="message" required rows="5" placeholder="A few words about the project or the role"></textarea>
-      </div>
-      {#- Honeypot: hidden decoy field for spam bots; the server drops non-empty submissions. -#}
-      <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">
-        <label for="cf-company">Leave this field empty</label>
-        <input type="text" id="cf-company" name="company" tabindex="-1" autocomplete="off">
-      </div>
-      <div class="form-footer">
-        <button type="submit" class="btn btn-primary btn-lg">Send</button>
-        <p class="form-hint text-small text-muted">No spam. Your details are used only to reply to you.</p>
-      </div>
-      <div class="form-status" id="cf-status" role="status" aria-live="polite"></div>
-    </form>
-  </div>
-</section>
-
-<script src="/assets/js/contact-form.js" defer></script>
