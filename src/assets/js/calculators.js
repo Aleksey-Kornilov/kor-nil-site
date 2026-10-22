@@ -2714,6 +2714,37 @@ const CALCS = {
         { id: 'screwsPer', label: 'Саморезов на лист', unit: 'шт (обычно 8–10)', value: '8', group: 'proflist' },
         { id: 'screwPack', label: 'Саморезов в упаковке', unit: 'шт', value: '250', group: 'screws' },
       ],
+      // Подсказки «?» у полей; поля из helpPics показываются на схеме (focusMarks)
+      help: {
+        hei: 'Высота забора от земли до верха. Обычно 1,5–2 м. Между соседними участками в СНТ чаще разрешают сетчатый или решётчатый забор до 1,5 м — уточните правила своего товарищества.',
+        step: 'Расстояние между центрами соседних столбов. Обычно 2–3 м: чем реже столбы, тем сильнее ветер давит на каждый. Под профнастил чаще всего ставят через 2,5 м.',
+        len: 'Длина забора по всем сторонам вместе с воротами и калиткой. Её можно взять из плана участка или промерить рулеткой.',
+        gate: 'Ширина проёма ворот между столбами. Для машины — не меньше 3 м, удобнее 3,5–4 м. Пусто или 0 — без ворот.',
+        wicket: 'Ширина проёма калитки между столбами. Обычно 0,9–1 м. Пусто или 0 — без калитки.',
+        sheetW: 'Ширина, которую лист закрывает на заборе, без нахлёста на соседний лист. Есть в описании профнастила: у С8 — 1,15 м, у С20 — 1,1 м.',
+        sheetWFull: 'Ширина листа целиком, вместе с нахлёстом. По ней магазин считает квадратные метры: у С8 — 1,2 м, у С20 — 1,15 м.',
+        plankW: 'Ширина одной штакетины в метрах: 0,1 — это 10 см. Металлический евроштакетник обычно 0,1–0,13 м.',
+        gap: 'Просвет между соседними штакетинами. Чем он меньше, тем глуше забор, но штакетин нужно больше.',
+        plankW2: 'Ширина одной штакетины в метрах: 0,1 — это 10 см.',
+        gap2: 'Штакетины стоят по обе стороны лаг вразбежку. Здесь — просвет между соседними штакетинами одной стороны. Его закрывает штакетина с другой стороны, поэтому он должен быть уже штакетины.',
+        boardW: 'Ширина одной доски в метрах: 0,15 — это 15 см.',
+        boardGap: 'Зазор между досками. 0 — встык. Обычно оставляют 1–2 см: доска разбухает от влаги.',
+        ranchW: 'Ширина горизонтальной доски или планки ранчо, в метрах.',
+        ranchGap: 'Зазор между горизонтальными досками. 0 — глухой забор.',
+        ranchLen: 'Длина доски, которую покупаете. Стыки досок приходятся на столбы, поэтому меньше отходов, когда длина кратна шагу столбов.',
+        louverStep: 'На сколько каждая ламель выше предыдущей — её полезная ширина. Есть в описании модели: у Grand Line Milan — 0,11 м, у Tokyo — 0,10 м.',
+        panelW: 'Длина 3D-панели: бывают 2,5 и 3 м. Столбы стоят по краям каждой панели, поэтому шаг столбов равен ей.',
+        arc: 'Насколько низ дуги ниже высоты забора. У арки ниже края пролёта, у каньона — середина.',
+        stain: 'Сколько литров пропитки уходит на квадратный метр одной стороны. Есть на банке, обычно 0,15–0,3 л.',
+        rollL: 'Длина рулона сетки-рабицы. Обычно 10 м.',
+        perM2: 'Сколько блоков или кирпичей уходит на квадратный метр кладки. Нажмите вариант ниже — число подставится само.',
+        mortar: 'Сколько килограммов раствора уходит на квадратный метр кладки. Смотрите расход на мешке смеси.',
+        postDepth: 'Сколько столба уходит в землю. Обычно около трети его длины, примерно 1–1,2 м. На глине, которая зимой вспучивается, — ниже глубины промерзания.',
+        lagRows: 'Сколько горизонтальных перекладин между столбами, к которым крепится полотно. При высоте до 2 м обычно две, выше — три.',
+        screwsPer: 'Сколько саморезов уходит на лист: обычно 8–10, по 4–5 на каждую лагу.',
+        screwPack: 'Сколько саморезов в одной упаковке. По нему считается, сколько упаковок купить.',
+      },
+      helpPics: ['hei', 'step', 'len', 'gate', 'wicket', 'sheetW', 'plankW', 'gap', 'plankW2', 'gap2', 'boardW', 'boardGap', 'ranchW', 'ranchGap', 'louverStep', 'panelW', 'arc', 'postDepth', 'lagRows'],
       presets: [{ label: 'Кладка', fieldId: 'perM2', unit: 'шт/м²', group: 'block', items: [['Блок 390×190', '12.5'], ['Кирпич в полкирпича', '51'], ['Кирпич в кирпич', '102']] }],
       prices: [
         // Свой ценник у каждого материала: иначе цена листа профнастила умножалась на сотни штакетин.
@@ -2827,7 +2858,9 @@ const CALCS = {
         const map = (r, s2, o) => [r.a[0] + r.d[0] * s2 + r.n[0] * o, r.a[1] + r.d[1] * s2 + r.n[1] * o];
         // sort — слой детали поперёк забора: схема рисует ряды по порядку, а не по центру деталей
         const lay = (r, s2, o) => { const p2 = map(r, s2, 0); return { at: [p2[0], p2[1], 0], n: r.n, o }; };
-        const box = (r, s0, s1, o0, o1, z, dz, color) => prisms.push({ poly: [map(r, s0, o0), map(r, s1, o0), map(r, s1, o1), map(r, s0, o1)], z, dz, color, sort: lay(r, (s0 + s1) / 2, (o0 + o1) / 2) });
+        // part — что это за деталь (столб, лага, створка): по нему подсказка «?» красит нужное
+        let part = '';
+        const box = (r, s0, s1, o0, o1, z, dz, color) => prisms.push({ poly: [map(r, s0, o0), map(r, s1, o0), map(r, s1, o1), map(r, s0, o1)], z, dz, color, part, sort: lay(r, (s0 + s1) / 2, (o0 + o1) / 2) });
         // Длинную деталь режем на куски: иначе соседние штакетины встают то перед ней, то за ней
         const longBox = (r, s0, s1, o0, o1, z, dz, color, piece) => { const k = Math.max(1, Math.ceil((s1 - s0) / piece)); for (let i = 0; i < k; i++) box(r, s0 + (s1 - s0) * i / k, s0 + (s1 - s0) * (i + 1) / k, o0, o1, z, dz, color); };
         const line = (r, s0, z0, s1, z1, o, color, width) => { const a = map(r, s0, o), b = map(r, s1, o); lines.push({ pts: [[a[0], a[1], z0], [b[0], b[1], z1]], cls: 'viz-fline', color, width, whole: true, sort: lay(r, (s0 + s1) / 2, o) }); };
@@ -2859,7 +2892,7 @@ const CALCS = {
                 if (seams < 1600) for (let z = courseH; z < hei - 1e-6; z += courseH) { line(r, a, z, b, z, wallT / 2 + 0.003, 'rgba(255,255,255,.45)', 0.6); line(r, a, z, b, z, -wallT / 2 - 0.003, 'rgba(255,255,255,.45)', 0.6); }
               } else if (t !== 'chainlink' && t !== 'louver' && t !== 'mesh3d' && t !== 'ranch') {
                 const levels = rowsL === 1 ? [hei / 2] : Array.from({ length: rowsL }, (_, k) => z0 + 0.2 + k * Math.max(0, hei - 0.4) / Math.max(1, rowsL - 1));
-                levels.forEach((z) => longBox(r, a - postW / 2, b + postW / 2, 0.03, 0.05, z - 0.02, 0.04, '#5b6169', 0.5));
+                part = 'lag'; levels.forEach((z) => longBox(r, a - postW / 2, b + postW / 2, 0.03, 0.05, z - 0.02, 0.04, '#5b6169', 0.5)); part = '';
               }
               if (t === 'proflist') {
                 longBox(r, a - postW / 2, b + postW / 2, 0.05, 0.058, z0, hei, col, v.sheetW || 1.15);
@@ -2871,7 +2904,7 @@ const CALCS = {
                 const nL = Math.max(1, Math.ceil((hei - 0.03) / v.louverStep - 1e-9)), fine = !heavy;
                 box(r, a, a + 0.04, -0.02, 0.02, z0, hei, col); box(r, b - 0.04, b, -0.02, 0.02, z0, hei, col);
                 box(r, a, b, -0.02, 0.02, top, 0.03, col);
-                if (fine) for (let i = 0; i < nL; i++) box(r, a + 0.04, b - 0.04, -0.012, 0.012, z0 + i * v.louverStep, v.louverStep * 0.92, col);
+                if (fine) { for (let i = 0; i < nL; i++) { part = 'lv' + i; box(r, a + 0.04, b - 0.04, -0.012, 0.012, z0 + i * v.louverStep, v.louverStep * 0.92, col); } part = ''; }
                 else { box(r, a + 0.04, b - 0.04, -0.012, 0.012, z0, hei, col); for (let i = 1; i < nL; i++) line(r, a + 0.04, z0 + i * v.louverStep, b - 0.04, z0 + i * v.louverStep, 0.014, 'rgba(0,0,0,.35)', 0.8); }
               } else if (t === 'mesh3d') {
                 // 3D-панель: прутки 200 мм по горизонтали, гнутые рёбра жёсткости — двойной линией
@@ -2888,7 +2921,7 @@ const CALCS = {
                 const rw = v.ranchW, rg = v.ranchGap || 0, nR = Math.max(1, Math.ceil((hei + rg) / (rw + rg) - 1e-9));
                 const metal = sel.picketKind && sel.picketKind !== 'wood';
                 if (metal && q1 - q0 > 1.5) box(r, (a + b) / 2 - 0.02, (a + b) / 2 + 0.02, 0.03, 0.05, z0, hei, '#3c4148');
-                if (!heavy) for (let i = 0; i < nR; i++) box(r, a - postW / 2, b + postW / 2, 0.05, 0.07, z0 + i * (rw + rg), rw, col);
+                if (!heavy) { for (let i = 0; i < nR; i++) { part = 'rb' + i; box(r, a - postW / 2, b + postW / 2, 0.05, 0.07, z0 + i * (rw + rg), rw, col); } part = ''; }
                 else { box(r, a - postW / 2, b + postW / 2, 0.05, 0.07, z0, hei, col); for (let i = 1; i < nR; i++) line(r, a - postW / 2, z0 + i * (rw + rg), b + postW / 2, z0 + i * (rw + rg), 0.072, 'rgba(0,0,0,.35)', 0.8); }
               } else if (t === 'chainlink') {
                 // Сетка ромбом на просвет: ячейка на схеме крупнее настоящей, иначе сольётся
@@ -2909,12 +2942,15 @@ const CALCS = {
                 for (let i = 0; i < k; i++) { const a = sa + (sb - sa) * i / k, b = sa + (sb - sa) * (i + 1) / k; box(r, a, b, t === 'picket2' ? 0.01 : 0.05, 0.07, z0, lay.hAt((a + b) / 2 - sa), col); }
                 if (lay.items && total < 6000) lay.items.forEach((it) => { if (!it.back) line(r, sa + it.x1, z0, sa + it.x1, z0 + it.h, 0.072, 'rgba(0,0,0,.28)', 0.7); });
               } else {
+                let front = 0;
                 lay.items.forEach((it) => {
                   // Задний ряд шахматки там, где столб, не встаёт — он за лагой у столба
                   if (it.back && postsX.some((x) => Math.abs((it.x0 + it.x1) / 2 - x) < postW / 2 + (it.x1 - it.x0) / 2)) return;
                   const o0 = it.back ? 0.01 : 0.05;
+                  part = it.back ? '' : 'pk' + front++;
                   box(r, sa + it.x0, sa + it.x1, o0, o0 + th, z0, it.h, col);
                 });
+                part = '';
               }
             }
           });
@@ -2925,7 +2961,7 @@ const CALCS = {
             const lc = block ? '#5d636b' : mixHex(col, '#ffffff', 0.22);
             leaves.forEach(([a, b]) => {
               if (b <= a) return;
-              box(r, a, b, -0.02, 0.02, 0.05, hei, lc);
+              part = o.kind; box(r, a, b, -0.02, 0.02, 0.05, hei, lc); part = '';
               const f = '#23272d', hz = hei + 0.05;
               [0.022, -0.022].forEach((oo) => {
                 line(r, a, 0.05, b, 0.05, oo, f, 1.8); line(r, b, 0.05, b, hz, oo, f, 1.8); line(r, b, hz, a, hz, oo, f, 1.8); line(r, a, hz, a, 0.05, oo, f, 1.8);
@@ -2934,8 +2970,66 @@ const CALCS = {
             });
           });
         });
-        posts.forEach(({ r, s: s2 }) => box(r, s2 - postW / 2, s2 + postW / 2, -postW / 2, postW / 2, 0, hei + 0.1, block ? '#8e4632' : '#3c4148'));
+        part = 'post'; posts.forEach(({ r, s: s2 }) => box(r, s2 - postW / 2, s2 + postW / 2, -postW / 2, postW / 2, 0, hei + 0.1, block ? '#8e4632' : '#3c4148'));
         return { prisms, lines, simple };
+      },
+      // Подсказка «?» и курсор в поле: размер этого поля на стороне r (оранжевым) и окраска деталей.
+      // Возвращает размеры; детали красит прямо в sc.prisms
+      focusMarks(F, v, sel, r, sc) {
+        const HL = '#f08c00', t = sel.type, block = t === 'block', z0 = block ? 0 : 0.05, top = v.hei + z0;
+        const at = (s2, o) => [r.a[0] + r.d[0] * s2 + r.n[0] * o, r.a[1] + r.d[1] * s2 + r.n[1] * o];
+        const d = (s0, za, s1, zb, label, offset, o) => ({ from: at(s0, o || 0).concat(za), to: at(s1, o || 0).concat(zb), label, offset, hl: true });
+        const paint = (k) => sc.prisms.forEach((p) => { if (p.part === k) p.color = HL; });
+        const mm = (x) => fmtInt(x * 1000) + ' мм';
+        const seg = fenceSegs(r.len, r.ops)[0];
+        if (F === 'len') return [d(0, 0, r.len, 0, 'длина ' + fmt(r.len) + ' м', 24)];
+        if (F === 'gate' || F === 'wicket') {
+          const o = r.ops.find((q) => q.kind === F); if (!o) return [];
+          paint(F); return [d(o.x, top + 0.15, o.x + o.w, top + 0.15, (F === 'gate' ? 'ворота ' : 'калитка ') + fmt(o.w) + ' м', 0)];
+        }
+        if (!seg) return [];
+        const sa = seg[0], sb = Math.min(sa + v.step, seg[1]), mid = (sa + sb) / 2;
+        if (F === 'hei') return [d(sa, 0, sa, v.hei, 'высота ' + fmt(v.hei) + ' м', -28)];
+        if (F === 'step' || F === 'panelW') { paint('post'); return [d(sa, 0, sb, 0, (F === 'panelW' ? 'панель ' : 'шаг столбов ') + fmt(v.step) + ' м', 24)]; }
+        if (F === 'lagRows') { paint('lag'); return []; }
+        if (F === 'postDepth') {
+          const pd = v.postDepth; if (!(pd > 0)) return [];
+          // Столбы продолжаются под землю: там, где их на схеме обычно не видно
+          const w = block ? 0.38 : 0.06;
+          [sa, sb].forEach((x) => sc.prisms.push({ poly: [at(x - w / 2, -w / 2), at(x + w / 2, -w / 2), at(x + w / 2, w / 2), at(x - w / 2, w / 2)], z: -pd, dz: pd, color: HL }));
+          return [d(sa, -pd, sa, 0, 'в земле ' + fmt(pd) + ' м', -26)];
+        }
+        if (F === 'sheetW') return t === 'proflist' && v.sheetW > 0 ? [d(sa, top + 0.1, sa + v.sheetW, top + 0.1, 'лист ' + fmt(v.sheetW) + ' м', 0)] : [];
+        if (F === 'arc') {
+          if (!(v.arc > 0) || !sel.top || sel.top === 'straight') return [];
+          const x = sel.top === 'arch' ? sa + 0.1 : mid;
+          return [d(x, top - v.arc, x, top, 'перепад ' + fmt(v.arc) + ' м', -24, 0.07)];
+        }
+        // Ранчо и жалюзи: доска (ламель) из середины высоты — оранжевая, размер сбоку от неё
+        if (F === 'ranchW' || F === 'ranchGap') {
+          const rw = v.ranchW, rg = v.ranchGap || 0; if (!(rw > 0)) return [];
+          const k = Math.max(0, Math.floor((Math.ceil((v.hei + rg) / (rw + rg) - 1e-9) - 2) / 2)), zk = z0 + k * (rw + rg);
+          if (F === 'ranchW') { paint('rb' + k); return [d(sa, zk, sa, zk + rw, 'доска ' + mm(rw), -24, 0.08)]; }
+          if (!(rg > 0)) return [];
+          paint('rb' + k); // одна доска: две оранжевые подряд сливаются, и зазора между ними не видно
+          return [d(sa, zk + rw, sa, zk + rw + rg, 'зазор ' + mm(rg), -24, 0.08)];
+        }
+        if (F === 'louverStep') {
+          if (!(v.louverStep > 0)) return [];
+          const k = Math.max(0, Math.floor((Math.ceil((v.hei - 0.03) / v.louverStep - 1e-9) - 1) / 2)), zk = z0 + k * v.louverStep;
+          paint('lv' + k); return [d(sa, zk, sa, zk + v.louverStep, 'шаг ' + mm(v.louverStep), -24, 0.03)];
+        }
+        if (['plankW', 'plankW2', 'boardW', 'gap', 'gap2', 'boardGap'].includes(F)) {
+          const lay = picketLayout(v, sel, seg[1] - sa); if (!lay.items) return [];
+          const fr = lay.items.filter((it) => !it.back), k = Math.max(0, Math.floor((fr.length - 2) / 2)), it = fr[k], nx = fr[k + 1];
+          if (!it) return [];
+          const z = z0 + it.h + 0.06;
+          if (F === 'plankW' || F === 'plankW2' || F === 'boardW') { paint('pk' + k); return [d(sa + it.x0, z, sa + it.x1, z, mm(it.x1 - it.x0), 0, 0.07)]; }
+          if (!nx || nx.x0 - it.x1 < 1e-4) return [];
+          paint('pk' + k); paint('pk' + (k + 1));
+          return [d(sa + it.x1, z, sa + nx.x0, z, 'зазор ' + mm(nx.x0 - it.x1), 0, 0.07)];
+        }
+        return [];
       },
       // Стороны забора с воротами: a — начало, d — направление, n — наружу, len, ops
       runs(v, mode, extras, only) {
@@ -2971,10 +3065,29 @@ const CALCS = {
         if (!ready(t, v) || (kinds.other && !ready(selB.type, fenceV(v0, selB)))) return false;
         // Нелепые размеры (сотни тысяч деталей) не рисуем — расчёт всё равно покажется
         if (v.hei > 10 || v.step < 0.3 || (v.lagRows || 0) > 8 || (mode === 'line' && v.len / v.step > 600)) return false;
-        const opts = { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true };
+        const opts = { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, mini: view.mini };
+        // Подсказка «?»: размеры штакетин и ламелей — на кусочке пролёта крупно, высота, столбы и лаги —
+        // на одном пролёте, ворота и длина — на всём заборе
+        const F = view.focus, SMALL = ['plankW', 'plankW2', 'boardW', 'gap', 'gap2', 'boardGap', 'ranchW', 'ranchGap', 'louverStep'];
+        const WHOLE = ['len', 'gate', 'wicket'], dup = (spanView) => (spanView ? { hei: 1, step: 0, panelW: 0 } : mode === 'line' ? { hei: 1, len: 0 } : {})[F];
+        if (view.mini && F && !WHOLE.includes(F)) {
+          const small = SMALL.includes(F), vv = small ? Object.assign({}, v, { hei: Math.min(v.hei, 0.7) }) : v;
+          const r = { a: [0, 0], d: [1, 0], n: [0, 1], len: small ? Math.min(v.step, 0.8) : v.step, ops: [] };
+          const sc = this.scene(vv, sel, [r], true);
+          // Лаги со стороны улицы закрыты полотном — их показываем со двора
+          const yaw = (Math.abs(view.yaw + 0.6) < 1e-6 ? -0.25 : view.yaw) + (F === 'lagRows' ? Math.PI : 0);
+          V.iso(box, sc.prisms, this.focusMarks(F, vv, sel, r, sc), Object.assign(opts, { yaw, zoom: small ? 2 : 1.5, ground: !small, lines: sc.lines }));
+          return true;
+        }
+        // Курсор в поле: размер на большой схеме (мелкие — только в виде «Один пролёт», на всём заборе их не разглядеть)
+        const mark = (dims, r, sc, spanView) => {
+          if (!F || !r || (SMALL.includes(F) && !spanView)) return dims;
+          const marks = this.focusMarks(F, v, sel, r, sc), k = dup(spanView);
+          return (marks.length && k != null ? dims.filter((_, i) => i !== k) : dims).concat(marks);
+        };
         const what = { proflist: 'Профнастил', picket: 'Штакетник', picket2: 'Штакетник шахматкой', plank: 'Доска', chainlink: 'Сетка-рабица', block: 'Кладка', ranch: 'Ранчо', louver: 'Жалюзи', mesh3d: '3D-сетка' }[t] || 'Забор';
         const cname = t === 'block' ? '' : ', ' + fenceColorName(sel);
-        if (sel.view === 'span') {
+        if (sel.view === 'span' && !(view.mini && WHOLE.includes(F))) {
           // Один пролёт в масштабе: видно, из чего забор и как он собран
           const r = { a: [0, 0], d: [1, 0], n: [0, 1], len: v.step, ops: [] };
           const sc = this.scene(v, sel, [r], true);
@@ -2989,7 +3102,7 @@ const CALCS = {
           if (t === 'ranch') { const g = v.ranchGap || 0; extra = ': ' + (sel.picketKind && sel.picketKind !== 'wood' ? 'планка ' : 'доска ') + fmtInt(v.ranchW * 1000) + ' мм, зазор ' + fmtInt(g * 1000) + ' мм, ' + Math.max(1, Math.ceil((v.hei + g) / (v.ranchW + g) - 1e-9)) + ' рядов'; }
           // Пролёт смотрим почти спереди, пока схему не крутили: так видна форма верха
           const yaw = Math.abs(view.yaw + 0.6) < 1e-6 ? -0.25 : view.yaw;
-          V.iso(box, sc.prisms, dims, Object.assign(opts, { yaw, zoom: view.zoom * 1.7, lines: sc.lines, caption: what + cname + extra + '. Потяните, чтобы повернуть.' }));
+          V.iso(box, sc.prisms, mark(dims, r, sc, true), Object.assign(opts, { yaw, zoom: view.zoom * 1.7, lines: sc.lines, caption: what + cname + extra + '. Потяните, чтобы повернуть.' }));
           return true;
         }
         const fr = this.runs(v, mode, extras);
@@ -3013,7 +3126,7 @@ const CALCS = {
           cap = (runsA.length ? what + cname : ({ proflist: 'Профнастил', picket: 'Штакетник', picket2: 'Штакетник шахматкой', plank: 'Доска', chainlink: 'Сетка-рабица', block: 'Кладка', ranch: 'Ранчо', louver: 'Жалюзи', mesh3d: '3D-сетка' })[selB.type] + (selB.type === 'block' ? '' : ', ' + fenceColorName(selB))) +
             (sm && !sm.error ? ': ' + sm.sections + ' ' + plural(sm.sections, 'пролёт', 'пролёта', 'пролётов') + ', ' + sm.posts + ' ' + plural(sm.posts, 'столб', 'столба', 'столбов') : '');
         }
-        V.iso(box, sc.prisms, dims, Object.assign(opts, { lines: sc.lines, caption: cap + (sc.simple ? '; штакетины полосами, крупно — «Один пролёт»' : '') + '. Потяните, чтобы повернуть.' }));
+        V.iso(box, sc.prisms, mark(dims, runsA[0] || runsB[0], sc, false), Object.assign(opts, { lines: sc.lines, caption: cap + (sc.simple ? '; штакетины полосами, крупно — «Один пролёт»' : '') + '. Потяните, чтобы повернуть.' }));
         return true;
       },
       // Материальная часть одного вида забора по его сторонам (only): листы/штакетины/…, лаги, саморезы
