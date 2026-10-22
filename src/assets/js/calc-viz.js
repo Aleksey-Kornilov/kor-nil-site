@@ -7,7 +7,7 @@
   const NS = 'http://www.w3.org/2000/svg';
   const el = (tag, attrs, text) => {
     const e = document.createElementNS(NS, tag);
-    for (const k in attrs || {}) e.setAttribute(k, attrs[k]);
+    for (const k in attrs || {}) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
     if (text != null) e.textContent = text;
     return e;
   };
@@ -134,7 +134,8 @@
         let area = 0;
         for (let i = 0; i < p.length; i++) { const a = p[i], q = p[(i + 1) % p.length]; area += a.sx * q.sy - q.sx * a.sy; }
         if (area <= 0) return;
-        if (b.color) { svg.appendChild(el('polygon', { points: poly(p), fill: tint(b.color, SHADE[fc.shade]), stroke: tint(b.color, 0.45), 'stroke-width': '0.5', 'stroke-opacity': '0.7' })); return; }
+        // Оранжевая деталь — подсветка поля (подсказка «?»): помечаем классом, чтобы её можно было найти
+        if (b.color) { svg.appendChild(el('polygon', { points: poly(p), fill: tint(b.color, SHADE[fc.shade]), stroke: tint(b.color, 0.45), 'stroke-width': '0.5', 'stroke-opacity': '0.7', class: b.color === '#f08c00' ? 'viz-hl-part' : null })); return; }
         const under = fc.z <= 0.0001;
         const fill = FILL[(under ? 'u' : '') + fc.shade];
         svg.appendChild(el('polygon', { points: poly(p), fill, 'fill-opacity': under ? '0.9' : '1', stroke: '#2b3440', 'stroke-width': '0.8', 'stroke-opacity': '0.6' }));
@@ -310,17 +311,19 @@
       opts.under(svg, X, Y, el);
       svg.appendChild(el('polygon', { points: pts.map((p) => X(p).toFixed(1) + ',' + Y(p).toFixed(1)).join(' '), class: 'viz-outline' }));
     }
-    const defs = el('defs');
-    const mk = el('marker', { id: 'viz-arr2', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
-    mk.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead' })); defs.appendChild(mk); svg.appendChild(defs);
+    arrows(svg);
+    // Подсветка размера поля (hl) — как на объёмной схеме: в маленькой картинке подсказки остальных нет
+    const anyHl = (dims || []).some((d) => d.hl), mini = opts && opts.mini;
     (dims || []).forEach((d) => {
+      if (mini && !d.hl) return;
       const ax = X(d.from), ay = Y(d.from), bx = X(d.to), by = Y(d.to);
       let nx = -(by - ay), ny = bx - ax; const len = Math.hypot(nx, ny) || 1; const off = d.offset == null ? 22 : d.offset; nx = nx / len * off; ny = ny / len * off;
-      svg.appendChild(el('line', { x1: ax + nx, y1: ay + ny, x2: bx + nx, y2: by + ny, class: 'viz-dim', 'marker-start': 'url(#viz-arr2)', 'marker-end': 'url(#viz-arr2)' }));
-      svg.appendChild(el('text', { x: (ax + bx) / 2 + nx * 1.6, y: (ay + by) / 2 + ny * 1.6 + 4, class: 'viz-label', 'text-anchor': 'middle' }, d.label));
+      const mod = d.hl ? ' viz-hl' : anyHl ? ' viz-faded' : '', arr = d.hl ? 'url(#viz-arr-hl)' : 'url(#viz-arr)';
+      svg.appendChild(el('line', { x1: ax + nx, y1: ay + ny, x2: bx + nx, y2: by + ny, class: 'viz-dim' + mod, 'marker-start': arr, 'marker-end': arr }));
+      svg.appendChild(el('text', { x: (ax + bx) / 2 + nx * 1.6, y: (ay + by) / 2 + ny * 1.6 + 4, class: 'viz-label' + mod, 'text-anchor': 'middle' }, d.label));
     });
-    if (opts && opts.center) svg.appendChild(el('text', { x: W / 2, y: H / 2 + 5, class: 'viz-big', 'text-anchor': 'middle' }, opts.center));
-    if (opts && opts.caption) svg.appendChild(el('text', { x: W / 2, y: H + capH - 8, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
+    if (opts && opts.center && !mini) svg.appendChild(el('text', { x: W / 2, y: H / 2 + 5, class: 'viz-big', 'text-anchor': 'middle' }, opts.center));
+    if (opts && opts.caption && !mini) svg.appendChild(el('text', { x: W / 2, y: H + capH - 8, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
     const old = container.querySelector('svg'); if (old) old.remove(); container.insertBefore(svg, container.firstChild);
     container.classList.add('viz-flat');
     declutter(svg, W, H + capH);
