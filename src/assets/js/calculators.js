@@ -630,7 +630,7 @@ const CALCS = {
           // углы не считаются дважды. Полная высота = в земле + цоколь.
           const L = v.hLen, Wd = v.hWid, w = (v.sWid || 0) / 100, h = ((v.sDepth || 0) + (v.sAbove || 0)) / 100;
           if (pos(L) && pos(Wd) && pos(w) && pos(v.sDepth)) {
-            if (!(2 * w < L && 2 * w < Wd)) return { error: 'Ширина ленты больше половины размера дома — проверьте единицы: размеры дома в метрах, лента в сантиметрах.' };
+            if (!(2 * w < L && 2 * w < Wd)) return { error: 'Ширина ленты больше половины размера дома — проверьте единицы: размеры дома в метрах, лента в сантиметрах.', field: 'sWid' };
             const ring = L * Wd - (L - 2 * w) * (Wd - 2 * w);
             volume = (ring + (v.sInner || 0) * w) * h;
           }
@@ -1271,7 +1271,7 @@ const CALCS = {
       compute(v, mode, sel) {
         const c = this.calc(v, mode, sel);
         if (!c) return null;
-        if (c.riser < 12 || c.riser > 22) return { error: 'Высота ступени получилась ' + fmt(c.riser) + ' см. Удобный диапазон 15–19 см, допустимо 12–22. Измените желаемую высоту ступени.' };
+        if (c.riser < 12 || c.riser > 22) return { error: 'Высота ступени получилась ' + fmt(c.riser) + ' см. Удобный диапазон 15–19 см, допустимо 12–22. Измените желаемую высоту ступени.', field: 'riser' };
         if (mode !== 'straight' && c.steps < c.occ + 2) return { error: 'Высота ' + fmt(v.height) + ' м — это всего ' + c.n + ' ' + plural(c.n, 'подъём', 'подъёма', 'подъёмов') + ', а двум маршам с площадкой нужно хотя бы 4. Здесь подойдёт прямая лестница.' };
         const rows = [], cost = [];
         const turn = mode !== 'straight';
@@ -2354,18 +2354,18 @@ const CALCS = {
       compute(v, mode, sel) {
         const g = this.geom(v, mode);
         if (!g) return null;
-        if (!(g.rise > 0)) return { error: g.angle >= 90 ? 'Угол должен быть меньше 90°.' : 'Укажите угол наклона или высоту конька.' };
+        if (!(g.rise > 0)) return { error: g.angle >= 90 ? 'Угол должен быть меньше 90°.' : 'Укажите угол наклона или высоту конька.', field: pos(v.ridgeH) ? 'ridgeH' : 'angle' };
         const m = sel.material;
         const minAngle = { metal: 12, prof: 12, ondulin: 10, soft: 12, seam: 3 }[m];
-        if (g.angle < minAngle) return { error: 'Уклон ' + fmt(g.angle) + '° слишком мал для этого покрытия: металлочерепице и профнастилу нужно от 12°, ондулину от 10°, мягкой черепице от 12°. Фальцевую кровлю кладут от 3°.' };
+        if (g.angle < minAngle) return { error: 'Уклон ' + fmt(g.angle) + '° слишком мал для этого покрытия: металлочерепице и профнастилу нужно от 12°, ондулину от 10°, мягкой черепице от 12°. Фальцевую кровлю кладут от 3°.', field: pos(v.ridgeH) ? 'ridgeH' : 'angle' };
         const rows = [], cost = [];
         let main, unitCost = null;
-        if (g.angle > 75) return { error: 'Уклон ' + fmt(g.angle) + '° — это уже стена, а не скат. Проверьте угол: у жилых домов обычно 20–45°.' };
+        if (g.angle > 75) return { error: 'Уклон ' + fmt(g.angle) + '° — это уже стена, а не скат. Проверьте угол: у жилых домов обычно 20–45°.', field: pos(v.ridgeH) ? 'ridgeH' : 'angle' };
         if (g.angle > 60) rows.push(['Крутая крыша', 'уклон больше 60°: проверьте угол, площадь растёт очень быстро']);
         if (m === 'metal' || m === 'prof' || m === 'ondulin') {
           if (!pos(v.sheetL) || !pos(v.sheetW)) return null;
           const useful = v.sheetL - (v.overlapV || 0);
-          if (useful <= 0) return { error: 'Нахлёст больше длины листа — проверьте размеры.' };
+          if (useful <= 0) return { error: 'Нахлёст больше длины листа — проверьте размеры.', field: 'overlapV' };
           const rowsCount = Math.ceil(g.slopeLen / useful - 1e-9);
           const cols = Math.ceil(g.L / v.sheetW - 1e-9);
           const byGrid = rowsCount * cols * (g.faces === 1 ? 1 : 2);
@@ -2398,7 +2398,7 @@ const CALCS = {
         } else {
           if (!pos(v.rollW) || !pos(v.rollL)) return null;
           const eff = v.rollW - (v.rollOver || 0);
-          if (eff <= 0) return { error: 'Нахлёст больше ширины рулона — проверьте размеры.' };
+          if (eff <= 0) return { error: 'Нахлёст больше ширины рулона — проверьте размеры.', field: 'rollOver' };
           const strips = Math.ceil(g.L / eff - 1e-9) * (g.faces === 1 ? 1 : 2);
           const perRoll = Math.floor(v.rollL / g.slopeLen);
           const rolls = perRoll > 0 ? Math.ceil(strips / perRoll) : Math.ceil(strips * g.slopeLen / v.rollL);
@@ -3933,8 +3933,8 @@ const CALCS = {
         const sh = this.shape(v, mode, extras);
         if (mode === 'plan' && !sh && extras.plan) return { error: 'Контур помещения пересекает сам себя — поправьте углы на плане.' };
         if (!sh || !pos(v.thick)) return null;
-        if (sel.mix === 'self' && v.thick > 30) return { error: 'Наливной пол толще 30 мм не льют: это дорого и он трескается. Выберите пескобетон или цемент с песком.' };
-        if (sel.mix !== 'self' && v.thick < 20) return { error: 'Стяжка тоньше 20 мм по плите трескается и отслаивается. Возьмите наливной пол или увеличьте слой.' };
+        if (sel.mix === 'self' && v.thick > 30) return { error: 'Наливной пол толще 30 мм не льют: это дорого и он трескается. Выберите пескобетон или цемент с песком.', field: 'thick' };
+        if (sel.mix !== 'self' && v.thick < 20) return { error: 'Стяжка тоньше 20 мм по плите трескается и отслаивается. Возьмите наливной пол или увеличьте слой.', field: 'thick' };
 
         const area = sh.area, vol = area * v.thick / 1000;
         const rows = [['Площадь', fmt(area) + ' м²'], ['Объём стяжки', fmt(vol) + ' м³ (' + fmt(v.thick) + ' мм)']];
@@ -4222,8 +4222,8 @@ const CALCS = {
         } else if (mode === 'partition') {
           if (!pos(v.plen) || !pos(v.phei) || !pos(step)) return null;
           const doors = Math.max(0, Math.round(v.pdoor || 0));
-          if (doors && doors * (v.pdoorW || 0) > v.plen - 0.2) return { error: 'Проёмы шире перегородки: ' + fmtInt(doors) + ' × ' + fmt(v.pdoorW) + ' м не помещаются в ' + fmt(v.plen) + ' м вместе со стойками. Проверьте ширину и число проёмов.' };
-          if (doors && (v.pdoorH || 0) >= v.phei) return { error: 'Проём выше перегородки — проверьте высоту проёма.' };
+          if (doors && doors * (v.pdoorW || 0) > v.plen - 0.2) return { error: 'Проёмы шире перегородки: ' + fmtInt(doors) + ' × ' + fmt(v.pdoorW) + ' м не помещаются в ' + fmt(v.plen) + ' м вместе со стойками. Проверьте ширину и число проёмов.', field: 'pdoorW' };
+          if (doors && (v.pdoorH || 0) >= v.phei) return { error: 'Проём выше перегородки — проверьте высоту проёма.', field: 'pdoorH' };
           const doorArea = doors * (v.pdoorW || 0) * (v.pdoorH || 0);
           const oneSide = v.plen * v.phei - doorArea;
           if (oneSide <= 0) return { error: 'Проёмы занимают всю перегородку — проверьте размеры.' };
@@ -4977,7 +4977,9 @@ const CALCS = {
       const inputRow = h('div', { class: 'calc-input' }, [input, f.unit ? h('span', { class: 'calc-unit', text: f.unit }) : null]);
       // Одно поле в разных режимах бывает разным («Длина» у прямоугольника, «Радиус» у круга): сначала «режим:поле»
       const help = f.help || (def.help && (def.help[state.mode + ':' + f.id] || def.help[f.id]));
-      if (!help) return h('div', { class: 'calc-field', 'data-group': f.group || '' }, [label, inputRow]);
+      // Что не так с числом — словами под полем (заполняет render)
+      const err = h('p', { class: 'calc-field-err', id: id + '-err', hidden: '' });
+      if (!help) return h('div', { class: 'calc-field', 'data-group': f.group || '' }, [label, inputRow, err]);
       // «?» у поля: что это и где мерить, и маленькая схема с этим размером
       const helpId = id + '-help';
       const pic = h('div', { class: 'calc-help-pic', hidden: '' });
@@ -4988,7 +4990,7 @@ const CALCS = {
         box.hidden = !open; btn.setAttribute('aria-expanded', String(open));
         if (open && onScheme) { helpPics.set(f.id, pic); drawHelpPic(f.id, pic); } else helpPics.delete(f.id);
       });
-      return h('div', { class: 'calc-field', 'data-group': f.group || '' }, [h('div', { class: 'calc-label-row' }, [label, btn]), inputRow, box]);
+      return h('div', { class: 'calc-field', 'data-group': f.group || '' }, [h('div', { class: 'calc-label-row' }, [label, btn]), inputRow, err, box]);
     }
 
     const OPENING_PRESETS = [
@@ -5079,16 +5081,29 @@ const CALCS = {
     function render() {
       const v = {};
       const mode = def.modes.find((m) => m.id === state.mode);
-      // Отрицательное там, где оно не имеет смысла, и астрономические числа не берём в расчёт, а подсвечиваем;
-      // штуки (столбы, проёмы, ряды) округляем до целых
-      const bad = [];
-      mode.fields.concat(def.common || []).forEach((f) => {
-        let x = parseNum(state.values[f.id]);
-        const wrong = x != null && (Math.abs(x) > 1e9 || (x < 0 && !(f.signed || def.signed)));
-        if (wrong) { x = null; bad.push(f.label); } else if (x != null && f.int) x = Math.round(x);
+      // Не число, отрицательное там, где оно не имеет смысла, и астрономические числа не берём в расчёт,
+      // а пишем под полем, что не так; штуки (столбы, проёмы, ряды) округляем до целых
+      const bad = [], errs = {};
+      const allFields = mode.fields.concat(def.common || []);
+      allFields.forEach((f) => {
+        const raw = String(state.values[f.id] == null ? '' : state.values[f.id]).trim();
+        let x = parseNum(raw);
+        // Одинокий минус — человек только начал набирать отрицательное число
+        if (x == null && raw && !(raw === '-' && (f.signed || def.signed))) errs[f.id] = f.int ? 'Нужно целое число, например 3.' : 'Нужно число, например 2,5 — только цифры и запятая.';
+        else if (x != null && Math.abs(x) > 1e9) errs[f.id] = 'Слишком большое число — проверьте, нет ли лишних нулей.';
+        else if (x != null && x < 0 && !(f.signed || def.signed)) errs[f.id] = 'Меньше нуля здесь не бывает — уберите минус.';
+        if (errs[f.id]) { x = null; bad.push(f.label); } else if (x != null && f.int) x = Math.round(x);
         v[f.id] = x;
+      });
+      // Пишет причину под полем; ошибки расчёта, у которых есть своё поле (r.field), — тоже туда
+      const showErrs = () => allFields.forEach((f) => {
         const inp = fieldsBox.querySelector('[name="' + f.id + '"]');
-        if (inp) { inp.closest('.calc-field').classList.toggle('calc-field--bad', wrong); inp.setAttribute('aria-invalid', wrong ? 'true' : 'false'); }
+        if (!inp) return;
+        const msg = errs[f.id], box = inp.closest('.calc-field'), out = box.querySelector('.calc-field-err');
+        box.classList.toggle('calc-field--bad', !!msg);
+        inp.setAttribute('aria-invalid', msg ? 'true' : 'false');
+        if (msg) inp.setAttribute('aria-describedby', out.id); else inp.removeAttribute('aria-describedby');
+        out.textContent = msg || ''; out.hidden = !msg;
       });
       const extras = { openings: state.extras.openings.map((o) => ({ kind: o.kind, w: parseNum(o.w), h: parseNum(o.h), count: Math.max(1, Math.round(parseNum(o.count) || 1)) })), plan: state.extras.plan, room: state.extras.room };
       if (planEditor) planEditor.redraw();
@@ -5107,6 +5122,8 @@ const CALCS = {
       drawViz();
       let r = def.compute(v, state.mode, state.sel, extras);
       if (!r && bad.length) r = { error: bad.map((l) => '«' + l + '»').join(', ') + ': ' + (bad.length > 1 ? 'нужны положительные числа' : 'нужно положительное число') + ' — исправьте, и результат появится.' };
+      if (r && r.error && r.field) [].concat(r.field).forEach((id) => { if (!errs[id]) errs[id] = r.error; });
+      showErrs();
       if (r && !r.error && bad.length) r.rows.unshift(['⚠ Не учтено', bad.map((l) => '«' + l + '»').join(', ') + ': ' + (bad.length > 1 ? 'нужны положительные числа' : 'нужно положительное число')]);
       result.innerHTML = '';
       costBox.hidden = !r || !!r.error || !(def.prices && def.prices.length);

@@ -45,3 +45,8 @@
 .viz-mark { fill: #f08c00; fill-opacity: 0.75; stroke: #b35600; stroke-width: 1.2; }
 .viz-mark--alt { fill: #ffc078; }
 .viz-mark-line { stroke: #f08c00; stroke-width: 2.2; stroke-linecap: round; }
+
+/* Что не так с числом — словами под полем */
+.calc-field-err { margin: var(--space-1) 0 0; color: var(--color-danger); font-size: var(--fs-small); line-height: 1.35; }
+/* #dc2626 на тёмном фоне — контраст 3,4; светлее — 5,9 */
+[data-theme="dark"] .calc-field-err, [data-theme="dark"] .calc-empty--error { color: #ff7a7a; }
