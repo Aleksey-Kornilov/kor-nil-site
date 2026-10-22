@@ -1038,6 +1038,23 @@ const CALCS = {
         { id: 'headroom', label: 'Нужный просвет над головой', unit: 'м', value: '2' },
         { id: 'slab', label: 'Толщина перекрытия', unit: 'м, для проёма', value: '0.2' },
       ],
+      // Подсказки «?» у полей; поля из helpPics ещё и подсвечиваются на схеме (draw, view.focus)
+      help: {
+        height: 'От готового пола внизу до готового пола наверху, вместе с толщиной перекрытия. Если полов ещё нет, прибавьте стяжку и покрытие: обычно 5–10 см.',
+        riser: 'На сколько каждая ступень выше предыдущей. Удобно 15–19 см. Калькулятор подгонит высоту, чтобы все ступени вышли одинаковыми: точное число — в результате.',
+        tread: 'Глубина ступени, куда встаёт нога, без свеса над нижней ступенью. Удобно 25–30 см. Шаг проверяется сам: две высоты ступени плюс глубина — 60–65 см.',
+        width: 'Ширина ступени от края до края поперёк хода. Удобно 0,9–1 м. При ширине 0,8 м уже тесно, вдвоём не разойтись.',
+        split: 'Сколько ступеней до поворота. Этим числом площадка сдвигается выше или ниже — например, чтобы пройти под ней в дверь.',
+        well: 'Зазор между нижним и верхним маршем, если смотреть сверху. 0 — марши вплотную. Ширина площадки — два марша плюс этот зазор.',
+        winders: 'Сколько ступеней-клиньев в повороте вместо площадки. Чем их больше, тем короче лестница, но у внутреннего угла клинья уже.',
+        thick: 'Толщина доски ступени. Для деревянной лестницы обычно 40 мм.',
+        slabT: 'Толщина бетона под ступенями, если мерить поперёк марша. Обычно 12–15 см.',
+        rebarRate: 'Сколько килограммов арматуры уходит на кубометр бетона. Для лестничного марша обычно 80–100 кг.',
+        balusterStep: 'Расстояние между балясинами вдоль поручня. Если в доме маленькие дети, просвет между балясинами — не больше 10 см. Пустое поле — лестница без перил.',
+        headroom: 'Сколько места должно остаться от ступени до потолка над ней, чтобы не задевать головой. Обычно не меньше 2 м. От этого зависит длина проёма в перекрытии.',
+        slab: 'Толщина перекрытия между этажами вместе с полом наверху. Нужна, чтобы посчитать длину проёма.',
+      },
+      helpPics: ['height', 'riser', 'tread', 'width', 'split', 'well', 'winders', 'thick', 'balusterStep'],
       selects: [
         { id: 'material', label: 'Из чего лестница', default: 'wood', choices: [
           { id: 'wood', label: 'Деревянная на косоурах', hint: 'ступени лежат на двух брусьях-косоурах' },
@@ -1163,6 +1180,7 @@ const CALCS = {
         if (!V || !c || !pos(v.width) || (mode !== 'straight' && c.steps < c.occ + 2)) return false;
         const t = (v.tread || 0) / 100, r = c.riser / 100, w = v.width, th = (v.thick || 40) / 1000;
         const prisms = [];
+        let winderAt = 0, balusterAt = 0, balusterPts = [];
         if (mode === 'straight') {
           for (let i = 0; i < c.steps; i++) prisms.push({ poly: [[i * t, 0], [(i + 1) * t, 0], [(i + 1) * t, w], [i * t, w]], z: (i + 1) * r - th, dz: th });
         } else {
@@ -1171,6 +1189,7 @@ const CALCS = {
           for (let i = 0; i < split; i++) prisms.push({ poly: [[i * t, 0], [(i + 1) * t, 0], [(i + 1) * t, w], [i * t, w]], z: (i + 1) * r - th, dz: th });
           // Площадка: у Г — квадрат в ширину марша, у П — на оба марша и просвет
           const px = split * t, D = this.landD(v, mode);
+          winderAt = prisms.length;
           if (c.wind) this.winderPolys(px, w, c.wind).forEach((poly, j) => prisms.push({ poly, z: (split + 1 + j) * r - th, dz: th }));
           else prisms.push({ poly: [[px, 0], [px + w, 0], [px + w, D], [px, D]], z: (split + 1) * r - th, dz: th });
           for (let i = 0; i < c.upper; i++) {
@@ -1190,7 +1209,9 @@ const CALCS = {
         if (pos(v.balusterStep)) {
           const RH = 0.9, b = 0.04, paths = this.railPaths(c, v, mode, (this._sel || {}).rails);
           paths.forEach((pts) => lines.push({ pts: pts.map((q) => [q[0], q[1], q[2] + RH]) }));
-          this.balusters(paths, v.balusterStep).forEach((q) => prisms.push({ poly: [[q[0] - b / 2, q[1] - b / 2], [q[0] + b / 2, q[1] - b / 2], [q[0] + b / 2, q[1] + b / 2], [q[0] - b / 2, q[1] + b / 2]], z: q[2], dz: RH }));
+          const bs = this.balusters(paths, v.balusterStep);
+          balusterAt = prisms.length; balusterPts = bs.map((q) => [q[0], q[1], q[2] + RH]);
+          bs.forEach((q) => prisms.push({ poly: [[q[0] - b / 2, q[1] - b / 2], [q[0] + b / 2, q[1] - b / 2], [q[0] + b / 2, q[1] + b / 2], [q[0] - b / 2, q[1] + b / 2]], z: q[2], dz: RH }));
         }
         const dims = [{ from: [0, 0, 0], to: [0, 0, v.height], label: 'высота ' + fmt(v.height) + ' м', offset: -28 }];
         if (mode === 'straight') dims.push({ from: [0, 0, 0], to: [c.run, 0, 0], label: 'по полу ' + fmt(c.run) + ' м', offset: 24 });
@@ -1201,7 +1222,40 @@ const CALCS = {
           if (mode === 'u') dims.push({ from: [px + w, 0, 0], to: [px + w, this.landD(v, mode), 0], label: 'ширина ' + fmt(this.landD(v, mode)) + ' м', offset: -24 });
           else dims.push({ from: [px + w, 0, 0], to: [px + w, w + upper, 0], label: 'верхний ' + fmt(upper) + ' м', offset: -24 });
         }
-        V.iso(box, prisms, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, lines, caption: (mode === 'straight' || c.wind ? c.steps : c.steps - 1) + ' ' + plural(mode === 'straight' || c.wind ? c.steps : c.steps - 1, 'ступень', 'ступени', 'ступеней') + (mode === 'straight' ? '' : c.wind ? ', из них ' + c.wind + ' забежных' : ' и площадка') + ' по ' + fmt(c.riser) + ' см, уклон ' + fmt(c.angle) + '°. Потяните, чтобы повернуть.' });
+        // Подсветка поля, в котором курсор или открыта «?»: деталь — оранжевым, размер — поверх остальных
+        const F = view.focus, HL = '#f08c00';
+        if (F) {
+          const lowN = mode === 'straight' ? c.steps : c.split, k = Math.max(0, Math.min(lowN - 1, Math.floor(lowN / 2)));
+          const top = (k + 1) * r, x0 = k * t, x1 = (k + 1) * t;
+          const paint = (from, to) => { for (let i = from; i < to; i++) if (prisms[i]) prisms[i].color = HL; };
+          if (F === 'height') dims[0].hl = true;
+          const stepDim = {
+            riser: { from: [x0, 0, k * r], to: [x0, 0, top], label: 'ступень ' + fmt(c.riser) + ' см', offset: -22, hl: true },
+            tread: { from: [x0, 0, top], to: [x1, 0, top], label: 'глубина ' + fmt(v.tread) + ' см', offset: 22, hl: true },
+            thick: { from: [x1, 0, top - th], to: [x1, 0, top], label: 'толщина ' + fmt(v.thick || 40) + ' мм', offset: 22, hl: true },
+            width: { from: [x1, 0, top], to: [x1, w, top], label: 'ширина ' + fmt(w) + ' м', offset: 22, hl: true },
+          }[F];
+          if (stepDim && view.mini) {
+            // В подсказке ступень крупно: она и по соседке с каждой стороны, иначе на всей лестнице её не разглядеть
+            const near = [];
+            for (let i = Math.max(0, k - 1); i <= Math.min(lowN - 1, k + 1); i++) near.push({ poly: [[i * t, 0], [(i + 1) * t, 0], [(i + 1) * t, w], [i * t, w]], z: (i + 1) * r - th, dz: th, color: i === k ? HL : undefined });
+            V.iso(box, near, [Object.assign({}, stepDim, { offset: stepDim.offset * 1.6 })], { yaw: view.yaw, pitch: view.pitch, zoom: 1.25, mini: true });
+            return true;
+          }
+          if (stepDim) { paint(k, k + 1); dims.push(stepDim); }
+          if (F === 'split' && mode !== 'straight') { paint(0, c.split); dims[1].hl = true; dims[1].label = c.split + ' ' + plural(c.split, 'ступень', 'ступени', 'ступеней') + ' до поворота'; }
+          if (F === 'winders' && c.wind) paint(winderAt, winderAt + c.wind);
+          if (F === 'well' && mode === 'u' && v.well > 0) {
+            const D = this.landD(v, mode), x = Math.max(0, c.split * t - t / 2), z = c.split * r;
+            dims.push({ from: [x, w, z], to: [x, D - w, z], label: 'зазор ' + fmt(v.well) + ' м', offset: 0, hl: true });
+          }
+          if (F === 'balusterStep' && balusterPts.length > 1) {
+            paint(balusterAt, prisms.length);
+            const a = balusterPts[0], b = balusterPts[1];
+            dims.push({ from: a, to: b, label: 'шаг ' + fmt(v.balusterStep) + ' м', offset: -18, hl: true });
+          }
+        }
+        V.iso(box, prisms, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.mini ? 1.6 : view.zoom, mini: view.mini, ground: true, lines, caption: (mode === 'straight' || c.wind ? c.steps : c.steps - 1) + ' ' + plural(mode === 'straight' || c.wind ? c.steps : c.steps - 1, 'ступень', 'ступени', 'ступеней') + (mode === 'straight' ? '' : c.wind ? ', из них ' + c.wind + ' забежных' : ' и площадка') + ' по ' + fmt(c.riser) + ' см, уклон ' + fmt(c.angle) + '°. Потяните, чтобы повернуть.' });
         return true;
       },
       compute(v, mode, sel) {
@@ -4421,6 +4475,8 @@ const CALCS = {
     const presetsBox = h('div', { class: 'calc-preset-rows' });
     const selectsBox = h('div');
     const result = h('div', { class: 'calc-result', 'aria-live': 'polite' });
+    let focusId = null;            // поле, в котором курсор: его размер подсвечен на схеме
+    const helpPics = new Map();    // открытые подсказки «?» с картинкой: id поля → блок картинки
     const costBox = h('details', { class: 'calc-cost' }, [h('summary', { text: 'Посчитать стоимость' })]);
 
     function field(f) {
@@ -4430,10 +4486,27 @@ const CALCS = {
         placeholder: f.placeholder || '0', value: saved != null ? saved : (f.value || '') });
       if (saved == null && f.value) state.values[f.id] = f.value;
       input.addEventListener('input', () => { state.values[f.id] = input.value; render(); });
-      return h('div', { class: 'calc-field', 'data-group': f.group || '' }, [
-        h('label', { for: id, text: f.label }),
-        h('div', { class: 'calc-input' }, [input, f.unit ? h('span', { class: 'calc-unit', text: f.unit }) : null]),
-      ]);
+      // Курсор в поле — его размер загорается на схеме (если калькулятор умеет его показать)
+      const onScheme = (def.helpPics || []).includes(f.id);
+      if (onScheme) {
+        input.addEventListener('focus', () => { focusId = f.id; drawViz(); });
+        input.addEventListener('blur', () => { if (focusId === f.id) { focusId = null; drawViz(); } });
+      }
+      const label = h('label', { for: id, text: f.label });
+      const inputRow = h('div', { class: 'calc-input' }, [input, f.unit ? h('span', { class: 'calc-unit', text: f.unit }) : null]);
+      const help = f.help || (def.help && def.help[f.id]);
+      if (!help) return h('div', { class: 'calc-field', 'data-group': f.group || '' }, [label, inputRow]);
+      // «?» у поля: что это и где мерить, и маленькая схема с этим размером
+      const helpId = id + '-help';
+      const pic = h('div', { class: 'calc-help-pic', hidden: '' });
+      const box = h('div', { class: 'calc-help', id: helpId, hidden: '' }, [h('p', { text: help }), pic]);
+      const btn = h('button', { type: 'button', class: 'calc-help-btn', 'aria-expanded': 'false', 'aria-controls': helpId, 'aria-label': 'Что это: ' + f.label, text: '?' });
+      btn.addEventListener('click', () => {
+        const open = box.hidden;
+        box.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+        if (open && onScheme) { helpPics.set(f.id, pic); drawHelpPic(f.id, pic); } else helpPics.delete(f.id);
+      });
+      return h('div', { class: 'calc-field', 'data-group': f.group || '' }, [h('div', { class: 'calc-label-row' }, [label, btn]), inputRow, box]);
     }
 
     const OPENING_PRESETS = [
@@ -4482,6 +4555,7 @@ const CALCS = {
 
     function renderFields() {
       fieldsBox.innerHTML = '';
+      helpPics.clear(); focusId = null;
       const mode = def.modes.find((m) => m.id === state.mode);
       mode.fields.forEach((f) => fieldsBox.appendChild(field(f)));
       renderOpenings();
@@ -4656,9 +4730,17 @@ const CALCS = {
       if (!def.draw || !lastViz) { vizBox.hidden = true; return; }
       // Сбой схемы не должен останавливать расчёт: иначе на экране остаются прошлые цифры
       let ok = false;
-      try { ok = def.draw(lastViz.v, state.mode, vizBox, { yaw: state.yaw, pitch: state.pitch, zoom: state.zoom }, lastViz.extras); } catch (e) { ok = false; }
+      try { ok = def.draw(lastViz.v, state.mode, vizBox, { yaw: state.yaw, pitch: state.pitch, zoom: state.zoom, focus: focusId }, lastViz.extras); } catch (e) { ok = false; }
       vizBox.hidden = !ok;
       if (ok && !vizBox.querySelector('svg')) vizBox.hidden = true;
+      helpPics.forEach((pic, id) => drawHelpPic(id, pic));
+    }
+    // Маленькая схема в подсказке «?»: тот же рисунок, но только с размером этого поля
+    function drawHelpPic(id, pic) {
+      pic.hidden = false;
+      let ok = false;
+      try { ok = !!lastViz && def.draw(lastViz.v, state.mode, pic, { yaw: state.yaw, pitch: state.pitch, zoom: 1, focus: id, mini: true }, lastViz.extras); } catch (e) { ok = false; }
+      if (!ok || !pic.querySelector('svg')) { pic.hidden = true; const old = pic.querySelector('svg'); if (old) old.remove(); }
     }
     if (window.CalcViz) window.CalcViz.rotatable(vizBox, () => ({ yaw: state.yaw, pitch: state.pitch, zoom: state.zoom }), (view) => { state.yaw = view.yaw; state.pitch = view.pitch; state.zoom = view.zoom; drawViz(); syncHash(); });
 

@@ -16,7 +16,8 @@
   /* ---------- Объёмная схема ----------
      boxes: [{ x, y, z, dx, dy, dz, kind }] — параллелепипеды в метрах, z вверх, z<0 — в земле.
      dims:  [{ from:[x,y,z], to:[x,y,z], label }] — размерные линии.
-     opts:  { yaw, ground: bool }
+     opts:  { yaw, ground: bool, mini: bool — картинка в подсказке: без подписи и неподсвеченных размеров }
+     Деталь с color и размер с hl: true — подсветка того, что сейчас вводят.
   */
   const DEFAULT_PITCH = 32 * Math.PI / 180;
   function project(p, yaw, pitch) {
@@ -103,7 +104,9 @@
     const defs = el('defs');
     const mk = el('marker', { id: 'viz-arr', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
     mk.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead' }));
-    defs.appendChild(mk); svg.appendChild(defs);
+    const mkHl = el('marker', { id: 'viz-arr-hl', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
+    mkHl.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead viz-arrhead--hl' }));
+    defs.appendChild(mk); defs.appendChild(mkHl); svg.appendChild(defs);
 
     if (opts.ground) {
       const g = [[x0 - gm, y0 - gm, 0], [x1 + gm, y0 - gm, 0], [x1 + gm, y1 + gm, 0], [x0 - gm, y1 + gm, 0]];
@@ -143,17 +146,22 @@
       });
     });
 
-    (dims || []).forEach((d) => {
+    // Подсветка (hl) — размер поля, в котором стоит курсор или открыта подсказка «?»: он рисуется
+    // поверх остальных, остальные бледнеют; в маленькой картинке подсказки (mini) остальных нет вовсе
+    const anyHl = (dims || []).some((d) => d.hl);
+    (dims || []).filter((d) => !d.hl).concat((dims || []).filter((d) => d.hl)).forEach((d) => {
+      if (opts.mini && !d.hl) return;
       const a = pr(d.from), b = pr(d.to);
       const ax = X(a), ay = Y(a), bx = X(b), by = Y(b);
       const off = d.offset || 0;
       let nx = -(by - ay), ny = bx - ax; const len = Math.hypot(nx, ny) || 1; nx = nx / len * off; ny = ny / len * off;
       const x1 = ax + nx, y1 = ay + ny, x2 = bx + nx, y2 = by + ny;
-      if (off) { svg.appendChild(el('line', { x1: ax, y1: ay, x2: x1, y2: y1, class: 'viz-ext' })); svg.appendChild(el('line', { x1: bx, y1: by, x2: x2, y2: y2, class: 'viz-ext' })); }
-      svg.appendChild(el('line', { x1, y1, x2, y2, class: 'viz-dim', 'marker-start': 'url(#viz-arr)', 'marker-end': 'url(#viz-arr)' }));
-      svg.appendChild(el('text', { x: (x1 + x2) / 2, y: (y1 + y2) / 2 - 6, class: 'viz-label', 'text-anchor': 'middle' }, d.label));
+      const mod = d.hl ? ' viz-hl' : anyHl ? ' viz-faded' : '', arr = d.hl ? 'url(#viz-arr-hl)' : 'url(#viz-arr)';
+      if (off) { svg.appendChild(el('line', { x1: ax, y1: ay, x2: x1, y2: y1, class: 'viz-ext' + mod })); svg.appendChild(el('line', { x1: bx, y1: by, x2: x2, y2: y2, class: 'viz-ext' + mod })); }
+      svg.appendChild(el('line', { x1, y1, x2, y2, class: 'viz-dim' + mod, 'marker-start': arr, 'marker-end': arr }));
+      svg.appendChild(el('text', { x: (x1 + x2) / 2, y: (y1 + y2) / 2 - 6, class: 'viz-label' + mod, 'text-anchor': 'middle' }, d.label));
     });
-    if (opts.caption) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
+    if (opts.caption && !opts.mini) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
     const old = container.querySelector('svg'); if (old) old.remove();
     container.insertBefore(svg, container.firstChild);
     container.classList.remove('viz-flat');
@@ -173,7 +181,9 @@
     const placed = [];
     svg.querySelectorAll('text.viz-big').forEach((t) => { try { const bb = t.getBBox(); if (bb.width) placed.push(bb); } catch (e) { /* скрыта */ } });
     const hit = (a) => placed.some((b) => a.x < b.x + b.width + 2 && b.x < a.x + a.width + 2 && a.y < b.y + b.height && b.y < a.y + a.height);
-    svg.querySelectorAll('text.viz-label, text.viz-small').forEach((t) => {
+    // Подсвеченная подпись ставится первой — сдвигаются остальные, а не она
+    const texts = Array.from(svg.querySelectorAll('text.viz-label, text.viz-small'));
+    texts.filter((t) => t.classList.contains('viz-hl')).concat(texts.filter((t) => !t.classList.contains('viz-hl'))).forEach((t) => {
       let bb; try { bb = t.getBBox(); } catch (e) { return; }
       if (!bb.width) return;
       const shiftX = bb.x < 2 ? 2 - bb.x : bb.x + bb.width > W - 2 ? W - 2 - bb.x - bb.width : 0;

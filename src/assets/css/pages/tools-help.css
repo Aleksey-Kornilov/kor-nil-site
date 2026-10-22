@@ -1,0 +1,42 @@
+/* tools-help.css — подсказки «?» у полей калькуляторов и подсветка размера на схеме (calculators.js, calc-viz.js). */
+
+.calc-label-row { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
+.calc-label-row label { margin-bottom: 0; }
+.calc-help-btn {
+  flex: none;
+  width: 24px; height: 24px;
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  color: var(--color-text); /* голубой на белом не дотягивает до контраста 4,5 */
+  font-size: 0.8125rem; font-weight: 700; line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.calc-help-btn:hover, .calc-help-btn[aria-expanded="true"] { background: var(--color-accent); color: white; }
+[data-theme="dark"] .calc-help-btn:hover, [data-theme="dark"] .calc-help-btn[aria-expanded="true"] { color: #0e1621; }
+.calc-help-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.calc-help {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+.calc-help p { margin: 0; }
+.calc-help-pic { margin-top: var(--space-2); border-radius: var(--radius-sm); background: var(--color-bg-elevated); }
+.calc-help-pic .viz-svg { max-height: 220px; }
+
+/* Подсвеченный размер — оранжевый, остальные бледнеют */
+.viz-dim.viz-hl { stroke: #f08c00; stroke-width: 2.2; }
+.viz-ext.viz-hl { stroke: #f08c00; opacity: 1; }
+.viz-arrhead--hl { fill: #f08c00; }
+.viz-label.viz-hl { fill: #b35600; font-weight: 800; }
+[data-theme="dark"] .viz-label.viz-hl { fill: #ffb44d; }
+.viz-faded { opacity: 0.3; }
+
+@media print { .calc-help-btn, .calc-help { display: none !important; } }
+
+/* Картинка в подсказке узкая (~300 px из 640 по схеме): подписи крупнее, чтобы читались */
+.calc-help-pic .viz-label { font-size: 28px; }
