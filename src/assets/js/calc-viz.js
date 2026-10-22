@@ -101,12 +101,7 @@
     const poly = (pts) => pts.map((q) => X(q).toFixed(1) + ',' + Y(q).toFixed(1)).join(' ');
 
     const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'viz-svg', role: 'img', 'aria-label': opts.title || 'Схема' });
-    const defs = el('defs');
-    const mk = el('marker', { id: 'viz-arr', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
-    mk.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead' }));
-    const mkHl = el('marker', { id: 'viz-arr-hl', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
-    mkHl.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead viz-arrhead--hl' }));
-    defs.appendChild(mk); defs.appendChild(mkHl); svg.appendChild(defs);
+    arrows(svg);
 
     if (opts.ground) {
       const g = [[x0 - gm, y0 - gm, 0], [x1 + gm, y0 - gm, 0], [x1 + gm, y1 + gm, 0], [x0 - gm, y1 + gm, 0]];
@@ -146,8 +141,27 @@
       });
     });
 
-    // Подсветка (hl) — размер поля, в котором стоит курсор или открыта подсказка «?»: он рисуется
-    // поверх остальных, остальные бледнеют; в маленькой картинке подсказки (mini) остальных нет вовсе
+    dimLines(svg, dims, opts, pr, X, Y);
+    if (opts.caption && !opts.mini) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
+    const old = container.querySelector('svg'); if (old) old.remove();
+    container.insertBefore(svg, container.firstChild);
+    container.classList.remove('viz-flat');
+    declutter(svg, W, H);
+    return svg;
+  }
+
+  // Стрелки размерных линий: обычная и оранжевая (подсветка поля)
+  function arrows(svg) {
+    const defs = el('defs');
+    [['viz-arr', 'viz-arrhead'], ['viz-arr-hl', 'viz-arrhead viz-arrhead--hl']].forEach(([id, cls]) => {
+      const mk = el('marker', { id, viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
+      mk.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: cls })); defs.appendChild(mk);
+    });
+    svg.appendChild(defs);
+  }
+  // Размерные линии. Подсветка (hl) — размер поля, в котором стоит курсор или открыта подсказка «?»:
+  // он рисуется поверх остальных, остальные бледнеют; в маленькой картинке подсказки (mini) их нет вовсе
+  function dimLines(svg, dims, opts, pr, X, Y) {
     const anyHl = (dims || []).some((d) => d.hl);
     (dims || []).filter((d) => !d.hl).concat((dims || []).filter((d) => d.hl)).forEach((d) => {
       if (opts.mini && !d.hl) return;
@@ -161,12 +175,6 @@
       svg.appendChild(el('line', { x1, y1, x2, y2, class: 'viz-dim' + mod, 'marker-start': arr, 'marker-end': arr }));
       svg.appendChild(el('text', { x: (x1 + x2) / 2, y: (y1 + y2) / 2 - 6, class: 'viz-label' + mod, 'text-anchor': 'middle' }, d.label));
     });
-    if (opts.caption && !opts.mini) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
-    const old = container.querySelector('svg'); if (old) old.remove();
-    container.insertBefore(svg, container.firstChild);
-    container.classList.remove('viz-flat');
-    declutter(svg, W, H);
-    return svg;
   }
 
   // На телефоне шрифт подписей крупнее (иначе не прочесть), и они наезжают друг на друга.
@@ -320,7 +328,8 @@
 
   /* ---------- Забор: вид сбоку со столбами, воротами и калиткой ---------- */
   /* ---------- Кровля: скаты как наклонные многоугольники поверх коробки дома ----------
-     faces: [[x,y,z], …] — вершины ската в метрах; walls — призма стен (необязательно). */
+     faces: [[x,y,z], …] — вершины ската в метрах; walls — призма стен (необязательно).
+     opts.marks — оранжевые накладки подсказки: { pts } лист, { line } рейка, { text, at } подпись. */
   function roof(container, faces, wallPrisms, dims, opts) {
     opts = opts || {};
     const yaw = opts.yaw == null ? -0.6 : opts.yaw;
@@ -338,9 +347,7 @@
     const X = (q) => W / 2 + (q.sx - c0.sx) * scale, Y = (q) => H / 2 + (q.sy - c0.sy) * scale;
     const poly = (pts) => pts.map((q) => X(q).toFixed(1) + ',' + Y(q).toFixed(1)).join(' ');
     const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'viz-svg', role: 'img', 'aria-label': opts.title || 'Схема кровли' });
-    const defs = el('defs');
-    const mk = el('marker', { id: 'viz-arr', viewBox: '0 0 10 10', refX: '5', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
-    mk.appendChild(el('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'viz-arrhead' })); defs.appendChild(mk); svg.appendChild(defs);
+    arrows(svg);
     if (opts.ground) {
       const m = Math.max(0.8, rx * 0.25);
       const g = [[cx - rx - m, cy - ry - m, 0], [cx + rx + m, cy - ry - m, 0], [cx + rx + m, cy + ry + m, 0], [cx - rx - m, cy + ry + m, 0]].map(pr);
@@ -363,16 +370,14 @@
     }).sort((a, b) => a.depth - b.depth).forEach((it) => {
       svg.appendChild(el('polygon', { points: poly(it.f.map(pr)), class: 'viz-roof' + (it.i % 2 ? ' viz-roof--alt' : '') }));
     });
-    (dims || []).forEach((d) => {
-      const a = pr(d.from), b = pr(d.to);
-      const ax = X(a), ay = Y(a), bx = X(b), by = Y(b), off = d.offset || 0;
-      let nx = -(by - ay), ny = bx - ax; const len = Math.hypot(nx, ny) || 1; nx = nx / len * off; ny = ny / len * off;
-      const x1 = ax + nx, y1 = ay + ny, x2 = bx + nx, y2 = by + ny;
-      if (off) { svg.appendChild(el('line', { x1: ax, y1: ay, x2: x1, y2: y1, class: 'viz-ext' })); svg.appendChild(el('line', { x1: bx, y1: by, x2: x2, y2: y2, class: 'viz-ext' })); }
-      svg.appendChild(el('line', { x1, y1, x2, y2, class: 'viz-dim', 'marker-start': 'url(#viz-arr)', 'marker-end': 'url(#viz-arr)' }));
-      svg.appendChild(el('text', { x: (x1 + x2) / 2, y: (y1 + y2) / 2 - 6, class: 'viz-label', 'text-anchor': 'middle' }, d.label));
+    // Накладки поверх скатов (подсказка «?»): лист — многоугольник, рейки и стропила — линии
+    (opts.marks || []).forEach((m) => {
+      if (m.line) { const a = pr(m.line[0]), b = pr(m.line[1]); svg.appendChild(el('line', { x1: X(a), y1: Y(a), x2: X(b), y2: Y(b), class: 'viz-mark-line' })); }
+      else if (m.text) { const a = pr(m.at); svg.appendChild(el('text', { x: X(a), y: Y(a), class: 'viz-label viz-hl', 'text-anchor': 'middle' }, m.text)); }
+      else svg.appendChild(el('polygon', { points: poly(m.pts.map(pr)), class: 'viz-mark' + (m.alt ? ' viz-mark--alt' : '') }));
     });
-    if (opts.caption) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
+    dimLines(svg, dims, opts, pr, X, Y);
+    if (opts.caption && !opts.mini) svg.appendChild(el('text', { x: W / 2, y: H - 10, class: 'viz-caption', 'text-anchor': 'middle' }, opts.caption));
     const old2 = container.querySelector('svg'); if (old2) old2.remove();
     container.insertBefore(svg, container.firstChild);
     container.classList.remove('viz-flat');

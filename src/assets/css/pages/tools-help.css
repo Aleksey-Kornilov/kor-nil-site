@@ -40,3 +40,8 @@
 
 /* Картинка в подсказке узкая (~300 px из 640 по схеме): подписи крупнее, чтобы читались */
 .calc-help-pic .viz-label { font-size: 28px; }
+
+/* Накладки на скатах крыши: лист покрытия, рейки обрешётки, стропила */
+.viz-mark { fill: #f08c00; fill-opacity: 0.75; stroke: #b35600; stroke-width: 1.2; }
+.viz-mark--alt { fill: #ffc078; }
+.viz-mark-line { stroke: #f08c00; stroke-width: 2.2; stroke-linecap: round; }

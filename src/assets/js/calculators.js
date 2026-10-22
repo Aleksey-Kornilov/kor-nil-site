@@ -2123,6 +2123,38 @@ const CALCS = {
         { id: 'downH', label: 'Высота от карниза до земли', unit: 'м, 0 = без водосточных труб', value: '3' },
         { id: 'pipeL', label: 'Длина водосточной трубы', unit: 'м', value: '3' },
       ],
+      // Подсказки «?» у полей; поля из helpPics показываются на схеме (draw, view.focus)
+      help: {
+        len: 'Длина дома по наружным стенам, без свесов — свесы калькулятор добавит сам. У двускатной крыши это сторона вдоль конька.',
+        wid: 'Ширина дома по наружным стенам, без свесов. У двускатной крыши это сторона под фронтоном, у односкатной — вдоль уклона.',
+        angle: 'Угол между скатом и горизонталью. У жилых домов обычно 20–45°. Металлочерепице и профнастилу нужно не меньше 12°. Знаете высоту конька — впишите её, тогда угол посчитается сам.',
+        ridgeH: 'На сколько верх крыши выше верха стен: у двускатной и вальмовой — конёк, у односкатной — высокий край. Если её задать, угол посчитается сам.',
+        over: 'На сколько крыша выступает за стены. Обычно 0,4–0,6 м: свес уводит воду от стен и фундамента.',
+        sheetL: 'Длина одного листа вдоль ската. Можно заказать лист на весь скат — тогда по длине не будет стыков.',
+        sheetW: 'Ширина, которую лист закрывает на крыше, без нахлёста на соседний. Есть в описании листа: у металлочерепицы Монтеррей — 1,1 м.',
+        sheetWFull: 'Ширина листа целиком, вместе с нахлёстом. По ней магазин считает квадратные метры: у металлочерепицы Монтеррей — 1,19 м.',
+        overlapV: 'Насколько верхний лист заходит на нижний, если по скату их несколько. Обычно 0,15–0,2 м; на пологой крыше — больше.',
+        rollW: 'Ширина рулона стали для фальцевой кровли. Часть её уходит на загибы фальцев по краям.',
+        rollL: 'Длина стали в одном рулоне.',
+        rollOver: 'Сколько стали уходит на соединение соседних полос — загиб фальца.',
+        packM2: 'Сколько квадратных метров крыши закрывает одна упаковка гонта. Написано на упаковке, обычно 3 м².',
+        battenStep: 'Расстояние между рейками обрешётки вдоль ската. Под металлочерепицу оно равно шагу волны, обычно 0,35 м; под профнастил — 0,4–0,5 м. Под мягкую черепицу обрешётка сплошная.',
+        rafterStep: 'Расстояние между стропилами вдоль дома. Обычно 0,6–1 м. Шаг 0,6 м удобен под плиты утеплителя шириной 60 см.',
+        insulation: 'Толщина утеплителя между стропилами. Для жилой мансарды обычно 15–20 см. 0 — холодная крыша без утепления.',
+        insulPack: 'Объём одной упаковки утеплителя в кубометрах. Написан на упаковке.',
+        rafterW: 'Толщина доски стропила. Обычно 50 мм.',
+        rafterH: 'Ширина доски стропила. Чаще 150–200 мм: чем длиннее стропило, тем шире доска.',
+        mauerW: 'Мауэрлат — брус по верху стен, на который опираются стропила. Обычно 150×150 или 100×150 мм.',
+        mauerH: 'Высота бруса мауэрлата.',
+        battenW: 'Толщина доски обрешётки. Обычно 25 мм.',
+        battenH: 'Ширина доски обрешётки. Обычно 100 мм.',
+        plankL: 'Длина одной доборной планки — коньковой, ветровой, карнизной. Обычно 2 м.',
+        plankOver: 'Насколько соседние планки заходят друг на друга. Обычно 0,1 м.',
+        gutterL: 'Длина одного желоба. Обычно 3 м.',
+        downH: 'Высота от края крыши до земли — по ней считаются водосточные трубы. 0 — без труб.',
+        pipeL: 'Длина одной водосточной трубы. Обычно 3 м.',
+      },
+      helpPics: ['len', 'wid', 'angle', 'ridgeH', 'over', 'sheetL', 'sheetW', 'overlapV', 'rollW', 'battenStep', 'rafterStep'],
       selects: [{ id: 'material', label: 'Покрытие', default: 'metal', choices: [
         { id: 'metal', label: 'Металлочерепица', hint: 'листы, нахлёст по волне и по длине', sets: { sheetL: '2', sheetW: '1.1', sheetWFull: '1.19', overlapV: '0.15' } },
         { id: 'prof', label: 'Профнастил', hint: 'листы, обрешётка реже', sets: { sheetL: '2', sheetW: '1.1', sheetWFull: '1.15', overlapV: '0.15' } },
@@ -2255,7 +2287,56 @@ const CALCS = {
             { from: [0, 0, z0], to: [r0, mid, top], label: 'ребро ' + fmt(Math.hypot(g.slopeLen, W / 2)) + ' м', offset: -26 },
           ];
         }
-        V.roof(box, faces, walls, dims, { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, ground: true, caption: 'Крыша со свесом ' + fmt(o) + ' м, уклон ' + fmt(g.angle) + '°. Потяните, чтобы повернуть.' });
+        // Подсказка «?» и курсор в поле: размер оранжевым, лист, рейки или стропила — накладкой на передний скат
+        const F = view.focus, marks = [];
+        if (F) {
+          const tan = Math.tan(g.angle * Math.PI / 180), run = mode === 'shed' ? W : W / 2, sl = Math.hypot(run, run * tan);
+          // Накладки — на скат, который обращён к зрителю: при повороте схемы это то y = 0, то y = W
+          const flip = mode !== 'shed' && Math.cos(view.yaw == null ? -0.6 : view.yaw) > 0, Yf = (y) => (flip ? W - y : y);
+          const P = (x, s2) => [x, Yf(s2 / sl * run), z0 + s2 / sl * run * tan];   // точка на скате: x вдоль дома, s2 — от карниза вверх
+          const quad = (x0, x1, s0, s1, alt) => marks.push({ pts: [P(x0, s0), P(x1, s0), P(x1, s1), P(x0, s1)], alt });
+          const hd = (from, to, label, offset) => dims.push({ from, to, label, offset, hl: true });
+          const xm = L / 2, sw = v.sheetW || 1.1, x0 = Math.max(0, xm - sw / 2);
+          if (F === 'len') { dims.shift(); hd([o, o, 0], [o + g.len, o, 0], 'длина дома ' + fmt(g.len) + ' м', 24); }
+          if (F === 'wid') hd([o + g.len, o, 0], [o + g.len, o + g.wid, 0], 'ширина дома ' + fmt(g.wid) + ' м', -24);
+          if (F === 'over') hd([xm, Yf(0), z0], [xm, Yf(o), z0 + o * tan], 'свес ' + fmt(o) + ' м', 0);
+          if (F === 'ridgeH' || F === 'angle') {
+            // Высота — над стенами, у конька (у односкатной — у высокой стены); угол — дугой у карниза в торце
+            const xe = mode === 'hip' ? (L - g.ridge) / 2 : 0, hy = mode === 'shed' ? W - o : W / 2;
+            if (F === 'ridgeH') hd([xe, hy, z0 + o * tan], [xe, hy, z0 + hy * tan], (mode === 'shed' ? 'перепад ' : 'конёк выше стен на ') + fmt((hy - o) * tan) + ' м', -26);
+            else {
+              const xa = mode === 'hip' ? L / 2 : 0, rr = run * 0.6, a = g.angle * Math.PI / 180, arc = [];
+              for (let i = 0; i <= 16; i++) { const t = a * i / 16; arc.push([xa, Yf(rr * Math.cos(t)), z0 + rr * Math.sin(t)]); }
+              for (let i = 1; i < arc.length; i++) marks.push({ line: [arc[i - 1], arc[i]] });
+              marks.push({ line: [[xa, Yf(0), z0], [xa, Yf(Math.min(run, rr * 1.4)), z0]] });
+              marks.push({ text: fmt(g.angle) + '°', at: [xa, Yf(rr * 1.1), z0 + rr * Math.sin(a / 2) * 0.9] });
+            }
+          }
+          if (['sheetL', 'sheetW', 'overlapV'].includes(F) && pos(v.sheetL)) {
+            const sL = Math.min(v.sheetL, sl), ov = Math.min(v.overlapV || 0, sL);
+            quad(x0, x0 + sw, 0, sL);
+            if (F === 'sheetW') hd([x0, Yf(0), z0], [x0 + sw, Yf(0), z0], 'ширина ' + fmt(sw) + ' м', 22);
+            if (F === 'sheetL') hd(P(x0, 0), P(x0, sL), 'лист ' + fmt(v.sheetL) + ' м', flip ? 34 : -34);
+            if (F === 'overlapV' && sL - ov < sl) { quad(x0, x0 + sw, sL - ov, Math.min(sl, 2 * sL - ov), true); hd(P(x0 + sw, sL - ov), P(x0 + sw, sL), 'нахлёст ' + fmt(ov) + ' м', 22); }
+          }
+          if (F === 'rollW' && pos(v.rollW)) { quad(x0, x0 + v.rollW, 0, sl); hd([x0, Yf(0), z0], [x0 + v.rollW, Yf(0), z0], 'рулон ' + fmt(v.rollW) + ' м', 22); }
+          if (F === 'battenStep' && v.battenStep > 0.05) {
+            const xa = L * 0.25, xb = L * 0.75;
+            // У вальмовой передний скат — трапеция: рейка кончается на ребре
+            for (let s2 = v.battenStep / 2, k = 0; s2 < sl && k < 40; s2 += v.battenStep, k++) {
+              const y = s2 / sl * run, a = mode === 'hip' ? Math.max(xa, y) : xa, b = mode === 'hip' ? Math.min(xb, L - y) : xb;
+              if (b > a) marks.push({ line: [P(a, s2), P(b, s2)] });
+            }
+            hd(P(xb, v.battenStep / 2), P(xb, v.battenStep * 1.5), 'шаг ' + fmt(v.battenStep) + ' м', 22);
+          }
+          if (F === 'rafterStep' && v.rafterStep > 0.1) {
+            for (let x = o, k = 0; x <= o + g.len + 1e-6 && k < 60; x += v.rafterStep, k++) marks.push({ line: [P(x, 0), P(x, mode === 'hip' ? Math.min(sl, Math.min(x, L - x) / run * sl) : sl)] });
+            hd([o, Yf(0), z0], [o + v.rafterStep, Yf(0), z0], 'шаг ' + fmt(v.rafterStep) + ' м', 22);
+          }
+        }
+        // Односкатную в подсказке смотрим сверху ската, а не снизу: иначе лист на нём не видно
+        const yaw = view.mini && mode === 'shed' && Math.cos(view.yaw == null ? -0.6 : view.yaw) > 0 ? view.yaw + Math.PI : view.yaw;
+        V.roof(box, faces, walls, dims, { yaw, pitch: view.pitch, zoom: view.mini ? 1.25 : view.zoom, ground: true, mini: view.mini, marks, caption: 'Крыша со свесом ' + fmt(o) + ' м, уклон ' + fmt(g.angle) + '°. Потяните, чтобы повернуть.' });
         return true;
       },
       compute(v, mode, sel) {
