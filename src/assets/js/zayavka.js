@@ -6,12 +6,17 @@
   const ENDPOINT = 'https://sntchat.ru/api/kor-nil-contact';
   const VERSIYA = '2026-10-15';            // редакция /soglasie/ и /politika/
   const DOM = new Set(['dom', 'rasst', 'inzh']);
+  // Рассыльщики рекламы заполняют форму за секунды после открытия страницы (27.10.2026 — за 6 с).
+  // Человек так быстро не успевает; если всё же успел (автозаполнение), второе нажатие проходит.
+  const OTKRYTO = Date.now();
+  const BYSTRO = 10000;
 
   document.querySelectorAll('.zayavka-form').forEach((form) => {
     const status = form.querySelector('.form-status');
     const tema = form.elements.tema;
     const pl = form.querySelector('.zayavka-ploshchad');
     const btn = form.querySelector('button[type="submit"]');
+    let predupredil = false;
 
     // Площадь спрашиваем только про дом.
     const pokazPl = () => { pl.hidden = !DOM.has(tema.value); };
@@ -37,6 +42,11 @@
       const name = f.name.value.trim(), svyaz = f.svyaz.value.trim();
       if (name.length < 2 || svyaz.length < 3) return soobshit('Укажите имя и как с вами связаться.');
       if (!f.soglasie_pd.checked) return soobshit('Без согласия на обработку данных я не смогу вам ответить — отметьте галочку.');
+      const vremya = Date.now() - OTKRYTO;
+      if (vremya < BYSTRO && !predupredil) {
+        predupredil = true;
+        return soobshit('Проверьте, всё ли верно, и нажмите «Отправить» ещё раз.');
+      }
 
       const data = {
         name, svyaz,
@@ -49,6 +59,7 @@
         soglasie_reklama: f.soglasie_reklama.checked,
         versiya: VERSIYA,
         company: f.company.value,
+        vremya: Math.round(vremya / 1000),   // секунд от открытия страницы до отправки
       };
 
       btn.disabled = true;
