@@ -1,0 +1,20 @@
+# Ежедневная сводка по сайту в ЧатЯдро
+
+Каждое утро в 09:00 по Самаре бот «kor-nil.ru» пишет Алексею в ЧатЯдро: коротко → разбор → вывод
+(растёт / держится / затухает). Данные — Метрика за вчера и последние данные Вебмастера.
+
+- Код: `report.js` (этот каталог). На сервере — копия в `/root/kor-nil-report/`.
+- Ключи: `/root/kor-nil-report/.env` (chmod 600): `YANDEX_OAUTH_TOKEN`, `METRIKA_COUNTER_ID`, `WM_USER_ID`, `WM_HOST_ID`.
+- Запуск: cron сервера `0 8 * * *` (сервер живёт по Москве), лог `/root/kor-nil-report/report.log`.
+  Копия crontab до правки — `/root/crontab.bak-2026-10-27-2123`.
+- Отправка — `services/kor_nil_bot.js` бэкенда ЧатЯдра (`sendKorNilMessage`): пуш пустой, текст не уходит
+  к Google/Apple. Код ЧатЯдра не меняли и не перезапускали. Если там переименуют функцию — сводка
+  перестанет приходить (в логе будет ошибка).
+- Защита от повтора: `last-sent.txt` — дата последней отправки.
+
+Обновить код на сервере после правки:
+
+```bash
+scp scripts/daily-report/report.js root@sntchat.ru:/root/kor-nil-report/report.js
+ssh root@sntchat.ru 'cd /root/kor-nil-report && node report.js --dry'   # посмотреть текст, не отправляя
+```
