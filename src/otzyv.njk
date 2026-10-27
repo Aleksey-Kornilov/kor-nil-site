@@ -1,0 +1,59 @@
+---
+layout: layouts/base.njk
+permalink: /otzyv/
+pageNoindex: true
+eleventyExcludeFromCollections: true
+pageTitle: "Отзыв о работе · kor-nil.ru"
+pageDescription: "Отзыв заказчика о работе — по личной ссылке."
+---
+{#- Отзыв по личной ссылке: kor-nil.ru/otzyv/#<код>. Код выдаётся заказчику после работы,
+    сервер ЧатЯдра знает, чей он: подпись на сайте и какая работа. Отзыв приходит Алексею
+    сообщением бота; на сайт попадает только после его «показать» — руками, в страницу работы.
+    Два согласия раздельно (152-ФЗ, ст. 10.1: на распространение — отдельный документ):
+    обработка — обязательно, показ на сайте — по желанию. Отправку делает assets/js/otzyv.js. -#}
+
+<section class="section container">
+  <div class="contact-form-wrap glass zayavka otzyv" data-telegram="{{ site.contacts.telegram }}">
+    <h1>Отзыв о работе</h1>
+
+    <div class="otzyv-net" hidden>
+      <p>Эта страница открывается по личной ссылке, которую я присылаю заказчику после работы.
+        Если ссылка не сработала, напишите мне в Telegram: <a href="https://t.me/{{ site.contacts.telegram }}">@{{ site.contacts.telegram }}</a>.</p>
+    </div>
+
+    <form class="contact-form otzyv-form" novalidate hidden>
+      <p class="text-muted">Пара предложений своими словами: как вам работа, что пригодилось, что было не так.</p>
+      <ul class="otzyv-pro">
+        <li>Работа: <a class="otzyv-rabota" href="/projects/"></a></li>
+        <li>Подпись на сайте: <strong class="otzyv-podpis"></strong></li>
+      </ul>
+
+      <div class="field">
+        <label for="o-tekst">Ваш отзыв</label>
+        <textarea id="o-tekst" name="tekst" class="ym-disable-keys" rows="6" minlength="10" maxlength="2000" required></textarea>
+      </div>
+
+      <label class="zayavka-check">
+        <input type="checkbox" name="soglasie_pd" value="1" required>
+        <span>Даю <a href="/soglasie-otzyv/" target="_blank">согласие на обработку персональных данных</a>
+          и знаком(а) с <a href="/politika/" target="_blank">политикой</a>.</span>
+      </label>
+      <label class="zayavka-check">
+        <input type="checkbox" name="soglasie_pokaz" value="1">
+        <span>Можно показать отзыв на сайте с подписью «<span class="otzyv-podpis"></span>»
+          (<a href="/soglasie-otzyv-pokaz/" target="_blank">согласие</a>). Без этой галочки отзыв прочитаю только я.</span>
+      </label>
+
+      <div aria-hidden="true" class="zayavka-lovushka">
+        <label for="o-company">Не заполняйте это поле</label>
+        <input type="text" id="o-company" name="company" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="form-footer">
+        <button type="submit" class="btn btn-primary btn-lg">Отправить отзыв</button>
+      </div>
+      <div class="form-status" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+</section>
+<script src="/assets/js/otzyv.js" defer></script>

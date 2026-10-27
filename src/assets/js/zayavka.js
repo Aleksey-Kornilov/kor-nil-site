@@ -4,7 +4,7 @@
 
 (function () {
   const ENDPOINT = 'https://sntchat.ru/api/kor-nil-contact';
-  const VERSIYA = '2026-10-15';            // редакция /soglasie/ и /politika/
+  const VERSIYA = '2026-10-15';            // редакция /soglasie/
   const DOM = new Set(['dom', 'rasst', 'inzh']);
   // Рассыльщики рекламы заполняют форму за секунды после открытия страницы (27.10.2026 — за 6 с).
   // Человек так быстро не успевает; если всё же успел (автозаполнение), второе нажатие проходит.
