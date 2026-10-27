@@ -28,6 +28,8 @@ const CARDS = [
     statSize: 92, title: 'Орфография в PWA на Flutter', sub: 'Hunspell на сервере, своя таблица опечаток, разбор в два шага' },
   { slug: 'rustore-publikaciya-otkaz-i-vskrytie-apk', stat: '9 дней до релиза',
     statSize: 96, title: 'Публикация в RuStore', sub: 'Пять шагов формы, отказ по юридическому основанию, вскрытие APK' },
+  { slug: 'raskladka-kvarcvinila-ryad-za-ryadom', stat: 'Отход 4% или 28%',
+    statSize: 96, title: 'Раскладка кварцвинила ряд за рядом', sub: 'Почему «+10% на подрезку» то много, то мало' },
 ];
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');

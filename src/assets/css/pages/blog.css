@@ -164,6 +164,9 @@
 .fig-grid { stroke: var(--color-border); stroke-width: 1; stroke-dasharray: 3 4; }
 .fig-arrow { stroke: var(--color-accent); stroke-width: 1.6; }
 .fig-arrhead { fill: var(--color-accent); }
+.fig-room { fill: none; stroke: var(--color-accent); stroke-width: 2; }
+.fig-wall { stroke: var(--color-text); stroke-width: 4; }
+.fig-lock { fill: #7a6a55; }
 .fig-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
 .fig-hint { display: none; }
 @media (max-width: 720px) {
