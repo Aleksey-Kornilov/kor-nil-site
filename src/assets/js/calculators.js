@@ -4934,6 +4934,14 @@ const CALCS = {
     const def = CALCS[key];
     if (!def) return;
     const state = { mode: def.modes[0].id, sel: {}, values: {}, prices: {}, extras: { openings: [] }, yaw: -0.6, pitch: 32 * Math.PI / 180, zoom: 1 };
+    // Цель «Посчитал калькулятором» — только после того, как человек сам что-то поменял: поле, выбор,
+    // план или стены. Результат со значениями по умолчанию появляется сразу при открытии, когда Метрика
+    // ещё не запущена (ждёт первого действия посетителя), — так цель терялась и расчёты не считались.
+    let touched = false, goalSent = false;
+    const touch = () => { touched = true; };
+    root.addEventListener('input', touch, true);
+    root.addEventListener('change', touch, true);
+    root.addEventListener('pointerup', (e) => { if (e.target.closest && e.target.closest('.calc-planbox, .calc-roombox')) touched = true; }, true);
     (def.selects || []).forEach((s) => { state.sel[s.id] = s.default; });
     const storageKey = (id) => 'kn_calc_price_' + key + '_' + id;
     (def.prices || []).forEach((p) => {
@@ -5188,11 +5196,14 @@ const CALCS = {
       });
       actions.appendChild(share); actions.appendChild(copy); actions.appendChild(link); actions.appendChild(pdf); actions.appendChild(qr);
       // Первый готовый расчёт — мягко подсвечиваем, что делать дальше
+      if (touched && !goalSent) {
+        goalSent = true;
+        if (window.ymGoal) window.ymGoal('calc_result', { calc: key || 'unknown' });
+      }
       if (!render.hadResult) {
         render.hadResult = true;
         share.classList.add('is-fresh');
         setTimeout(() => share.classList.remove('is-fresh'), 7000);
-        if (window.ymGoal) window.ymGoal('calc_result', { calc: key || 'unknown' });
       }
       if (!vizBox.hidden && vizBox.querySelector('svg')) {
         const png = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Схема PNG' });
