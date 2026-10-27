@@ -32,6 +32,17 @@ pageDescription: "Отзыв заказчика о работе — по лич�
         <label for="o-tekst">Ваш отзыв</label>
         <textarea id="o-tekst" name="tekst" class="ym-disable-keys" rows="6" minlength="10" maxlength="2000" required></textarea>
       </div>
+      {#- Фамилия, имя и контакт — обязательная часть согласия на распространение (приказ РКН № 18).
+          На сайте не показываются, уходят только в запись согласия. -#}
+      <div class="field">
+        <label for="o-fio">Фамилия и имя</label>
+        <input type="text" id="o-fio" name="fio" required class="ym-disable-keys" autocomplete="name" maxlength="150">
+      </div>
+      <div class="field">
+        <label for="o-kontakt">Телефон или почта</label>
+        <input type="text" id="o-kontakt" name="kontakt" required class="ym-disable-keys" autocomplete="tel" maxlength="120">
+      </div>
+      <p class="text-small text-muted">Фамилия и контакт нужны только для записи вашего согласия, на сайте их не будет.</p>
 
       <label class="zayavka-check">
         <input type="checkbox" name="soglasie_pd" value="1" required>

@@ -3,6 +3,7 @@
 // чтения убираем его из адреса, чтобы он не попал в Метрику и в закладки.
 // Сервер ЧатЯдра по коду отдаёт подпись и работу (GET) и принимает отзыв (POST), передаёт
 // его Алексею сообщением бота. Согласие на обработку ПД — обязательно, на показ — по желанию.
+// Фамилия, имя и контакт — для записи согласия (приказ РКН № 18), на сайте не показываются.
 
 (function () {
   const ENDPOINT = 'https://sntchat.ru/api/kor-nil-otzyv';
@@ -48,11 +49,13 @@
     e.preventDefault();
     const f = form.elements;
     const tekst = f.tekst.value.trim();
+    const fio = f.fio.value.trim(), kontakt = f.kontakt.value.trim();
     if (tekst.length < 10) return soobshit('Напишите хотя бы пару слов.');
+    if (fio.length < 3 || kontakt.length < 3) return soobshit('Укажите фамилию с именем и телефон или почту — они нужны для записи согласия.');
     if (!f.soglasie_pd.checked) return soobshit('Без согласия на обработку данных я не смогу принять отзыв — отметьте первую галочку.');
 
     const data = {
-      kod, tekst,
+      kod, tekst, fio, kontakt,
       soglasie_pd: true,
       soglasie_pokaz: f.soglasie_pokaz.checked,
       versiya: VERSIYA,
