@@ -1,9 +1,21 @@
 # Ежедневная сводка по сайту в ЧатЯдро
 
-Каждое утро в 09:00 по Самаре бот «kor-nil.ru» пишет Алексею в ЧатЯдро: коротко → разбор → вывод
-(растёт / держится / затухает). Данные — Метрика за вчера и последние данные Вебмастера.
+Каждое утро в 09:00 по Самаре бот «kor-nil.ru» пишет Алексею в ЧатЯдро одну сводку: коротко → разбор →
+вывод (растёт / держится / затухает). Данные — Метрика и Вебмастер.
 
-- Код: `report.js` (этот каталог). На сервере — копия в `/root/kor-nil-report/`.
+| Когда | Что | Файл |
+|---|---|---|
+| обычный день | за вчера, вывод — 7 дней против 7 | `daily.js` |
+| понедельник | за прошлую неделю (пн–вс) + тренд 4 недели | `period.js` |
+| 1-е число | за прошлый месяц + тренд 6 месяцев | `period.js` |
+| 1 янв / апр / июл / окт | за прошлый квартал + тренд 4 квартала | `period.js` |
+
+Совпали (1-е число в понедельник) — уходит самая крупная. В периодных — лучший день и почему,
+что смотрели, цели с прошлым периодом, запросы Яндекса с движением мест, «что стоит сделать».
+Пока прошлый период целиком до счётчика (до 08.09.2026) — пишет «точка отсчёта», без вывода.
+
+- Код: `report.js` (выбор и отправка), `common.js` (данные, слова, вывод), `daily.js`, `period.js`.
+  На сервере — копия в `/root/kor-nil-report/`.
 - Ключи: `/root/kor-nil-report/.env` (chmod 600): `YANDEX_OAUTH_TOKEN`, `METRIKA_COUNTER_ID`, `WM_USER_ID`, `WM_HOST_ID`.
 - Запуск: cron сервера `0 8 * * *` (сервер живёт по Москве), лог `/root/kor-nil-report/report.log`.
   Копия crontab до правки — `/root/crontab.bak-2026-10-27-2123`.
@@ -15,6 +27,7 @@
 Обновить код на сервере после правки:
 
 ```bash
-scp scripts/daily-report/report.js root@sntchat.ru:/root/kor-nil-report/report.js
-ssh root@sntchat.ru 'cd /root/kor-nil-report && node report.js --dry'   # посмотреть текст, не отправляя
+scp scripts/daily-report/*.js root@sntchat.ru:/root/kor-nil-report/
+ssh root@sntchat.ru 'cd /root/kor-nil-report && node report.js --dry'               # то, что уйдёт сегодня
+ssh root@sntchat.ru 'cd /root/kor-nil-report && node report.js --kind=week --dry'   # day | week | month | quarter
 ```
