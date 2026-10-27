@@ -34,8 +34,10 @@
       if (!d.podpis) return nevernaya();
       wrap.querySelectorAll('.otzyv-podpis').forEach((el) => { el.textContent = d.podpis; });
       const a = wrap.querySelector('.otzyv-rabota');
-      a.textContent = d.rabota || 'на сайте';
-      if (/^\/[a-z0-9\-/]*$/.test(d.ssylka || '')) a.href = d.ssylka;
+      // Полный адрес страницы работы — на неё ссылается согласие на показ (приказ РКН № 18: где показываются данные).
+      const put = /^\/[a-z0-9\-/]*$/.test(d.ssylka || '') ? d.ssylka : '';
+      a.textContent = (d.rabota || 'на сайте') + (put ? ` — kor-nil.ru${put}` : '');
+      if (put) a.href = put;
       form.hidden = false;
     })
     .catch((st) => {
