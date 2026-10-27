@@ -1018,25 +1018,25 @@ const CALCS = {
       modeLabel: 'Тип лестницы',
       modes: [
         { id: 'straight', label: 'Прямая (один марш)', fields: [
-          { id: 'height', label: 'Высота этажа (от пола до пола)', unit: 'м', value: '2.8' },
+          { id: 'height', label: 'Высота этажа (от пола до пола)', unit: 'м', value: '2.8', max: 20, maxText: 'Больше 20 м — это уже не этаж. Высота в метрах: 2,8, а не 280.' },
           { id: 'riser', label: 'Желаемая высота ступени', unit: 'см', value: '17' },
-          { id: 'tread', label: 'Глубина ступени (проступь)', unit: 'см', value: '28' },
+          { id: 'tread', label: 'Глубина ступени (проступь)', unit: 'см', value: '28', max: 100, maxText: 'Больше 100 см — проверьте: глубина ступени в сантиметрах, обычно 25–32.' },
           { id: 'width', label: 'Ширина марша', unit: 'м', value: '0.9' },
         ] },
         { id: 'turn', label: 'С поворотом на 90° (площадка)', fields: [
-          { id: 'height', label: 'Высота этажа', unit: 'м', value: '2.8' },
+          { id: 'height', label: 'Высота этажа', unit: 'м', value: '2.8', max: 20, maxText: 'Больше 20 м — это уже не этаж. Высота в метрах: 2,8, а не 280.' },
           { id: 'riser', label: 'Желаемая высота ступени', unit: 'см', value: '17' },
-          { id: 'tread', label: 'Глубина ступени', unit: 'см', value: '28' },
+          { id: 'tread', label: 'Глубина ступени', unit: 'см', value: '28', max: 100, maxText: 'Больше 100 см — проверьте: глубина ступени в сантиметрах, обычно 25–32.' },
           { id: 'width', label: 'Ширина марша', unit: 'м', value: '0.9' },
           { id: 'split', label: 'Ступеней в нижнем марше', unit: 'шт, до площадки', value: '8', int: true },
         ] },
         { id: 'u', label: 'П-образная (разворот на 180°)', fields: [
-          { id: 'height', label: 'Высота этажа', unit: 'м', value: '2.8' },
+          { id: 'height', label: 'Высота этажа', unit: 'м', value: '2.8', max: 20, maxText: 'Больше 20 м — это уже не этаж. Высота в метрах: 2,8, а не 280.' },
           { id: 'riser', label: 'Желаемая высота ступени', unit: 'см', value: '17' },
-          { id: 'tread', label: 'Глубина ступени', unit: 'см', value: '28' },
+          { id: 'tread', label: 'Глубина ступени', unit: 'см', value: '28', max: 100, maxText: 'Больше 100 см — проверьте: глубина ступени в сантиметрах, обычно 25–32.' },
           { id: 'width', label: 'Ширина марша', unit: 'м', value: '0.9' },
           { id: 'split', label: 'Ступеней в нижнем марше', unit: 'шт, до площадки', value: '8', int: true },
-          { id: 'well', label: 'Просвет между маршами', unit: 'м, 0 — марши вплотную', value: '0.1' },
+          { id: 'well', label: 'Просвет между маршами', unit: 'м, 0 — марши вплотную', value: '0.1', max: 5, maxText: 'Больше 5 м — проверьте: просвет в метрах, обычно 0,1–0,3.' },
         ] },
       ],
       common: [
@@ -1384,15 +1384,15 @@ const CALCS = {
       modeLabel: 'Что считаем',
       modes: [
         { id: 'septic', label: 'Септик', sets: { perDay: '200', days: '3' }, fields: [
-          { id: 'people', label: 'Человек в доме', unit: '', value: '4', int: true },
-          { id: 'perDay', label: 'Расход воды на человека', unit: 'л/сутки', value: '200' },
-          { id: 'days', label: 'Запас по времени', unit: 'суток (норма 3)', value: '3' },
-          { id: 'guests', label: 'Гости по выходным', unit: 'человек, необязательно', int: true },
+          { id: 'people', label: 'Человек в доме', unit: '', value: '4', int: true, max: 200, maxText: 'Больше 200 человек — это уже очистные сооружения, а не септик для дома.' },
+          { id: 'perDay', label: 'Расход воды на человека', unit: 'л/сутки', value: '200', max: 2000, maxText: 'Больше 2000 л в сутки на человека — проверьте: обычно 150–200.' },
+          { id: 'days', label: 'Запас по времени', unit: 'суток (норма 3)', value: '3', max: 30, maxText: 'Больше 30 суток — проверьте: по норме стоки стоят 3 суток.' },
+          { id: 'guests', label: 'Гости по выходным', unit: 'человек, необязательно', int: true, max: 200, maxText: 'Больше 200 человек — это уже очистные сооружения, а не септик для дома.' },
         ] },
         { id: 'tank', label: 'Бак для воды / накопитель', sets: { perDay: '100', days: '2' }, fields: [
-          { id: 'people', label: 'Человек', unit: '', value: '4', int: true },
-          { id: 'perDay', label: 'Расход на человека', unit: 'л/сутки', value: '100' },
-          { id: 'days', label: 'На сколько суток запас', unit: '', value: '2' },
+          { id: 'people', label: 'Человек', unit: '', value: '4', int: true, max: 200, maxText: 'Больше 200 человек — это уже очистные сооружения, а не септик для дома.' },
+          { id: 'perDay', label: 'Расход на человека', unit: 'л/сутки', value: '100', max: 2000, maxText: 'Больше 2000 л в сутки на человека — проверьте: обычно 100–200.' },
+          { id: 'days', label: 'На сколько суток запас', unit: '', value: '2', max: 365, maxText: 'Больше года — проверьте число суток.' },
           { id: 'garden', label: 'Полив', unit: 'л/сутки, необязательно', value: '200' },
         ] },
       ],
@@ -2741,7 +2741,7 @@ const CALCS = {
           { id: 'step', label: 'Шаг столбов', unit: 'м', value: '2.5' },
         ] },
         { id: 'line', label: 'Просто по длине', fields: [
-          { id: 'len', label: 'Длина забора', unit: 'м', value: '40' },
+          { id: 'len', label: 'Длина забора', unit: 'м', value: '40', max: 10000, maxText: 'Больше 10 км — проверьте число: длина забора в метрах.' },
           { id: 'hei', label: 'Высота забора', unit: 'м', value: '2' },
           { id: 'step', label: 'Шаг столбов', unit: 'м', value: '2.5' },
           { id: 'gate', label: 'Ворота', unit: 'м, необязательно', value: '3' },
@@ -4016,18 +4016,18 @@ const CALCS = {
       modeLabel: 'Что обшиваем',
       modes: [
         { id: 'wall', label: 'Стены комнаты', room: true, fields: [
-          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
-          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5', max: 100, maxText: 'Больше 100 м — для комнаты многовато. Размеры в метрах: 5, а не 500.' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4', max: 100, maxText: 'Больше 100 м — для комнаты многовато. Размеры в метрах: 5, а не 500.' },
           { id: 'hei', label: 'Высота потолка', unit: 'м', value: '2.7' },
         ] },
         { id: 'ceiling', label: 'Потолок', fields: [
-          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5' },
-          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4' },
+          { id: 'len', label: 'Длина комнаты', unit: 'м', value: '5', max: 100, maxText: 'Больше 100 м — для комнаты многовато. Размеры в метрах: 5, а не 500.' },
+          { id: 'wid', label: 'Ширина комнаты', unit: 'м', value: '4', max: 100, maxText: 'Больше 100 м — для комнаты многовато. Размеры в метрах: 5, а не 500.' },
         ] },
         { id: 'partition', label: 'Перегородка', fields: [
-          { id: 'plen', label: 'Длина перегородки', unit: 'м', value: '4' },
+          { id: 'plen', label: 'Длина перегородки', unit: 'м', value: '4', max: 100, maxText: 'Больше 100 м — проверьте: длина в метрах, 4, а не 400.' },
           { id: 'phei', label: 'Высота перегородки', unit: 'м', value: '2.7' },
-          { id: 'pdoor', label: 'Дверных проёмов', unit: 'шт', value: '1', int: true },
+          { id: 'pdoor', label: 'Дверных проёмов', unit: 'шт', value: '1', int: true, max: 50, maxText: 'Больше 50 проёмов в одной перегородке не бывает — проверьте число.' },
           { id: 'pdoorW', label: 'Ширина проёма', unit: 'м', value: '0.9' },
           { id: 'pdoorH', label: 'Высота проёма', unit: 'м', value: '2.1' },
         ] },
@@ -5092,6 +5092,8 @@ const CALCS = {
         if (x == null && raw && !(raw === '-' && (f.signed || def.signed))) errs[f.id] = f.int ? 'Нужно целое число, например 3.' : 'Нужно число, например 2,5 — только цифры и запятая.';
         else if (x != null && Math.abs(x) > 1e9) errs[f.id] = 'Слишком большое число — проверьте, нет ли лишних нулей.';
         else if (x != null && x < 0 && !(f.signed || def.signed)) errs[f.id] = 'Меньше нуля здесь не бывает — уберите минус.';
+        // Потолок поля: не только защита от опечатки, но и от зависания — схема рисует каждую ступень и лист
+        else if (x != null && f.max != null && x > f.max) errs[f.id] = f.maxText || 'Больше ' + fmt(f.max) + ' ' + String(f.unit || '').split(',')[0] + ' — проверьте число и единицы.';
         if (errs[f.id]) { x = null; bad.push(f.label); } else if (x != null && f.int) x = Math.round(x);
         v[f.id] = x;
       });
@@ -5121,10 +5123,11 @@ const CALCS = {
       def._sel = state.sel;
       drawViz();
       let r = def.compute(v, state.mode, state.sel, extras);
-      if (!r && bad.length) r = { error: bad.map((l) => '«' + l + '»').join(', ') + ': ' + (bad.length > 1 ? 'нужны положительные числа' : 'нужно положительное число') + ' — исправьте, и результат появится.' };
+      const badList = bad.map((l) => '«' + l + '»').join(', ');
+      if (!r && bad.length) r = { error: 'Исправьте ' + (bad.length > 1 ? 'поля ' : 'поле ') + badList + ' — что не так, написано под ' + (bad.length > 1 ? 'ними' : 'ним') + '. Тогда появится результат.' };
       if (r && r.error && r.field) [].concat(r.field).forEach((id) => { if (!errs[id]) errs[id] = r.error; });
       showErrs();
-      if (r && !r.error && bad.length) r.rows.unshift(['⚠ Не учтено', bad.map((l) => '«' + l + '»').join(', ') + ': ' + (bad.length > 1 ? 'нужны положительные числа' : 'нужно положительное число')]);
+      if (r && !r.error && bad.length) r.rows.unshift(['⚠ Не учтено', badList + ' — что не так, написано под полем']);
       result.innerHTML = '';
       costBox.hidden = !r || !!r.error || !(def.prices && def.prices.length);
       if (!r || r.error) {
