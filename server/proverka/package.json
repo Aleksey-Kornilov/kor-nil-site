@@ -1,0 +1,9 @@
+{
+  "name": "kor-nil-proverka",
+  "private": true,
+  "description": "Проверка сайта для kor-nil.ru/seo/proverka/",
+  "type": "module",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "node-html-parser": "^9.0.6" }
+}

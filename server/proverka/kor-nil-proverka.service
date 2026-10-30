@@ -1,0 +1,16 @@
+[Unit]
+Description=kor-nil.ru: проверка сайта (/seo/proverka/)
+After=network.target
+
+[Service]
+WorkingDirectory=/root/kor-nil-proverka
+ExecStart=/usr/bin/node server.js
+Environment=PORT=8791 DATA_DIR=/root/kor-nil-proverka-data NODE_ENV=production
+Restart=always
+RestartSec=5
+# Обход чужих сайтов — без лишних прав
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

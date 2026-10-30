@@ -1,0 +1,124 @@
+---
+layout: layouts/base.njk
+permalink: /seo/proverka/
+pageCrumb: "Проверка сайта"
+pageCrumbParent:
+  href: /seo/
+  label: "SEO-услуги"
+pageTitle: "Проверка сайта онлайн бесплатно — SEO-анализ за минуту · Алексей Корнилов"
+pageDescription: "Бесплатная проверка сайта: robots.txt, карта сайта, зеркала, заголовки и описания, дубли title, битые ссылки, разметка, скорость. До 20 страниц за минуту, без регистрации."
+pageKeywords: "проверка сайта онлайн, SEO анализ сайта бесплатно, проверить сайт на ошибки, дубли title, битые ссылки, технический аудит сайта"
+pageSchema: |
+  {
+    "@type": "WebApplication",
+    "@id": "https://kor-nil.ru/seo/proverka/#app",
+    "name": "Проверка сайта",
+    "url": "https://kor-nil.ru/seo/proverka/",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Любая, в браузере",
+    "inLanguage": "ru",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "RUB" },
+    "author": { "@id": "https://kor-nil.ru#person" }
+  }
+---
+{#- Проверка сайта. Обход делает служба kor-nil-proverka на сервере (код — server/proverka/),
+    страница только запускает и показывает отчёт: assets/js/proverka.js.
+    Готовый отчёт открывается по ссылке /seo/proverka/#<код> 30 дней. -#}
+
+<section class="section container pv-hero">
+  <p class="hero-eyebrow">Бесплатно и без регистрации</p>
+  <h1>Проверка сайта</h1>
+  <p class="section-lead">
+    Введите адрес — за минуту обойду до 20 страниц и покажу, что мешает сайту в Яндексе и Google:
+    закрытые страницы, дубли заголовков, битые ссылки, тяжёлые картинки.
+  </p>
+
+  <form class="pv-form glass" novalidate>
+    <label class="sr-only" for="pv-url">Адрес сайта</label>
+    <input id="pv-url" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false"
+           placeholder="example.ru" maxlength="300" required>
+    <button type="submit" class="btn btn-primary btn-lg">Проверить</button>
+  </form>
+  <p class="pv-oshibka" role="alert" hidden></p>
+</section>
+
+<section class="section container pv-hod" hidden aria-live="polite">
+  <div class="glass pv-hod-box">
+    <p class="pv-hod-etap">Готовлюсь…</p>
+    <div class="pv-bar"><span></span></div>
+    <p class="text-small text-muted">Обычно 30–60 секунд. Сайт обхожу не чаще двух запросов в секунду, чтобы его не нагружать.</p>
+  </div>
+</section>
+
+<section class="section container pv-otchet" hidden>
+  <header class="pv-shapka">
+    <div>
+      <h2 class="pv-host"></h2>
+      <p class="text-small text-muted pv-data"></p>
+    </div>
+    <div class="pv-itogo"></div>
+  </header>
+
+  <div class="pv-snippet glass">
+    <p class="text-small text-muted">Так главная выглядит в выдаче</p>
+    <p class="pv-sn-title"></p>
+    <p class="pv-sn-url"></p>
+    <p class="pv-sn-desc"></p>
+  </div>
+
+  <div class="pv-gruppy"></div>
+
+  <div class="pv-dalee glass">
+    <h2>Нужен полный разбор?</h2>
+    <p>Эта проверка — техника по 20 страницам. В полном разборе — весь сайт, позиции по вашим запросам,
+      сравнение с конкурентами в выдаче и план работ: что чинить первым и что это даст.
+      Пример — <a href="/seo/#case">кейс cookai.ru</a>.</p>
+    <div class="hero-cta">
+      <a href="#zayavka" class="btn btn-primary btn-lg pv-napisat">Написать</a>
+      <button type="button" class="btn btn-secondary btn-lg pv-podelitsya">Поделиться отчётом</button>
+    </div>
+    <p class="text-small text-muted pv-podelitsya-status" role="status"></p>
+  </div>
+</section>
+
+<section class="section container pv-chto">
+  <h2 class="section-title">Что проверяю</h2>
+  <div class="grid grid-3">
+    <div class="card">
+      <h3 class="card-title">Видит ли поиск сайт</h3>
+      <p class="card-description">robots.txt и карта сайта, https и перенаправление с http, зеркало с www,
+        canonical, запреты noindex. Одна ошибка здесь — и сайта нет в поиске целиком.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Как выглядит в выдаче</h3>
+      <p class="card-description">Заголовок и описание — их длина и то, как их покажет Яндекс.
+        Превью ссылки для ВКонтакте и Telegram.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Все страницы разом</h3>
+      <p class="card-description">Одинаковые заголовки и описания, страницы без h1, битые ссылки,
+        лишние перенаправления, закрытые страницы — по 20 страницам из карты сайта.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Содержимое</h3>
+      <p class="card-description">Заголовок h1, подписи картинок, разметка JSON-LD, настройка для телефона,
+        язык страницы.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Скорость</h3>
+      <p class="card-description">Время ответа сервера, вес страницы с картинками и скриптами, сжатие.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Что не проверяю</h3>
+      <p class="card-description">Позиции, тексты, ссылки с других сайтов и поведение посетителей — это
+        уже полный разбор, руками и с доступом к Метрике и Вебмастеру.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section container">
+  {%- set zTema = "seo" %}{% set zId = "pv" %}{% set zZagolovok = "Заказать полный разбор" %}
+  {% include "components/zayavka.njk" %}
+</section>
+
+<script src="/assets/js/proverka.js" defer></script>
