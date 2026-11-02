@@ -1,0 +1,16 @@
+[Unit]
+Description=kor-nil.ru: бот ВК «Ремонт и стройка: калькуляторы и проекты»
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/root/kor-nil-vk-bot
+ExecStart=/usr/bin/node main.js
+Environment=SITE_JS=/root/kor-nil-site/assets/js NODE_ENV=production
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
