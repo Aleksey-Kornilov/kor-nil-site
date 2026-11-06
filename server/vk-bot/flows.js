@@ -47,7 +47,7 @@ export const FLOWS = {
       const [L, W] = a.tile.split('x');
       return { mode: 'rect', v: { len: a.len, wid: a.wid, tileL: L, tileW: W }, s: { material: 'tile' } };
     },
-    opis: (a) => `Пол ${n(a.len)} × ${n(a.wid)} м, плитка ${a.tile.replace('x', ' × ')} см`,
+    opis: (a) => `Пол ${n(a.len)} × ${n(a.wid)} м, плитка ${a.tile.split('x').reverse().join(' × ')} см`,
   },
 
   kvarcvinil: {
