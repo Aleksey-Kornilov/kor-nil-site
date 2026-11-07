@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Заявки · kor-nil.ru</title>
+<link rel="stylesheet" href="/admin/admin.css?v=1">
+<script src="/admin/admin.js?v=1" defer></script>
+</head>
+<body>
+<!-- Панель заявок. Закрыта паролем nginx. Намеренно без общего шаблона сайта:
+     там Метрика с Вебвизором, а записывать экран с чужими заявками нельзя. -->
+<header class="shapka">
+  <h1><a href="#">Заявки</a></h1>
+  <nav class="filtr" id="filtr" aria-label="Состояние заявки"></nav>
+</header>
+<main>
+  <p class="soobshchenie" id="soobshchenie" role="status" hidden></p>
+  <section id="spisok" aria-label="Список заявок"></section>
+  <button type="button" class="knopka" id="esche" hidden>Показать ещё</button>
+  <section id="kartochka" aria-label="Заявка" hidden></section>
+</main>
+</body>
+</html>

@@ -36,6 +36,10 @@ export default async function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy('src/dom');
   eleventyConfig.ignores.add('src/dom/**');
 
+  // Панель заявок: отдельная страница за паролем nginx, без шаблона сайта (там Метрика с Вебвизором).
+  eleventyConfig.addPassthroughCopy('src/admin');
+  eleventyConfig.ignores.add('src/admin/**');
+
   // CSS: пересборка при правке любого css-файла в режиме --serve.
   eleventyConfig.addWatchTarget('src/assets/css/');
   eleventyConfig.on('eleventy.before', () => resetCssCache());
