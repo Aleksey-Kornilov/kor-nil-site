@@ -1,0 +1,201 @@
+/* Панель kor-nil.ru: свои стили, общий CSS сайта здесь не грузится. Лежит в /admin/vhod/,
+   потому что нужен и экрану входа, а он единственный открыт без сессии. */
+:root {
+  color-scheme: light;
+  --fon: #f5f6f8; --bok: #ffffff; --plitka: #ffffff; --vvod: #ffffff; --tekst: #1a1d21; --tiho: #5f6773;
+  --gran: #e2e5ea; --gran-silno: #c8cdd5; --navedenie: #eef1f5; --akcent: #2768c4; --akcent-fon: #e6effb;
+  --akcent-tekst: #ffffff; --zel: #0d7a5f; --zel-fon: #e2f4ee; --zhelt: #8a5a00; --zhelt-fon: #fbf1dc;
+  --krasn: #c02626; --krasn-fon: #fcebeb; --ten: 0 1px 2px rgba(20, 30, 50, .05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fon: #0f1218; --bok: #151922; --plitka: #181d27; --vvod: #10141c; --tekst: #e8ebf1; --tiho: #9aa4b4;
+    --gran: #282f3c; --gran-silno: #3a4353; --navedenie: #212835; --akcent: #6aa8f2; --akcent-fon: #1c2c44;
+    --akcent-tekst: #0b1220; --zel: #58cda9; --zel-fon: #15302a; --zhelt: #e6b95a; --zhelt-fon: #33290f;
+    --krasn: #ff8a8a; --krasn-fon: #3a1c1f; --ten: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fon: #0f1218; --bok: #151922; --plitka: #181d27; --vvod: #10141c; --tekst: #e8ebf1; --tiho: #9aa4b4;
+  --gran: #282f3c; --gran-silno: #3a4353; --navedenie: #212835; --akcent: #6aa8f2; --akcent-fon: #1c2c44;
+  --akcent-tekst: #0b1220; --zel: #58cda9; --zel-fon: #15302a; --zhelt: #e6b95a; --zhelt-fon: #33290f;
+  --krasn: #ff8a8a; --krasn-fon: #3a1c1f; --ten: none;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--fon); color: var(--tekst); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--akcent); }
+h1 { margin: 0; font-size: 1.5rem; line-height: 1.25; letter-spacing: -.01em; overflow-wrap: anywhere; }
+h2 { margin: 0 0 12px; font-size: 1rem; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--akcent); outline-offset: 2px; }
+.ikon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Каркас */
+.karkas { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+.bok {
+  position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 16px;
+  padding: 18px 12px 12px; background: var(--bok); border-right: 1px solid var(--gran);
+}
+.brend { padding: 0 10px; font-weight: 700; letter-spacing: -.01em; color: var(--tekst); text-decoration: none; }
+.menyu, .bok-niz { display: flex; flex-direction: column; gap: 2px; }
+.bok-niz { margin-top: auto; }
+.punkt {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 8px 10px; border: 0; border-radius: 8px;
+  background: none; color: var(--tiho); text-align: left; text-decoration: none; cursor: pointer;
+}
+.punkt:hover { background: var(--navedenie); color: var(--tekst); }
+.punkt[aria-current="page"] { background: var(--akcent-fon); color: var(--akcent); font-weight: 600; }
+.schet {
+  margin-left: auto; min-width: 22px; padding: 0 6px; border-radius: 999px; background: var(--akcent); color: var(--akcent-tekst);
+  font-size: .75rem; font-weight: 600; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums;
+}
+.kto-ya {
+  display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 10px; border-top: 1px solid var(--gran);
+  color: var(--tekst); text-decoration: none; min-width: 0;
+}
+.kto-ya span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avatar {
+  display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; overflow: hidden;
+  background: var(--akcent-fon); color: var(--akcent); font-weight: 600; object-fit: cover;
+}
+.avatar.bolshoj { width: 96px; height: 96px; font-size: 2rem; }
+.rabota { width: 100%; max-width: 1120px; margin: 0 auto; padding: 28px 32px 48px; }
+.golova { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.golova h2 { margin: 0; }
+.podpis { color: var(--tiho); font-size: .875rem; }
+
+/* Общие детали */
+.knopka {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 8px 14px;
+  border: 1px solid var(--gran-silno); border-radius: 8px; background: var(--plitka); color: var(--tekst);
+  text-decoration: none; cursor: pointer; overflow-wrap: anywhere;
+}
+.knopka:hover { background: var(--navedenie); }
+.knopka:disabled { opacity: .6; cursor: default; }
+.knopka.glavnaya { background: var(--akcent); border-color: var(--akcent); color: var(--akcent-tekst); font-weight: 600; }
+.knopka.glavnaya:hover { filter: brightness(1.08); }
+.knopka.opasno { color: var(--krasn); }
+.knopka.shirokaya { width: 100%; }
+.plitka { padding: 18px; border: 1px solid var(--gran); border-radius: 12px; background: var(--plitka); box-shadow: var(--ten); }
+.soobshchenie, .oshibka { margin-bottom: 14px; padding: 10px 12px; border-radius: 8px; background: var(--krasn-fon); color: var(--krasn); overflow-wrap: anywhere; }
+.uspeh { margin-bottom: 12px; padding: 10px 12px; border-radius: 8px; background: var(--zel-fon); color: var(--zel); }
+.pusto { padding: 24px 0; color: var(--tiho); text-align: center; }
+select, input:not([type="checkbox"], [type="file"]), textarea {
+  width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--gran-silno); border-radius: 8px;
+  background: var(--vvod); color: var(--tekst);
+}
+input[readonly] { background: var(--navedenie); color: var(--tiho); }
+textarea { display: block; margin-bottom: 8px; resize: vertical; }
+.pole-vvoda { display: block; margin-bottom: 14px; }
+.pole-vvoda > span:first-child { display: block; margin-bottom: 4px; font-size: .875rem; font-weight: 500; }
+.parol-obertka { position: relative; display: block; }
+.parol-obertka input { padding-right: 44px; }
+.glazik {
+  position: absolute; top: 0; right: 0; display: grid; place-items: center; width: 44px; height: 40px; border: 0;
+  background: none; color: var(--tiho); cursor: pointer;
+}
+.glazik:hover { color: var(--tekst); }
+
+/* Экран входа */
+.ekran-vhoda { display: grid; place-items: center; min-height: 100vh; padding: 16px; }
+.vhod { width: 100%; max-width: 380px; }
+.vhod-forma { padding: 28px; border: 1px solid var(--gran); border-radius: 14px; background: var(--plitka); box-shadow: var(--ten); }
+.vhod-forma .brend { padding: 0; margin-bottom: 4px; color: var(--tiho); font-size: .875rem; font-weight: 600; }
+.vhod-forma h1 { margin-bottom: 20px; }
+
+/* Сводка */
+.pokazateli { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.pokazatel { display: block; padding: 16px 18px; border: 1px solid var(--gran); border-radius: 12px; background: var(--plitka); box-shadow: var(--ten); color: inherit; text-decoration: none; }
+a.pokazatel:hover { border-color: var(--gran-silno); }
+.pokazatel b { display: block; font-size: 1.75rem; line-height: 1.2; font-weight: 650; font-variant-numeric: tabular-nums; }
+.pokazatel span { color: var(--tiho); font-size: .875rem; }
+.pokazatel.vazhno b { color: var(--akcent); }
+
+/* Заявки */
+.polka { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+.vkladki { display: flex; flex-wrap: wrap; gap: 4px; }
+.vkladka { padding: 6px 12px; border-radius: 8px; color: var(--tiho); text-decoration: none; font-variant-numeric: tabular-nums; }
+.vkladka:hover { background: var(--navedenie); color: var(--tekst); }
+.vkladka[aria-current="page"] { background: var(--akcent-fon); color: var(--akcent); font-weight: 600; }
+.poisk { flex: 1 1 220px; max-width: 320px; margin-left: auto; }
+.tablica-mesto { overflow: hidden; padding: 0; }
+.tablica { width: 100%; border-collapse: collapse; }
+.tablica th { padding: 10px 16px; border-bottom: 1px solid var(--gran); color: var(--tiho); font-size: .8rem; font-weight: 500; text-align: left; }
+.tablica td { padding: 12px 16px; border-bottom: 1px solid var(--gran); vertical-align: middle; overflow-wrap: anywhere; }
+.tablica tr:last-child td { border-bottom: 0; }
+.tablica tbody tr { cursor: pointer; }
+.tablica tbody tr:hover { background: var(--navedenie); }
+.tablica .imya { color: inherit; font-weight: 600; text-decoration: none; }
+.tablica .novaya .imya::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 7px 2px 0; border-radius: 50%; background: var(--akcent); }
+.tablica .spam { color: var(--tiho); }
+.kogda { color: var(--tiho); font-size: .875rem; white-space: nowrap; }
+.metki { display: flex; flex-wrap: wrap; gap: 4px; }
+.metka { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--navedenie); color: var(--tiho); font-size: .78rem; white-space: nowrap; }
+.metka.status-novaya { background: var(--akcent-fon); color: var(--akcent); }
+.metka.status-v_rabote { background: var(--zhelt-fon); color: var(--zhelt); }
+.metka.status-otvetil { background: var(--zel-fon); color: var(--zel); }
+.metka.trevoga { background: var(--krasn-fon); color: var(--krasn); }
+#esche { display: flex; margin: 14px auto 0; }
+
+/* Карточка заявки */
+.nazad { display: inline-block; margin-bottom: 10px; color: var(--tiho); text-decoration: none; }
+.nazad:hover { color: var(--tekst); }
+.dve-kolonki { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.stolbec { display: grid; gap: 16px; min-width: 0; }
+.svyazi { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.tekst { white-space: pre-wrap; overflow-wrap: anywhere; }
+.upravlenie { display: grid; gap: 12px; }
+.upravlenie label { display: block; margin-bottom: 4px; font-size: .875rem; }
+.upravlenie .galochka { margin: 0; }
+.upravlenie .galochka, .galochka { display: flex; align-items: center; gap: 8px; }
+.preduprezhdenie { padding: 8px 10px; border-radius: 8px; background: var(--zhelt-fon); color: var(--zhelt); font-size: .875rem; }
+.dva-shaga { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.vopros { color: var(--krasn); font-size: .875rem; }
+.istoriya ol { margin: 0 0 14px; padding: 0; list-style: none; }
+.istoriya li { padding: 10px 0; border-bottom: 1px solid var(--gran); }
+.istoriya .tekst { margin: 2px 0 6px; }
+.istoriya .knopka { min-height: 32px; padding: 4px 10px; font-size: .85rem; }
+.polya { margin: 0; }
+.pole { padding: 8px 0; border-bottom: 1px solid var(--gran); }
+.pole:last-child { border-bottom: 0; }
+.pole dt { color: var(--tiho); font-size: .8rem; }
+.pole dd { margin: 0; overflow-wrap: anywhere; }
+
+/* Профиль */
+.profil { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; max-width: 860px; }
+.foto-stroka { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.foto-knopki { position: relative; display: flex; flex-wrap: wrap; gap: 8px; }
+.ryad-knopok { display: flex; flex-wrap: wrap; gap: 8px; }
+.skrytyj-fajl { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.skrytyj-fajl:focus-visible + .knopka { outline: 2px solid var(--akcent); outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .dve-kolonki, .profil { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .karkas { display: block; }
+  .bok {
+    position: fixed; inset: auto 0 0 0; z-index: 5; display: block; height: auto; padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+    border-right: 0; border-top: 1px solid var(--gran);
+  }
+  .bok > .brend, .bok-niz { display: none; }
+  .menyu { flex-direction: row; }
+  .menyu .punkt { position: relative; flex: 1; flex-direction: column; gap: 2px; min-height: 52px; padding: 6px 4px; font-size: .75rem; text-align: center; }
+  .menyu .schet { position: absolute; top: 2px; left: calc(50% + 6px); margin: 0; }
+  .rabota { padding: 16px 16px calc(84px + env(safe-area-inset-bottom)); }
+  .poisk { max-width: none; margin-left: 0; flex-basis: 100%; }
+  .tablica, .tablica tbody, .tablica tr, .tablica td { display: block; }
+  .tablica thead { display: none; }
+  .tablica tr { padding: 12px 14px; border-bottom: 1px solid var(--gran); }
+  .tablica tr:last-child { border-bottom: 0; }
+  .tablica td { padding: 1px 0; border: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .punkt, .knopka, .vkladka { transition: background-color .12s, color .12s; }
+}

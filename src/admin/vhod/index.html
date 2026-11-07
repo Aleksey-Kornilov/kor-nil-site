@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Вход · kor-nil.ru</title>
+<link rel="stylesheet" href="/admin/vhod/panel.css?v=2">
+<script src="/admin/vhod/obshchee.js?v=2" defer></script>
+<script src="/admin/vhod/vhod.js?v=2" defer></script>
+</head>
+<body class="ekran-vhoda">
+<!-- Единственная часть панели, открытая без сессии. Данных здесь нет.
+     Панель намеренно без общего шаблона сайта: там Метрика с Вебвизором. -->
+<main class="vhod">
+  <form id="forma" class="vhod-forma" novalidate>
+    <p class="brend">kor-nil.ru</p>
+    <h1>Вход в панель</h1>
+    <p class="oshibka" id="oshibka" role="alert" hidden></p>
+    <label class="pole-vvoda"><span>Логин</span>
+      <input id="login" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" required>
+    </label>
+    <div id="mesto-parolya"></div>
+    <button type="submit" class="knopka glavnaya shirokaya" id="vojti">Войти</button>
+  </form>
+</main>
+</body>
+</html>

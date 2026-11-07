@@ -5,22 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<title>Заявки · kor-nil.ru</title>
-<link rel="stylesheet" href="/admin/admin.css?v=1">
-<script src="/admin/admin.js?v=1" defer></script>
+<title>Панель · kor-nil.ru</title>
+<link rel="stylesheet" href="/admin/vhod/panel.css?v=2">
+<script src="/admin/vhod/obshchee.js?v=2" defer></script>
+<script src="/admin/zayavki.js?v=2" defer></script>
+<script src="/admin/profil.js?v=2" defer></script>
+<script src="/admin/admin.js?v=2" defer></script>
 </head>
 <body>
-<!-- Панель заявок. Закрыта паролем nginx. Намеренно без общего шаблона сайта:
-     там Метрика с Вебвизором, а записывать экран с чужими заявками нельзя. -->
-<header class="shapka">
-  <h1><a href="#">Заявки</a></h1>
-  <nav class="filtr" id="filtr" aria-label="Состояние заявки"></nav>
-</header>
-<main>
-  <p class="soobshchenie" id="soobshchenie" role="status" hidden></p>
-  <section id="spisok" aria-label="Список заявок"></section>
-  <button type="button" class="knopka" id="esche" hidden>Показать ещё</button>
-  <section id="kartochka" aria-label="Заявка" hidden></section>
-</main>
+<!-- Панель сайта. Намеренно без общего шаблона: там Метрика с Вебвизором, а записывать экран
+     с чужими заявками нельзя. Доступ: сессия, её проверяют и nginx, и бэкенд. -->
+<div class="karkas">
+  <aside class="bok">
+    <a class="brend" href="#svodka">kor-nil.ru</a>
+    <nav class="menyu" id="menyu" aria-label="Разделы"></nav>
+    <div class="bok-niz">
+      <a class="punkt" id="na-sajt" href="/" target="_blank" rel="noopener noreferrer"></a>
+      <button type="button" class="punkt" id="tema"></button>
+      <button type="button" class="punkt" id="vyhod"></button>
+      <a class="kto-ya" id="kto-ya" href="#profil"></a>
+    </div>
+  </aside>
+  <main class="rabota" id="rabota">
+    <p class="soobshchenie" id="soobshchenie" role="alert" hidden></p>
+    <div id="ekran"></div>
+  </main>
+</div>
 </body>
 </html>
