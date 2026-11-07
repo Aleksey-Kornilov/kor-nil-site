@@ -1,0 +1,9 @@
+{#- Один отзыв заказчика. Ждёт o из данных otzyvy; при sRabotoy показывает ссылку на работу.
+    Текст показывается как есть: согласие заказчика запрещает его менять. -#}
+<div class="glass vrezka">
+  <h2>Отзыв заказчика</h2>
+  {%- for a in o.abzacy %}
+  <p>{{ a | escape }}</p>
+  {%- endfor %}
+  <p class="text-muted">{{ o.podpis | escape }} · заказчик, проверено{% if sRabotoy %} · <a href="{{ o.url }}">{{ o.nazvanie | escape }}</a>{% endif %}</p>
+</div>

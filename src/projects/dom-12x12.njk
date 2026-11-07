@@ -96,6 +96,13 @@ pageSchema: |
   </div>
 </section>
 
+{%- set sRabotoy = false %}
+{%- for o in otzyvy %}{% if o.rabota == "dom-12x12" %}
+<section class="section container">
+  {% include "components/otzyv.njk" %}
+</section>
+{% endif %}{% endfor %}
+
 <section class="section container">
   {%- set zId = "zd12" %}{% set zTema = "dom" %}{% set zZagolovok = "Хотите так же для своего дома?" %}
   {% include "components/zayavka.njk" %}

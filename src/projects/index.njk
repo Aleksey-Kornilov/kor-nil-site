@@ -28,6 +28,13 @@ pageType: website
   </div>
 </section>
 
+{%- set sRabotoy = true %}
+{%- for o in otzyvy %}
+<section class="section container">
+  {% include "components/otzyv.njk" %}
+</section>
+{% endfor %}
+
 <section class="section container">
   <div class="glass vrezka vhod">
     <h2>Заказчикам</h2>
