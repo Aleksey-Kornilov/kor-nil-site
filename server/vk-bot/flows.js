@@ -117,10 +117,48 @@ export const FLOWS = {
     build: (a) => ({ mode: 'rect', v: { len: a.len, wid: a.wid, thick: a.thick }, s: { mix: a.mix } }),
     opis: (a) => `Пол ${n(a.len)} × ${n(a.wid)} м, слой ${n(a.thick)} мм, ${{ ready: 'пескобетон', cps: 'цемент и песок', self: 'наливной пол' }[a.mix]}`,
   },
+
+  akvarium: {
+    title: 'Аквариум', key: 'aquarium', page: 'kalkulyator-akvariuma',
+    steps: [
+      { id: 'forma', kind: 'choice', q: 'Какой формы аквариум?', choices: [['Прямоугольный', 'rect'], ['Восьмигранный', 'oct'], ['Шестигранный', 'hex'],
+        ['Угловой на 5 граней', 'corner5'], ['Угловой треугольный', 'corner3'], ['Круглый (цилиндр)', 'cyl'], ['Шар', 'ball']] },
+      { id: 'len', kind: 'num', q: 'Длина аквариума, см?', presets: ['40', '50', '60', '80'], min: 5, max: 500, when: (a) => a.forma === 'rect' },
+      { id: 'wid', kind: 'num', q: 'Ширина — от переднего стекла до заднего, см?', presets: ['25', '30', '35', '40'], min: 5, max: 500, when: (a) => a.forma === 'rect' },
+      { id: 'face', kind: 'num', q: 'Ширина одного стекла (грани) снаружи, см?', presets: ['10', '12', '15', '20'], min: 2, max: 300, when: (a) => a.forma === 'oct' || a.forma === 'hex' },
+      { id: 'backL', kind: 'num', q: 'Задняя стенка слева (вдоль стены), см?', presets: ['40', '50', '60', '70'], min: 5, max: 500, when: (a) => a.forma === 'corner5' || a.forma === 'corner3' },
+      { id: 'backR', kind: 'num', q: 'Задняя стенка справа (вдоль стены), см?', presets: ['40', '50', '60', '70'], min: 5, max: 500, when: (a) => a.forma === 'corner5' || a.forma === 'corner3' },
+      { id: 'sideL', kind: 'num', q: 'Короткое боковое стекло слева, см?', presets: ['15', '20', '25', '30'], min: 1, max: 500, when: (a) => a.forma === 'corner5' },
+      { id: 'sideR', kind: 'num', q: 'Короткое боковое стекло справа, см?', presets: ['15', '20', '25', '30'], min: 1, max: 500, when: (a) => a.forma === 'corner5' },
+      { id: 'diam', kind: 'num', q: 'Диаметр в самом широком месте, см?', presets: ['30', '40', '50', '60'], min: 5, max: 500, when: (a) => a.forma === 'cyl' },
+      { id: 'diam', kind: 'num', q: 'Диаметр шара в самом широком месте, см?', presets: ['20', '25', '30', '40'], min: 5, max: 300, when: (a) => a.forma === 'ball' },
+      { id: 'hei', kind: 'num', q: 'Высота аквариума, см?', presets: ['30', '35', '40', '45', '50'], min: 5, max: 300, when: (a) => a.forma !== 'ball' },
+      { id: 'soil', kind: 'choice', q: 'Грунт на дне (слой 5 см)?', choices: [['Гравий', 'gravel'], ['Песок', 'sand'], ['Питательный', 'nutri'], ['Без грунта', 'none']] },
+      { id: 'fish', kind: 'choice', q: 'Какие рыбки?', choices: [['Тропические (гуппи, неоны, петушки)', 'trop'], ['Золотые и вуалехвосты', 'cold']] },
+    ],
+    build(a) {
+      const s = { soil: a.soil, fish: a.fish };
+      if (a.forma === 'oct' || a.forma === 'hex') return { mode: 'regular', v: { sides: a.forma === 'oct' ? '8' : '6', face: a.face, hei: a.hei }, s };
+      const fields = { rect: ['len', 'wid', 'hei'], corner5: ['backL', 'backR', 'sideL', 'sideR', 'hei'], corner3: ['backL', 'backR', 'hei'], cyl: ['diam', 'hei'], ball: ['diam'] }[a.forma];
+      return { mode: a.forma, v: pick(a, fields), s };
+    },
+    opis(a) {
+      const h = `высота ${n(a.hei)} см`;
+      return {
+        rect: `прямоугольный ${n(a.len)} × ${n(a.wid)} см, ${h}`,
+        oct: `восьмигранный, грань ${n(a.face)} см, ${h}`,
+        hex: `шестигранный, грань ${n(a.face)} см, ${h}`,
+        corner5: `угловой на 5 граней: задние ${n(a.backL)} и ${n(a.backR)} см, боковые ${n(a.sideL)} и ${n(a.sideR)} см, ${h}`,
+        corner3: `угловой треугольный: задние ${n(a.backL)} и ${n(a.backR)} см, ${h}`,
+        cyl: `круглый, диаметр ${n(a.diam)} см, ${h}`,
+        ball: `шар диаметром ${n(a.diam)} см`,
+      }[a.forma];
+    },
+  },
 };
 
 // Порядок кнопок в меню
-export const MENU = ['beton', 'styazhka', 'plitka', 'kvarcvinil', 'laminat', 'oboi', 'kraska'];
+export const MENU = ['beton', 'styazhka', 'plitka', 'kvarcvinil', 'laminat', 'oboi', 'kraska', 'akvarium'];
 
 const n = (x) => String(x).replace('.', ',');
 function pick(a, ids) { const o = {}; for (const k of ids) o[k] = a[k]; return o; }
