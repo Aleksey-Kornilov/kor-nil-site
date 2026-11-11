@@ -23,6 +23,7 @@
         <li><a href="mailto:{{ site.contacts.email }}" rel="me">{{ site.contacts.email }}</a></li>
         {%- if site.contacts.telegram %}<li><a href="https://t.me/{{ site.contacts.telegram }}" target="_blank" rel="me noopener">Telegram</a></li>{% endif %}
         {%- if site.contacts.vk %}<li><a href="{{ site.contacts.vk }}" target="_blank" rel="me noopener">{{ t.vk }}</a></li>{% endif %}
+        {%- if site.contacts.vkGroup and lang == "ru" %}<li><a href="{{ site.contacts.vkGroup }}" target="_blank" rel="noopener">Группа «Ремонт и стройка»</a></li>{% endif %}
         {%- if site.contacts.github %}<li><a href="{{ site.contacts.github }}" target="_blank" rel="me noopener">GitHub</a></li>{% endif %}
       </ul>
     </div>
