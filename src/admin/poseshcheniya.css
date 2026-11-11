@@ -1,0 +1,33 @@
+/* Блок «Посещения» в сводке панели. Столбики: тоньше 24 px, скругление только сверху, зазор 2 px. */
+:root { --stolbik: #2768c4; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stolbik: #4a90e2; } }
+:root[data-theme="dark"] { --stolbik: #4a90e2; }
+
+.poseshcheniya { margin-top: 28px; }
+h3 { margin: 0 0 12px; font-size: .95rem; font-weight: 600; }
+.pokazatel small { display: block; margin-top: 2px; color: var(--tiho); font-size: .8rem; }
+.grafik { margin-bottom: 12px; }
+.polotno { position: relative; padding-top: 20px; }
+.maks { position: absolute; top: 0; left: 0; color: var(--tiho); font-size: .78rem; font-variant-numeric: tabular-nums; }
+.polotno::before { content: ""; position: absolute; top: 20px; left: 0; right: 0; border-top: 1px solid var(--gran); }
+.stolbcy { position: relative; display: flex; align-items: flex-end; gap: 2px; height: 140px; border-bottom: 1px solid var(--gran-silno); touch-action: pan-y; }
+.den { display: flex; flex: 1 1 0; align-items: flex-end; justify-content: center; height: 100%; min-width: 0; }
+.den:hover { background: var(--navedenie); }
+.stolbik { display: block; width: 100%; max-width: 24px; min-height: 3px; border-radius: 4px 4px 0 0; background: var(--stolbik); }
+.stolbik.nol { height: 2px; min-height: 2px; border-radius: 0; background: var(--gran-silno); }
+.podskazka {
+  position: absolute; top: 0; z-index: 2; transform: translateX(-50%); padding: 4px 8px; border-radius: 6px;
+  background: var(--tekst); color: var(--fon); font-size: .8rem; white-space: nowrap; pointer-events: none;
+}
+.os { display: flex; justify-content: space-between; margin-top: 6px; color: var(--tiho); font-size: .78rem; }
+.po-dnyam { margin-top: 12px; }
+.po-dnyam summary { color: var(--tiho); font-size: .875rem; cursor: pointer; }
+.prostaya { width: 100%; margin-top: 8px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.prostaya th, .prostaya td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--gran); text-align: left; font-size: .875rem; }
+.prostaya th { color: var(--tiho); font-weight: 500; }
+.tri-kolonki { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.chisla { margin: 0; padding: 0; list-style: none; }
+.chisla li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--gran); overflow-wrap: anywhere; }
+.chisla li:last-child { border-bottom: 0; }
+.chisla b { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+@media (max-width: 1000px) { .tri-kolonki { grid-template-columns: minmax(0, 1fr); } }

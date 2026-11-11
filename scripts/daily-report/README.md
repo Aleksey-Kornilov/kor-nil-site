@@ -31,3 +31,7 @@ scp scripts/daily-report/*.js root@sntchat.ru:/root/kor-nil-report/
 ssh root@sntchat.ru 'cd /root/kor-nil-report && node report.js --dry'               # то, что уйдёт сегодня
 ssh root@sntchat.ru 'cd /root/kor-nil-report && node report.js --kind=week --dry'   # day | week | month | quarter
 ```
+
+## Числа для панели
+
+`panel-metrika.js`: раз в час (cron `12 * * * *`, лог `panel-metrika.log`) пишет суммы Метрики в `/root/kor-nil-site/admin/metrika.json`. Файл закрыт сессией панели и пересоздаётся сам. `--dry` печатает его, ничего не записывая.

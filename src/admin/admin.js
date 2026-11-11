@@ -49,9 +49,9 @@
 
   async function svodka() {
     const ekran = Panel.novyjEkran('Сводка');
-    let s, novye;
+    let s, novye, poseshcheniya;
     try {
-      [s, novye] = await Promise.all([api('/svodka'), api('/zayavki?status=novaya&limit=5')]);
+      [s, novye, poseshcheniya] = await Promise.all([api('/svodka'), api('/zayavki?status=novaya&limit=5'), Panel.poseshcheniya()]);
     } catch (e) {
       if (ekran.aktualen()) { Panel.skazat(e.message); $('ekran').replaceChildren(); }
       return;
@@ -66,11 +66,12 @@
         pokazatel(p.v_rabote, 'В работе', '#zayavki/v_rabote'),
         pokazatel(p.otvetil, 'Ответил', '#zayavki/otvetil'),
         pokazatel(p.spam, 'Спам', '#zayavki/spam'),
-        pokazatel(s.za_7_dney, 'За 7 дней'),
-        pokazatel(s.za_30_dney, 'За 30 дней')),
+        pokazatel(s.za_7_dney, 'Заявок за 7 дней'),
+        pokazatel(s.za_30_dney, 'Заявок за 30 дней')),
       el('section', {},
         el('div', { klass: 'golova' }, el('h2', {}, 'Новые заявки'), el('a', { href: '#zayavki' }, 'Все заявки')),
-        novye.items.length ? Panel.zayavki.tablica(novye.items).mesto : el('p', { klass: 'pusto plitka' }, 'Новых заявок нет.')));
+        novye.items.length ? Panel.zayavki.tablica(novye.items).mesto : el('p', { klass: 'pusto plitka' }, 'Новых заявок нет.')),
+      poseshcheniya);
   }
 
   function otmetitPunkt(kod) {
