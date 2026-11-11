@@ -394,6 +394,48 @@ function fenceColorName(sel) {
   return { proflist: 'зелёный мох (RAL 6005)', chainlink: 'оцинковка' }[sel.type] || 'дерево';
 }
 
+// Аквариум: грунты (насыпная плотность, кг на литр; цвет на схеме), подписи и геометрия контура дна
+const AQ_MAX = 'Слишком большое число — проверьте: размеры в сантиметрах.';
+const AQ_SOILS = [
+  { id: 'gravel', label: 'Гравий, галька', hint: 'фракция 3–5 мм, самый частый; около 1,5 кг на литр', density: 1.5, color: '#a8a195' },
+  { id: 'sand', label: 'Кварцевый песок', hint: 'около 1,6 кг на литр; слой толще 3–4 см без корней растений закисает', density: 1.6, color: '#e2cc98' },
+  { id: 'nutri', label: 'Питательный грунт для растений', hint: 'около 1 кг на литр, слой 4–6 см', density: 1.0, color: '#5c4733' },
+  { id: 'none', label: 'Без грунта', hint: 'голое дно', density: 0, color: '#a8a195' },
+];
+const AQ_CORNER_ROT = 1.38; // поворот углового: угол комнаты сзади при виде по умолчанию
+const aqCm = (x) => formatNumber(x, 1) + ' см';
+function aqArea(p) { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[i], r = p[(i + 1) % p.length]; a += q[0] * r[1] - r[0] * q[1]; } return a / 2; }
+function aqCCW(p) { return aqArea(p) < 0 ? p.slice().reverse() : p; }
+// Внутренний контур: каждая сторона сдвигается внутрь на толщину стекла, соседние пересекаются.
+// null — если стекло «съело» аквариум (контур вывернулся)
+function aqInset(p, t) {
+  const n = p.length, lines = [];
+  for (let i = 0; i < n; i++) {
+    const a = p[i], b = p[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
+    lines.push({ p: [a[0] - dy / len * t, a[1] + dx / len * t], d: [dx, dy] });
+  }
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const A = lines[(i - 1 + n) % n], B = lines[i];
+    const den = A.d[0] * B.d[1] - A.d[1] * B.d[0];
+    if (Math.abs(den) < 1e-9) { out.push(B.p); continue; }
+    const s = ((B.p[0] - A.p[0]) * B.d[1] - (B.p[1] - A.p[1]) * B.d[0]) / den;
+    out.push([A.p[0] + A.d[0] * s, A.p[1] + A.d[1] * s]);
+  }
+  return aqArea(out) > 0 ? out : null;
+}
+// Сколько рыбок — грубый ориентир для начинающих
+function aqFish(water, kind) {
+  if (kind === 'cold') {
+    if (water < 40) return 'золотой рыбке тесно: ей нужно от 40–50 л';
+    const n = 1 + Math.floor(Math.max(0, water - 50) / 30);
+    return 'до ' + n + ' ' + plural(n, 'золотой рыбки', 'золотых рыбок', 'золотых рыбок') + ': 50 л на первую и по 30 л на каждую следующую';
+  }
+  if (water < 10) return 'для стайки мало: один петушок или креветки и улитки';
+  const n = Math.floor(water / 4);
+  return 'до ' + n + ' мелких рыбок размером с гуппи или неона — по правилу «литр воды на сантиметр рыбки»';
+}
+
 const CALCS = {
     /* --- Бетон / фундамент --- */
     concrete: {
@@ -3637,6 +3679,310 @@ const CALCS = {
       },
     },
 
+    /* --- Аквариум: литры по форме дна (готовые формы и свой рисунок), вода на деле, грунт, вес,
+       подмена, фильтр, нагреватель и рыбки. Размеры в сантиметрах, стекло в миллиметрах. --- */
+    aquarium: {
+      modeLabel: 'Форма аквариума',
+      modes: [
+        { id: 'rect', label: 'Прямоугольный', fields: [
+          { id: 'len', label: 'Длина', unit: 'см', value: '60', max: 500, maxText: AQ_MAX },
+          { id: 'wid', label: 'Ширина (от переднего стекла до заднего)', unit: 'см', value: '30', max: 500, maxText: AQ_MAX },
+          { id: 'hei', label: 'Высота', unit: 'см', value: '35', max: 300, maxText: AQ_MAX },
+        ] },
+        { id: 'bow', label: 'Панорамный (выпуклое переднее стекло)', fields: [
+          { id: 'len', label: 'Длина', unit: 'см', value: '60', max: 500, maxText: AQ_MAX },
+          { id: 'wid', label: 'Глубина у боковых стёкол', unit: 'см', value: '30', max: 500, maxText: AQ_MAX },
+          { id: 'mid', label: 'Глубина в середине (самое широкое место)', unit: 'см', value: '38', max: 500, maxText: AQ_MAX },
+          { id: 'hei', label: 'Высота', unit: 'см', value: '35', max: 300, maxText: AQ_MAX },
+        ] },
+        { id: 'regular', label: 'Многогранный (6, 8 граней)', fields: [
+          { id: 'sides', label: 'Сколько граней', unit: 'шт', value: '8', int: true, max: 24, maxText: 'Больше 24 граней — это уже почти цилиндр: выберите форму «Цилиндр».' },
+          { id: 'face', label: 'Ширина одной грани', unit: 'см', value: '12', group: 'mFace', max: 300, maxText: AQ_MAX },
+          { id: 'across', label: 'От грани до противоположной грани', unit: 'см', group: 'mAcross', max: 500, maxText: AQ_MAX },
+          { id: 'acrossC', label: 'От угла до противоположного угла', unit: 'см', group: 'mCorner', max: 500, maxText: AQ_MAX },
+          { id: 'hei', label: 'Высота', unit: 'см', value: '45', max: 300, maxText: AQ_MAX },
+        ] },
+        { id: 'corner5', label: 'Угловой пятигранный', fields: [
+          { id: 'backL', label: 'Задняя стенка слева (вдоль стены)', unit: 'см', value: '50', max: 500, maxText: AQ_MAX },
+          { id: 'backR', label: 'Задняя стенка справа (вдоль стены)', unit: 'см', value: '50', max: 500, maxText: AQ_MAX },
+          { id: 'sideL', label: 'Боковое стекло слева', unit: 'см', value: '20', max: 500, maxText: AQ_MAX },
+          { id: 'sideR', label: 'Боковое стекло справа', unit: 'см', value: '20', max: 500, maxText: AQ_MAX },
+          { id: 'hei', label: 'Высота', unit: 'см', value: '50', max: 300, maxText: AQ_MAX },
+        ] },
+        { id: 'corner3', label: 'Угловой треугольный', fields: [
+          { id: 'backL', label: 'Задняя стенка слева (вдоль стены)', unit: 'см', value: '50', max: 500, maxText: AQ_MAX },
+          { id: 'backR', label: 'Задняя стенка справа (вдоль стены)', unit: 'см', value: '50', max: 500, maxText: AQ_MAX },
+          { id: 'hei', label: 'Высота', unit: 'см', value: '50', max: 300, maxText: AQ_MAX },
+        ] },
+        { id: 'quarter', label: 'Угловой с гнутым передним стеклом', fields: [
+          { id: 'rad', label: 'Задняя стенка (вдоль стены)', unit: 'см', value: '50', max: 500, maxText: AQ_MAX },
+          { id: 'hei', label: 'Высота', unit: 'см', value: '50', max: 300, maxText: AQ_MAX },
+        ] },
+        { id: 'cyl', label: 'Круглый (цилиндр)', fields: [
+          { id: 'diam', label: 'Диаметр', unit: 'см', value: '40', max: 500, maxText: AQ_MAX },
+          { id: 'hei', label: 'Высота', unit: 'см', value: '60', max: 300, maxText: AQ_MAX },
+        ] },
+        { id: 'ball', label: 'Шар', fields: [
+          { id: 'diam', label: 'Диаметр шара (самое широкое место)', unit: 'см', value: '25', max: 300, maxText: AQ_MAX },
+          { id: 'level', label: 'Уровень воды от дна', unit: 'см, необязательно', max: 300, maxText: AQ_MAX },
+        ] },
+        { id: 'custom', label: 'Свой: нарисовать дно', plan: { simple: true, presetsKey: 'AQUA_PRESETS', unit: 'см', grid: 10, margin: 4, title: 'Дно аквариума', unitInLabels: false, digits: 1,
+          hint: 'Тяните углы, чтобы менять форму дна. Нажмите на стекло, чтобы ввести его длину. «+ угол» добавляет угол на выбранном стекле. Клетка — 10 см, длины — в сантиметрах по наружному краю.',
+          caption: (g, f) => 'Дно ' + f(g.outerArea) + ' см² · периметр ' + f(g.perimeter, 1) + ' см · стёкол ' + g.edges.length }, fields: [
+          { id: 'hei', label: 'Высота', unit: 'см', value: '40', max: 300, maxText: AQ_MAX },
+        ] },
+      ],
+      common: [
+        { id: 'glass', label: 'Толщина стекла', unit: 'мм', value: '5', group: 'outer', max: 40, maxText: 'Больше 40 мм — проверьте: толщина в миллиметрах, обычно 4–12.' },
+        { id: 'gap', label: 'Недолив до верхнего края', unit: 'см', value: '2', group: 'gap', max: 100, maxText: AQ_MAX },
+        { id: 'soilH', label: 'Слой грунта', unit: 'см', value: '5', group: 'soil', max: 100, maxText: AQ_MAX },
+        { id: 'decor', label: 'Камни и коряги', unit: '% объёма, необязательно', max: 80, maxText: 'Больше 80 % — тогда это уже не аквариум, а горка камней.' },
+      ],
+      selects: [
+        { id: 'measure', label: 'Что измерили у многогранного', default: 'face', group: 'regular', choices: [
+          { id: 'face', label: 'Одну грань', hint: 'ширину одного стекла снаружи — проще всего' },
+          { id: 'across', label: 'От грани до грани', hint: 'поперёк аквариума между параллельными стёклами; у нечётного числа граней — от грани до угла' },
+          { id: 'corner', label: 'От угла до угла', hint: 'самая большая ширина, через центр' },
+        ] },
+        { id: 'where', label: 'Размеры сняты', default: 'out', choices: [
+          { id: 'out', label: 'Снаружи', hint: 'рулеткой по стеклу — так проще; толщину стекла калькулятор вычтет сам' },
+          { id: 'in', label: 'Изнутри', hint: 'внутренние размеры — стекло уже не мешает' },
+        ] },
+        { id: 'soil', label: 'Грунт', default: 'gravel', choices: AQ_SOILS.map((s) => ({ id: s.id, label: s.label, hint: s.hint })) },
+        { id: 'fish', label: 'Какие рыбки', default: 'trop', choices: [
+          { id: 'trop', label: 'Тропические', hint: 'гуппи, неоны, петушки, сомики, моллинезии — вода 24–26 °C' },
+          { id: 'cold', label: 'Холодноводные', hint: 'золотые рыбки, вуалехвосты — 18–22 °C, нагреватель обычно не нужен' },
+        ] },
+      ],
+      prices: [{ id: 'soilKg', label: 'Грунт', unit: '₽ за кг', group: 'soil' }],
+      noApp: true,
+      noZakaz: true,
+      groups(v, mode, extras, sel) {
+        const r = mode === 'regular';
+        return { regular: r, mFace: r && sel.measure !== 'across' && sel.measure !== 'corner', mAcross: r && sel.measure === 'across', mCorner: r && sel.measure === 'corner',
+          outer: sel.where !== 'in', gap: mode !== 'ball', soil: sel.soil !== 'none' };
+      },
+      // Наружный контур дна (см, против часовой; передняя сторона — у y = 0), его точная площадь и размеры для схемы
+      outline(v, mode, extras, sel) {
+        const need = (ids) => ids.every((id) => pos(v[id]));
+        const arc = (cx, cy, r, a0, a1, n) => { const p = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; p.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return p; };
+        if (mode === 'rect') {
+          if (!need(['len', 'wid'])) return null;
+          const L = v.len, W = v.wid;
+          return { pts: [[0, 0], [L, 0], [L, W], [0, W]], area: L * W,
+            dims: [{ from: [0, 0, 0], to: [L, 0, 0], label: 'длина ' + aqCm(L) }, { from: [L, 0, 0], to: [L, W, 0], label: 'ширина ' + aqCm(W) }] };
+        }
+        if (mode === 'bow') {
+          if (!need(['len', 'wid', 'mid'])) return null;
+          const L = v.len, W = v.wid, s = v.mid - v.wid;
+          if (!(s > 0)) return { error: 'Глубина в середине должна быть больше, чем у боковых стёкол: на столько и выгнуто переднее стекло.', field: 'mid' };
+          // Переднее стекло — дуга окружности: хорда = длина, стрела = mid − wid
+          const R = (L * L / 4 + s * s) / (2 * s), th = 2 * Math.asin(Math.min(1, L / (2 * R)));
+          const seg = R * R / 2 * (th - Math.sin(th));
+          // центр дуги — на оси, вершина дуги у зрителя (y = 0), концы — у боковых стёкол (y = s)
+          const front = arc(L / 2, R, R, -Math.PI / 2 - th / 2, -Math.PI / 2 + th / 2, 32);
+          return { pts: front.concat([[L, W + s], [0, W + s]]), area: L * W + seg,
+            dims: [{ from: [0, W + s, 0], to: [L, W + s, 0], label: 'длина ' + aqCm(L), offset: -22 }, { from: [L, s, 0], to: [L, W + s, 0], label: 'у боков ' + aqCm(W) },
+              { from: [L / 2, 0, 0], to: [L / 2, W + s, 0], label: 'в середине ' + aqCm(v.mid), offset: 0 }] };
+        }
+        if (mode === 'regular') {
+          const n = v.sides;
+          if (!(n >= 3)) return n == null ? null : { error: 'Граней хотя бы три.', field: 'sides' };
+          const t = Math.tan(Math.PI / n), sn = Math.sin(Math.PI / n);
+          // через грань a: до грани r = a/(2 tg), до угла R = a/(2 sin)
+          let a = null;
+          const m = sel.measure === 'across' || sel.measure === 'corner' ? sel.measure : 'face';
+          if (m === 'face') { if (!pos(v.face)) return null; a = v.face; }
+          else if (m === 'across') { if (!pos(v.across)) return null; a = n % 2 ? v.across / (1 / (2 * t) + 1 / (2 * sn)) : v.across * t; }
+          else { if (!pos(v.acrossC)) return null; a = n % 2 ? v.acrossC / (1 / (2 * t) + 1 / (2 * sn)) : v.acrossC * sn; }
+          const R = a / (2 * sn), r = a / (2 * t);
+          // Нижняя грань параллельна краю экрана: с неё начинаем обход
+          const pts = []; for (let i = 0; i < n; i++) { const ang = -Math.PI / 2 - Math.PI / n + i * 2 * Math.PI / n; pts.push([R * Math.cos(ang), R * Math.sin(ang) + r]); }
+          const across = n % 2 ? r + R : 2 * r;
+          return { pts, area: n * a * a / (4 * t), face: a, across, acrossC: n % 2 ? r + R : 2 * R,
+            dims: [{ from: [pts[0][0], pts[0][1], 0], to: [pts[1][0], pts[1][1], 0], label: 'грань ' + aqCm(a) }].concat(m === 'face' ? [] : [
+              { from: [-R - 2, 0, 0], to: [-R - 2, across, 0], label: (n % 2 ? 'грань — угол ' : 'грань — грань ') + aqCm(across) }]) };
+        }
+        if (mode === 'corner5' || mode === 'corner3') {
+          if (!need(['backL', 'backR'])) return null;
+          // Угол комнаты — сзади, в точке (0, B); стенки идут вдоль стен вправо и вперёд
+          const A = v.backL, B = v.backR;
+          if (mode === 'corner3') {
+            return { pts: [[0, 0], [B, A], [0, A]], area: A * B / 2, front: Math.hypot(A, B),
+              dims: [{ from: [0, 0, 0], to: [0, A, 0], label: 'слева ' + aqCm(A) }, { from: [0, A, 0], to: [B, A, 0], label: 'справа ' + aqCm(B) }] };
+          }
+          if (!need(['sideL', 'sideR'])) return null;
+          const sL = v.sideL, sR = v.sideR;
+          if (sL >= B) return { error: 'Боковое стекло слева длиннее задней стенки справа — так угловой не сложится. Проверьте замеры или нарисуйте дно сами.', field: 'sideL' };
+          if (sR >= A) return { error: 'Боковое стекло справа длиннее задней стенки слева — так угловой не сложится. Проверьте замеры или нарисуйте дно сами.', field: 'sideR' };
+          // Левая задняя стенка — от (0,0) к (0,A); правая — от (0,A) к (B,A); боковые стёкла под прямым углом к ним
+          const pts = [[sL, 0], [B, A - sR], [B, A], [0, A], [0, 0]];
+          return { pts, area: A * B - (B - sL) * (A - sR) / 2, front: Math.hypot(B - sL, A - sR),
+            dims: [{ from: [0, 0, 0], to: [0, A, 0], label: 'слева ' + aqCm(A) }, { from: [0, A, 0], to: [B, A, 0], label: 'справа ' + aqCm(B) },
+              { from: [0, 0, 0], to: [sL, 0, 0], label: 'бок слева ' + aqCm(sL) }, { from: [B, A - sR, 0], to: [B, A, 0], label: 'бок справа ' + aqCm(sR) }] };
+        }
+        if (mode === 'quarter') {
+          if (!pos(v.rad)) return null;
+          const R = v.rad;
+          return { pts: [[0, R]].concat(arc(0, R, R, -Math.PI / 2, 0, 32)), area: Math.PI * R * R / 4,
+            dims: [{ from: [0, 0, 0], to: [0, R, 0], label: 'слева ' + aqCm(R) }, { from: [0, R, 0], to: [R, R, 0], label: 'справа ' + aqCm(R) }] };
+        }
+        if (mode === 'cyl' || mode === 'ball') {
+          if (!pos(v.diam)) return null;
+          const R = v.diam / 2;
+          return { pts: arc(0, R, R, -Math.PI / 2, 1.5 * Math.PI, 48).slice(0, -1), area: Math.PI * R * R, round: R,
+            dims: [{ from: [-R, R, 0], to: [R, R, 0], label: '⌀ ' + aqCm(v.diam) }] };
+        }
+        if (mode === 'custom') {
+          const P = window.CalcPlan; if (!P || !extras || !extras.plan) return null;
+          const g = P.geometry(extras.plan, { w: 1, depth: 1, above: 0 });
+          if (!g.valid) return { error: 'Контур дна пересекает сам себя — поправьте углы на рисунке.' };
+          const pts = g.verts.map((p) => [p[0], p[1]]);
+          const ys = pts.map((p) => p[1]), y0 = Math.min(...ys);
+          const pp = pts.map((p) => [p[0], p[1] - y0]);
+          return { pts: pp, area: g.outerArea, dims: pp.length <= 8 ? pp.map((a, i) => { const b = pp[(i + 1) % pp.length]; return { from: [a[0], a[1], 0], to: [b[0], b[1], 0], label: aqCm(Math.hypot(b[0] - a[0], b[1] - a[1])) }; }) : [] };
+        }
+        return null;
+      },
+      // Всё, что нужно и расчёту, и схеме: внутренний контур, уровни, литры
+      geo(v, mode, extras, sel) {
+        const o = this.outline(v, mode, extras, sel);
+        if (!o || o.error) return o;
+        const out = sel.where !== 'in';
+        const t = out ? (v.glass == null ? 0 : v.glass) / 10 : 0; // мм → см
+        const pts = aqCCW(o.pts);
+        const shoe = Math.abs(aqArea(pts));
+        if (mode === 'ball') {
+          const R = o.round, Ri = R - t;
+          if (!(Ri > 0)) return { error: 'Стекло толще половины шара — толщина в миллиметрах: 3, а не 30.', field: 'glass' };
+          const lvl = pos(v.level) ? v.level - t : 1.5 * Ri; // по умолчанию — три четверти высоты
+          if (pos(v.level) && v.level > 2 * R) return { error: 'Уровень воды выше самого шара — проверьте замер от дна.', field: 'level' };
+          if (!(lvl > 0)) return { error: 'Уровень воды ниже дна — проверьте замер.', field: 'level' };
+          const cap = (h) => Math.PI * h * h * (3 * Ri - h) / 3; // сегмент шара высотой h, см³
+          const sH = sel.soil === 'none' ? 0 : (v.soilH || 0);
+          if (sH >= lvl) return { error: 'Грунт выше уровня воды — уменьшите слой.', field: 'soilH' };
+          return { o, pts, t, R, Ri, ball: true, H: 2 * R, outerL: 4 / 3 * Math.PI * R * R * R / 1000, innerL: 4 / 3 * Math.PI * Ri * Ri * Ri / 1000,
+            grossL: cap(lvl) / 1000, soilL: cap(sH) / 1000, lvl, sH, gapL: (4 / 3 * Math.PI * Ri * Ri * Ri - cap(lvl)) / 1000,
+            glassKg: 4 * Math.PI * R * R * 0.85 * t * 2.5 / 1000, bottomA: Math.PI * (Ri * Ri - (Ri - Math.min(sH, Ri)) ** 2) };
+        }
+        const H = v.hei;
+        if (!pos(H)) return null;
+        const inner = t > 0 ? aqInset(pts, t) : pts;
+        const innerShoe = inner ? Math.abs(aqArea(inner)) : 0;
+        if (!inner || !(innerShoe > 0) || (o.round && o.round <= t)) return { error: 'Стекло толще половины аквариума — толщина в миллиметрах: 5, а не 50.', field: 'glass' };
+        // Дуги и круг — многоугольником; поправка возвращает точную площадь
+        const innerA = o.round ? Math.PI * (o.round - t) ** 2 : innerShoe * (o.area / shoe);
+        const hIn = H - t; // дно — тоже стекло
+        const gap = v.gap || 0;
+        if (gap >= hIn) return { error: 'Недолив больше высоты аквариума — проверьте: недолив в сантиметрах, обычно 2–3.', field: 'gap' };
+        const lvl = hIn - gap;
+        const sH = sel.soil === 'none' ? 0 : (v.soilH || 0);
+        if (sH >= lvl) return { error: 'Грунт выше уровня воды — уменьшите слой.', field: 'soilH' };
+        const perim = pts.reduce((s, p, i) => { const q = pts[(i + 1) % pts.length]; return s + Math.hypot(q[0] - p[0], q[1] - p[1]); }, 0);
+        return { o, pts, inner, t, H, hIn, lvl, sH, innerA,
+          outerL: o.area * H / 1000, innerL: innerA * hIn / 1000, grossL: innerA * lvl / 1000, gapL: innerA * gap / 1000, soilL: innerA * sH / 1000,
+          glassKg: (o.area + perim * H) * (t || 0.5) * 2.5 / 1000, bottomA: innerA };
+      },
+      draw(v, mode, box, view, extras) {
+        const V = window.CalcViz; if (!V) return false;
+        const sel = this._sel || {};
+        const g = this.geo(v, mode, extras, sel); if (!g || g.error) return false;
+        const k = 0.01; // см → м: схема общая со стройкой, там всё в метрах
+        // На объёмной схеме к зрителю обращена дальняя по y сторона — отражаем, чтобы переднее стекло было спереди
+        const yMax = Math.max(...g.pts.map((p) => p[1]));
+        let M = (p) => [p[0] * k, (yMax - p[1]) * k];
+        // Угловой: угол комнаты (0, A) уводим назад, биссектрисой к зрителю — тогда спереди переднее стекло
+        if (mode === 'corner5' || mode === 'corner3' || mode === 'quarter') {
+          const A = mode === 'quarter' ? v.rad : v.backL, rot = AQ_CORNER_ROT;
+          const c = Math.cos(rot), sn = Math.sin(rot);
+          M = (p) => { const x = p[0], y = A - p[1]; return [(x * c - y * sn) * k, (x * sn + y * c) * k]; };
+        }
+        const soil = AQ_SOILS.find((s) => s.id === sel.soil) || AQ_SOILS[0];
+        const WATER = '#4a9fd8';
+        const prisms = [], lines = [];
+        let dims = [];
+        if (g.ball) {
+          // Шар — стопкой тонких дисков: снизу грунт, выше вода; стекло — сетка из параллелей и меридианов
+          const R = g.R, Ri = g.Ri, n = 18, dz = 2 * Ri / n, circ = (r) => { const p = []; for (let i = 0; i < 32; i++) { const a = i * Math.PI / 16; p.push([r * Math.cos(a) * k, r * Math.sin(a) * k]); } return p; };
+          const wTop = g.t + g.lvl;
+          for (let i = 0; i < n; i++) {
+            const z0 = g.t + i * dz; if (z0 >= wTop) break;
+            const z1 = Math.min(z0 + dz, wTop), mid = (z0 + z1) / 2, r = Math.sqrt(Math.max(0, Ri * Ri - (mid - R) ** 2));
+            prisms.push({ poly: circ(r), z: z0 * k, dz: (z1 - z0) * k, color: mid < g.t + g.sH ? soil.color : WATER });
+          }
+          for (let j = 1; j < 6; j++) { const z = 2 * R * j / 6, r = Math.sqrt(Math.max(0, R * R - (z - R) ** 2)); const c = circ(r).map((p) => [p[0], p[1], z * k]); lines.push({ pts: c.concat([c[0]]), cls: 'viz-glass' }); }
+          for (let j = 0; j < 8; j++) { const a = j * Math.PI / 8, c = []; for (let i = 0; i <= 32; i++) { const b = i * Math.PI / 16; c.push([R * Math.sin(b) * Math.cos(a) * k, R * Math.sin(b) * Math.sin(a) * k, (R - R * Math.cos(b)) * k]); } lines.push({ pts: c, cls: 'viz-glass viz-glass--thin' }); }
+          dims = [{ from: [-R * k, 0, R * k], to: [R * k, 0, R * k], label: '⌀ ' + aqCm(v.diam), offset: 0 }];
+          if (pos(v.level)) dims.push({ from: [R * k, 0, 0], to: [R * k, 0, v.level * k], label: 'уровень ' + aqCm(v.level), offset: 26 });
+        } else {
+          const P = g.pts.map(M), I = g.inner.map(M);
+          // стекло дна, грунт, вода
+          prisms.push({ poly: P, z: 0, dz: Math.max(g.t, 0.3) * k, color: '#cfe4ee' });
+          if (g.sH > 0) prisms.push({ poly: I, z: g.t * k, dz: g.sH * k, color: soil.color });
+          prisms.push({ poly: I, z: (g.t + g.sH) * k, dz: (g.lvl - g.sH) * k, color: WATER });
+          // рёбра стекла: верхний край и стойки на углах (у круглого — четыре)
+          const top = P.map((p) => [p[0], p[1], g.H * k]);
+          lines.push({ pts: top.concat([top[0]]), cls: 'viz-glass' });
+          const step = P.length > 12 ? Math.round(P.length / 8) : 1;
+          for (let i = 0; i < P.length; i += step) lines.push({ pts: [[P[i][0], P[i][1], 0], [P[i][0], P[i][1], g.H * k]], cls: 'viz-glass', whole: true });
+          // у углового задние стенки подписываем по верхнему краю: внизу их закрывает вода
+          const zOf = (d) => (/^(слева|справа)/.test(d.label) && (mode === 'corner5' || mode === 'corner3' || mode === 'quarter') ? g.H * k : 0);
+          dims = g.o.dims.map((d) => ({ from: M(d.from).concat([zOf(d)]), to: M(d.to).concat([zOf(d)]), label: d.label, offset: d.offset == null ? -22 : -d.offset }));
+          const p0 = P.reduce((b, p) => (p[0] + p[1] < b[0] + b[1] ? p : b), P[0]);
+          dims.push({ from: [p0[0], p0[1], 0], to: [p0[0], p0[1], g.H * k], label: 'высота ' + aqCm(v.hei), offset: -26 });
+        }
+        const HL = { len: 'длина', wid: mode === 'bow' ? 'у боков' : 'ширина', mid: 'в середине', face: 'грань', across: 'грань —', acrossC: 'грань —', hei: 'высота',
+          backL: 'слева', backR: 'справа', sideL: 'бок слева', sideR: 'бок справа', rad: 'слева', diam: '⌀', level: 'уровень' };
+        V.iso(box, prisms, hlDims(dims, view.focus, HL), { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom, mini: view.mini, lines,
+          caption: 'Воды ≈ ' + fmt(this.water(g, v), 1) + ' л. Потяните, чтобы повернуть.' });
+        return true;
+      },
+      water(g, v) { return Math.max(0, g.grossL - g.soilL * 0.6 - g.grossL * (v.decor || 0) / 100); },
+      compute(v, mode, sel, extras) {
+        const g = this.geo(v, mode, extras, sel);
+        if (!g || g.error) return g;
+        const water = this.water(g, v);
+        const decorL = g.grossL * (v.decor || 0) / 100;
+        const soil = AQ_SOILS.find((s) => s.id === sel.soil) || AQ_SOILS[0];
+        const soilKg = g.soilL * soil.density;
+        const out = sel.where !== 'in';
+        const L = (x) => fmt(x, x < 10 ? 1 : 0) + ' л';
+        const rows = [];
+        if (mode === 'corner5' || mode === 'corner3') rows.push(['Переднее стекло по расчёту', aqCm(g.o.front) + ' — сверьте рулеткой']);
+        if (mode === 'regular') rows.push(['Многогранник', g.o.pts.length + ' граней по ' + aqCm(g.o.face) + ', от грани до ' + (g.o.pts.length % 2 ? 'угла ' : 'грани ') + aqCm(g.o.across)]);
+        if (g.ball) rows.push(['Шар целиком', L(g.outerL) + (out ? ', внутри ' + L(g.innerL) : '')]);
+        else rows.push([out ? 'Объём по наружным размерам' : 'Объём до краёв', L(g.outerL) + (out ? ' — обычно его пишут на коробке' : '')]);
+        if (out && !g.ball) rows.push(['Внутри, без стекла', L(g.innerL)]);
+        const minus = [];
+        if (g.gapL > 0.05) minus.push((g.ball ? 'над водой ' : 'недолив ') + L(g.gapL));
+        if (g.soilL > 0.05) minus.push('грунт ' + L(g.soilL * 0.6));
+        if (decorL > 0.05) minus.push('камни и коряги ' + L(decorL));
+        if (minus.length) rows.push(['Вычли', minus.join(', ')]);
+        if (g.soilL > 0) rows.push(['Грунт слоем ' + aqCm(g.sH), fmt(soilKg, soilKg < 10 ? 1 : 0) + ' кг (' + L(g.soilL) + ')']);
+        const totalKg = water + soilKg + g.glassKg;
+        const wParts = [['вода', water], ['грунт', soilKg], ['стекло', g.glassKg]].filter(([, x]) => x >= 0.5);
+        rows.push(['Вес с водой', fmtInt(totalKg) + ' кг (' + wParts.map(([nm, x]) => nm + ' ' + fmtInt(x)).join(', ') + ') — столько должна держать тумба']);
+        rows.push(['Подмена воды раз в неделю', '20–30 %: ' + fmt(water * 0.2, 1) + '–' + fmt(water * 0.3, 1) + ' л']);
+        const turns = water < 100 ? [4, 5] : [3, 4];
+        rows.push(['Фильтр', 'от ' + fmtInt(Math.ceil(water * turns[0] / 10) * 10) + ' л/ч — прогоняет всю воду ' + turns[0] + '–' + turns[1] + ' раз в час']);
+        if (sel.fish === 'cold') rows.push(['Нагреватель', 'не нужен: золотым рыбкам хватает комнатной воды 18–22 °C']);
+        else {
+          const need = water * (water <= 60 ? 1.5 : 1);
+          const w = [10, 25, 50, 75, 100, 150, 200, 250, 300].find((x) => x >= need * 0.95) || Math.ceil(need / 50) * 50;
+          rows.push(['Нагреватель', fmtInt(w) + ' Вт с терморегулятором — держит 24–26 °C в комнате 20–22 °C']);
+        }
+        rows.push(['Рыбки (ориентир)', aqFish(water, sel.fish)]);
+        return {
+          main: { label: 'Воды войдёт', value: '≈ ' + L(water) },
+          rows,
+          note: (mode === 'corner5' ? 'Считаем, что боковые стёкла стоят под прямым углом к стене. Если переднее стекло на деле другой длины — нарисуйте дно в форме «Свой». ' : '')
+            + (mode === 'ball' && !pos(v.level) ? 'Уровень воды не введён — принят на три четверти высоты шара. ' : '')
+            + 'Литры на коробке считают по наружным размерам, а воды входит на 15–30 % меньше: стекло, грунт и недолив. Грунт вытесняет около 60 % своего объёма — остальное вода в промежутках. Рыбки, фильтр и нагреватель — ориентир для начинающих.',
+          cost: g.soilL > 0 ? [{ label: 'Грунт', amount: Math.ceil(soilKg * 10) / 10, unit: 'кг', priceId: 'soilKg' }] : [],
+        };
+      },
+    },
+
     /* --- Удобрения --- */
     fertilizer: {
       modeLabel: 'Что считаем',
@@ -4806,6 +5152,31 @@ const CALCS = {
     },
     helpPics: ['a', 'b', 'c', 'ta', 'tb', 'tc', 'qa', 'qb', 'qc', 'qd', 'qdiag'],
   });
+  Object.assign(CALCS.aquarium, {
+    help: {
+      len: 'Длина аквариума — по переднему стеклу, слева направо.',
+      wid: 'Ширина — от переднего стекла до заднего, сбоку.',
+      'bow:wid': 'Глубина у боковых стёкол — там, где выгнутое переднее стекло встречается с боковым.',
+      mid: 'Глубина в самом широком месте — посередине, от выгнутого переднего стекла до заднего.',
+      hei: 'Высота от низа до верхнего края стекла, без крышки.',
+      sides: 'Сколько стёкол по кругу: у шестигранного 6, у восьмигранного 8.',
+      face: 'Ширина одного стекла снаружи — от угла до угла.',
+      across: 'Поперёк аквариума между двумя параллельными стёклами. У нечётного числа граней — от стекла до противоположного угла.',
+      acrossC: 'Самая большая ширина: от угла до противоположного угла через центр.',
+      backL: 'Стекло, которое стоит вдоль левой стены комнаты.',
+      backR: 'Стекло, которое стоит вдоль правой стены комнаты.',
+      sideL: 'Короткое боковое стекло слева — между задней стенкой и передним стеклом.',
+      sideR: 'Короткое боковое стекло справа — между задней стенкой и передним стеклом.',
+      rad: 'Длина стекла вдоль стены. У такого аквариума две задние стенки равны, переднее стекло — дугой.',
+      diam: 'Ширина через центр в самом широком месте.',
+      level: 'Высота воды от дна. Если не ввести — примем три четверти высоты шара.',
+      glass: 'Толщина стекла. До 50 л обычно 4–5 мм, 100–200 л — 6–8 мм, больше — 10–12 мм. Видна на торце стекла.',
+      gap: 'Сколько не доливают до края. Обычно 2–3 см — чтобы вода не плескалась и было место для крышки.',
+      soilH: 'Толщина слоя грунта. Без живых растений хватит 3–4 см, с растениями — 5–7 см.',
+      decor: 'Крупные камни и коряги вытесняют воду. Обычно это 5–10 % объёма; мелкий декор можно не считать.',
+    },
+    helpPics: ['len', 'wid', 'mid', 'hei', 'face', 'across', 'acrossC', 'backL', 'backR', 'sideL', 'sideR', 'rad', 'diam', 'level'],
+  });
   Object.assign(CALCS.fertilizer, {
     help: {
       area: 'Площадь грядки или участка. 1 сотка — 100 м².',
@@ -5042,7 +5413,7 @@ const CALCS = {
       if (!state.extras.plan) state.extras.plan = { verts: presets.rect.make(), edges: [], inner: [], preset: 'rect' };
       planEditor = window.CalcPlan.editor(planBox, state.extras.plan, () => ({
         w: parseNum(state.values.pW) || 40, depth: parseNum(state.values.pDepth) || 60, above: parseNum(state.values.pAbove) || 0,
-      }), () => render(), { simple: !!opts.simple, presets });
+      }), () => render(), Object.assign({}, opts, { simple: !!opts.simple, presets }));
     }
 
     function renderFields() {
@@ -5212,8 +5583,8 @@ const CALCS = {
       }
       result.appendChild(actions);
       syncHash();
-      // --- Приложение: здесь, когда польза уже получена ---
-      result.appendChild(h('div', { class: 'app-cta app-cta--result' }, [
+      // --- Приложение: здесь, когда польза уже получена (noApp — калькулятора ещё нет в ЧатЯдре) ---
+      if (!def.noApp) result.appendChild(h('div', { class: 'app-cta app-cta--result' }, [
         h('img', { src: '/assets/images/chatyadro-icon-128.webp', width: '64', height: '64', alt: 'ЧатЯдро', class: 'app-cta-icon', loading: 'lazy' }),
         h('div', { class: 'app-cta-body' }, [
           h('p', { class: 'app-cta-title', text: 'Этот расчёт — в приложении ЧатЯдро' }),
@@ -5227,7 +5598,8 @@ const CALCS = {
         try { sessionStorage.setItem('kn_zayavka', JSON.stringify({ ssylka: shareUrl(), chto: document.title.split(' — ')[0] })); } catch (e) { /* без хранилища — просто откроется форма */ }
         if (window.ymGoal) window.ymGoal('calc_zakaz', { calc: key || 'unknown' });
       });
-      result.appendChild(h('div', { class: 'app-cta app-cta--result calc-zakaz' }, [
+      // noZakaz — калькулятор не про стройку (аквариум): заказ проекта дома тут не к месту
+      if (!def.noZakaz) result.appendChild(h('div', { class: 'app-cta app-cta--result calc-zakaz' }, [
         h('div', { class: 'app-cta-body' }, [
           h('p', { class: 'app-cta-title', text: 'Нужно под ключ?' }),
           h('p', { class: 'app-cta-text', text: 'Сделаю проект дома с электрикой и водой или подробный расчёт по вашим размерам. Этот расчёт приложится к заявке сам.' }),

@@ -120,6 +120,16 @@
     trap: { label: 'Трапеция', make: () => [[0, 0], [24, 0], [20, 30], [4, 30]] },
     pent: { label: 'Пятиугольник', make: () => [[0, 0], [22, 0], [26, 18], [11, 32], [-4, 18]] },
   };
+  // Заготовки дна аквариума (см): все формы из калькулятора — чтобы начать с похожей и поправить
+  function bowFront(L, W, s) { const R = (L * L / 4 + s * s) / (2 * s), th = 2 * Math.asin(L / (2 * R)), p = []; for (let i = 0; i <= 8; i++) { const a = -Math.PI / 2 - th / 2 + th * i / 8; p.push([snap(L / 2 + R * Math.cos(a)), snap(R + R * Math.sin(a))]); } return p.concat([[L, W + s], [0, W + s]]); }
+  const AQUA_PRESETS = {
+    rect: { label: 'Прямоугольный 60×30', make: () => [[0, 0], [60, 0], [60, 30], [0, 30]] },
+    bow: { label: 'Панорамный', make: () => bowFront(60, 30, 8) },
+    hex: { label: 'Шестигранный', make: () => regular(6, 20) },
+    oct: { label: 'Восьмигранный', make: () => regular(8, 15.7) },
+    corner5: { label: 'Угловой пятигранный', make: () => [[20, 0], [50, 30], [50, 50], [0, 50], [0, 0]] },
+    corner3: { label: 'Угловой треугольный', make: () => [[0, 0], [50, 50], [0, 50]] },
+  };
   function regular(n, r) { const p = []; for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / n; p.push([snap(r + r * Math.cos(a)), snap(r + r * Math.sin(a))]); } return p; }
 
   /* ---------- Редактор ---------- */
@@ -128,6 +138,8 @@
     opts = opts || {};
     const simple = !!opts.simple; // только контур: без ширины/глубины и внутренних лент (комната, фасад)
     const presets = opts.presets || PRESETS;
+    // Единицы и сетка: по умолчанию метры и сетка 1 м; аквариум — сантиметры, сетка 10 см
+    const U = opts.unit || 'м', GRID = opts.grid || 1, MARGIN = opts.margin == null ? 1 : opts.margin;
     const VW = 640, VH = simple ? 380 : 420, PAD = 36;
     let sel = null; // { type: 'edge', i } | { type: 'vertex', i }
     let drag = null; let tf = null;
@@ -140,9 +152,9 @@
       b.addEventListener('click', () => { plan.verts = presets[k].make(plan.diameter); plan.edges = []; plan.inner = []; plan.preset = k; sel = null; redraw(); onChange(); });
       bar.appendChild(b);
     });
-    const svg = el('svg', { viewBox: `0 0 ${VW} ${VH}`, class: 'viz-svg plan-svg', role: 'img', 'aria-label': 'План фундамента' });
+    const svg = el('svg', { viewBox: `0 0 ${VW} ${VH}`, class: 'viz-svg plan-svg', role: 'img', 'aria-label': opts.title || 'План фундамента' });
     const panel = document.createElement('div'); panel.className = 'plan-panel';
-    const hint = document.createElement('p'); hint.className = 'calc-note'; hint.textContent = simple
+    const hint = document.createElement('p'); hint.className = 'calc-note'; hint.textContent = opts.hint ? opts.hint : simple
       ? 'Тяните углы, чтобы менять форму. Нажмите на сторону, чтобы задать её длину. «+ угол» добавляет угол на выбранной стороне. Номера сторон — это номера стен ниже.'
       : 'Тяните углы, чтобы менять форму. Нажмите на сторону, чтобы задать её длину, ширину и глубину. «+ угол» добавляет угол на выбранной стороне.';
     wrap.appendChild(bar); wrap.appendChild(svg); wrap.appendChild(panel); wrap.appendChild(hint);
@@ -151,7 +163,7 @@
     function fit() {
       const pts = plan.verts.concat((plan.inner || []).flatMap((t) => [t.a, t.b]));
       const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-      const minX = Math.min(...xs) - 1, maxX = Math.max(...xs) + 1, minY = Math.min(...ys) - 1, maxY = Math.max(...ys) + 1;
+      const minX = Math.min(...xs) - MARGIN, maxX = Math.max(...xs) + MARGIN, minY = Math.min(...ys) - MARGIN, maxY = Math.max(...ys) + MARGIN;
       const s = Math.min((VW - PAD * 2) / (maxX - minX), (VH - PAD * 2) / (maxY - minY));
       tf = { s, ox: PAD + ((VW - PAD * 2) - (maxX - minX) * s) / 2 - minX * s, oy: VH - PAD - ((VH - PAD * 2) - (maxY - minY) * s) / 2 + minY * s };
     }
@@ -166,10 +178,10 @@
       if (!drag) fit();
       svg.innerHTML = '';
       const g = geometry(plan, simple ? { w: 1, depth: 1, above: 0 } : getDefaults());
-      // сетка 1 м
-      const gx0 = Math.floor((0 - tf.ox) / tf.s), gx1 = Math.ceil((VW - tf.ox) / tf.s), gy0 = Math.floor((tf.oy - VH) / tf.s), gy1 = Math.ceil(tf.oy / tf.s);
-      for (let x = gx0; x <= gx1; x++) svg.appendChild(el('line', { x1: X([x, 0]), y1: 0, x2: X([x, 0]), y2: VH, class: 'plan-grid' }));
-      for (let y = gy0; y <= gy1; y++) svg.appendChild(el('line', { x1: 0, y1: Y([0, y]), x2: VW, y2: Y([0, y]), class: 'plan-grid' }));
+      // сетка: шаг GRID (1 м или 10 см)
+      const gx0 = Math.floor((0 - tf.ox) / tf.s / GRID) * GRID, gx1 = Math.ceil((VW - tf.ox) / tf.s), gy0 = Math.floor((tf.oy - VH) / tf.s / GRID) * GRID, gy1 = Math.ceil(tf.oy / tf.s);
+      for (let x = gx0; x <= gx1; x += GRID) svg.appendChild(el('line', { x1: X([x, 0]), y1: 0, x2: X([x, 0]), y2: VH, class: 'plan-grid' }));
+      for (let y = gy0; y <= gy1; y += GRID) svg.appendChild(el('line', { x1: 0, y1: Y([0, y]), x2: VW, y2: Y([0, y]), class: 'plan-grid' }));
       // лента: наружный − внутренний
       if (simple) {
         svg.appendChild(el('polygon', { points: g.verts.map((p) => X(p) + ',' + Y(p)).join(' '), class: g.valid ? 'viz-area' : 'plan-tape plan-tape--bad' }));
@@ -197,7 +209,7 @@
         if (g.edges.length <= 8) {
           const mx = (X(e.a) + X(e.b)) / 2, my = (Y(e.a) + Y(e.b)) / 2;
           const nx = -(Y(e.b) - Y(e.a)), ny = X(e.b) - X(e.a); const l = Math.hypot(nx, ny) || 1;
-          svg.appendChild(el('text', { x: mx - nx / l * 14, y: my - ny / l * 14 + 4, class: 'viz-label', 'text-anchor': 'middle' }, (simple ? (i + 1) + ': ' : '') + fmt(e.len) + ' м'));
+          svg.appendChild(el('text', { x: mx - nx / l * 14, y: my - ny / l * 14 + 4, class: 'viz-label', 'text-anchor': 'middle' }, (simple ? (i + 1) + ': ' : '') + fmt(e.len, opts.digits) + (opts.unitInLabels === false ? '' : ' ' + U)));
         }
       });
       // углы
@@ -208,6 +220,7 @@
       });
       svg.appendChild(el('text', { x: VW / 2, y: VH - 8, class: 'viz-caption', 'text-anchor': 'middle' },
         !g.valid ? 'Контур пересекает сам себя — поправьте углы'
+          : opts.caption ? opts.caption(g, fmt)
           : simple ? `Площадь ${fmt(g.outerArea)} м² · периметр ${fmt(g.perimeter)} м · стен ${g.edges.length}`
           : `Лента: ${fmt(g.footprint)} м² в плане · периметр ${fmt(g.perimeter)} м`));
       renderPanel(g);
@@ -242,7 +255,7 @@
         const e = g.edges[sel.i], i = sel.i;
         const t = document.createElement('p'); t.className = 'plan-panel-title'; t.textContent = 'Сторона ' + (i + 1);
         panel.appendChild(t);
-        panel.appendChild(num('Длина', fmt(e.len), 'м', (v) => {
+        panel.appendChild(num('Длина', fmt(e.len), U, (v) => {
           const len = Number(v); if (!(len > 0)) return;
           const n = plan.verts.length; const a = plan.verts[i], b = plan.verts[(i + 1) % n];
           const dx = b[0] - a[0], dy = b[1] - a[1], cur = Math.hypot(dx, dy) || 1;
@@ -285,5 +298,5 @@
     return { redraw };
   }
 
-  window.CalcPlan = { geometry, prisms, editor, PRESETS, ROOM_PRESETS, PLOT_PRESETS };
+  window.CalcPlan = { geometry, prisms, editor, PRESETS, ROOM_PRESETS, PLOT_PRESETS, AQUA_PRESETS };
 })();

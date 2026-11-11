@@ -118,6 +118,8 @@
 .viz-area { fill: var(--color-accent-subtle); stroke: var(--color-accent); stroke-width: 1.5; }
 .viz-outline { fill: none; stroke: var(--color-accent); stroke-width: 1.5; }
 .viz-rail { stroke: #8a5a2b; stroke-width: 3.5; stroke-linecap: round; }
+.viz-glass { stroke: #6fa8c8; stroke-width: 1.8; stroke-linecap: round; stroke-opacity: 0.9; }
+.viz-glass--thin { stroke-width: 1.1; stroke-opacity: 0.6; }
 .viz-gkl-sheet { fill: #e9eef3; fill-opacity: 0.3; stroke: #b3bec9; stroke-width: 0.9; }
 .viz-gkl-hole { fill: var(--color-bg); stroke: #9aa7b4; stroke-dasharray: 4 3; }
 .viz-fline { stroke-linecap: round; }
