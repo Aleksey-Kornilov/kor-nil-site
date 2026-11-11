@@ -25,7 +25,7 @@ const BACKEND = process.env.KOR_NIL_BACKEND || '/root/sntchat-app/backend';
 const DRY = process.argv.includes('--dry');
 const FORCE = process.argv.includes('--force');
 const KIND = (process.argv.find((a) => a.startsWith('--kind=')) || '').slice(7) || kindForToday();
-const NAMES = { day: 'за ' + human(Y), week: 'за неделю', month: 'за месяц', quarter: 'за квартал' };
+const NAMES = { day: '📊 СУТОЧНАЯ СВОДКА · kor-nil.ru · за ' + human(Y), week: '📅 НЕДЕЛЬНАЯ СВОДКА · kor-nil.ru', month: '🗓 МЕСЯЧНАЯ СВОДКА · kor-nil.ru', quarter: '🗂 КВАРТАЛЬНАЯ СВОДКА · kor-nil.ru' };
 
 async function main() {
   const stateFile = path.join(HERE, 'last-sent.txt');
@@ -35,7 +35,7 @@ async function main() {
     text = KIND === 'day' ? await daily() : await periodReport(KIND);
   } catch (e) {
     console.error(new Date().toISOString(), KIND, 'сбор не удался:', e.message);
-    text = `📊 kor-nil.ru — сводку ${NAMES[KIND] || ''} собрать не удалось: Метрика не ответила (${String(e.message).slice(0, 80)}). Завтра попробую снова.`;
+    text = `${NAMES[KIND] || '📊 kor-nil.ru'}\n\nСобрать не удалось: Метрика не ответила (${String(e.message).slice(0, 80)}). Завтра попробую снова.`;
   }
   if (DRY) { console.log(text); return; }
   require(path.join(BACKEND, 'node_modules/dotenv')).config({ path: path.join(BACKEND, '.env') });

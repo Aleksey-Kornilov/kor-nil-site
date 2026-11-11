@@ -52,7 +52,7 @@ function compose(m, w) {
   const goalLine = (st, g) => (st.goals[g.code] ? `${g.words} — ${times(st.goals[g.code])}` : null);
   const zay = d.goals.zayavka || 0;
 
-  L.push(`📊 kor-nil.ru — сводка за ${human(Y)}`, '');
+  L.push(`📊 СУТОЧНАЯ СВОДКА · kor-nil.ru · за ${human(Y)}`, '');
   L.push('КОРОТКО');
   L.push(`• Людей на сайте: ${d.users} (заходов ${d.visits})`);
   L.push(`• Из поиска: ${people(d.search)}`);

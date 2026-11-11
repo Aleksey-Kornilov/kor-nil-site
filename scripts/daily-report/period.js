@@ -32,6 +32,7 @@ const WORDS = {
   month: { span: 'месяц', this: 'этот месяц', prev: 'прошлым месяцем', series: 'по месяцам' },
   quarter: { span: 'квартал', this: 'этот квартал', prev: 'прошлым кварталом', series: 'по кварталам' },
 };
+const HEAD = { week: '📅 НЕДЕЛЬНАЯ СВОДКА', month: '🗓 МЕСЯЧНАЯ СВОДКА', quarter: '🗂 КВАРТАЛЬНАЯ СВОДКА' };
 function label(kind, [d1, d2]) {
   if (kind === 'week') return `неделя ${human(d1)} — ${human(d2)}`;
   if (kind === 'month') return `${MONTHS[+d1.slice(5, 7) - 1]} ${d1.slice(0, 4)}`;
@@ -119,7 +120,8 @@ function compose(kind, m, w) {
   const noPrev = m.Q[1] < SINCE;
   const was = (n) => (noPrev ? '' : ` — перед этим ${n}`);
   const zay = c.goals.zayavka || 0;
-  L.push(`📅 kor-nil.ru — итоги: ${label(kind, m.P)}`, '');
+  // Первая строка — вид сводки крупно: по старому «итоги: неделя …» Алексей не различал виды
+  L.push(`${HEAD[kind]} · kor-nil.ru · ${label(kind, m.P).replace(/^неделя /, '')}`, '');
   L.push('КОРОТКО');
   L.push(`• Людей: ${c.users} (заходов ${c.visits})${was(p.users)}`);
   L.push(`• Из поиска: ${c.search}${was(p.search)}`);
