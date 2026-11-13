@@ -4961,6 +4961,47 @@ const CALCS = {
     compute(v, mode, sel, extras) { return CALCS.lvt.compute.call(this, v, mode, Object.assign({}, sel, { type: 'click' }), extras); },
   });
 
+  /* ---------- Ходовые размеры материалов — кнопки над полями ----------
+     Сверено с каталогами производителей и магазинов 13.11.2026 (те же списки — в боте ВК, server/vk-bot/flows.js).
+     Кнопка размера ставит сразу два поля: { длина, ширина }. */
+  const sz = (L, W) => fmt(+L) + '×' + fmt(+W);
+  const sizes = (list, fL, fW) => list.map(([L, W]) => [sz(L, W), { [fL]: L, [fW]: W }]);
+  const addPresets = (def, rows) => { def.presets = [].concat(Object.prototype.hasOwnProperty.call(def, 'presets') ? def.presets || [] : [], rows); };
+  const LVT_SIZES = [['122', '18.3'], ['120', '18'], ['152', '18'], ['152', '23'], ['61', '30.5'], ['60', '30'], ['91.4', '45.7']];
+  const LAM_SIZES = [['138', '19.3'], ['128.5', '19.2'], ['129.2', '19.3'], ['138', '15.6'], ['129.2', '24.6'], ['205', '24']];
+  const TILE_SIZES = [['20', '20'], ['30', '30'], ['33', '33'], ['40', '40'], ['45', '45'], ['60', '30'], ['60', '60'], ['60', '20'], ['120', '20'], ['120', '60']];
+  const SKIRTING = { label: 'Плинтус', fieldId: 'skirting', unit: 'м', items: [['Короткий', '2.2'], ['Средний', '2.4'], ['Обычный', '2.5']] };
+  const PAINT_CANS = (group) => ({ label: 'Банка', fieldId: 'can', unit: 'л', group, items: [['Малая', '0.9'], ['Средняя', '2.7'], ['Большая', '4.5'], ['Ведро', '9'], ['Ведро', '10']] });
+  const PROFLIST = [['С8', '1.15', '1.2'], ['С20', '1.1', '1.15'], ['С21', '1', '1.05'], ['НС35', '1', '1.06']];
+  const proflist = (group, extra) => ({ label: 'Лист', unit: 'м (рабочая / полная ширина)', group,
+    items: (extra || []).concat(PROFLIST).map(([n, w, full]) => [n + ' ' + fmt(+w) + ' / ' + fmt(+full), { sheetW: w, sheetWFull: full }]) });
+
+  addPresets(CALCS.lvt, [{ label: 'Размер', unit: 'см', items: sizes(LVT_SIZES, 'plankL', 'plankW') }, Object.assign({ group: 'floor' }, SKIRTING)]);
+  addPresets(CALCS.laminate, [{ label: 'Размер', unit: 'см', items: sizes(LAM_SIZES, 'plankL', 'plankW') }, SKIRTING]);
+  addPresets(CALCS.floor, [
+    { label: 'Плитка', unit: 'см', group: 'tile', items: sizes(TILE_SIZES, 'tileL', 'tileW') },
+    { label: 'Мешок клея', fieldId: 'glueBag', unit: 'кг', group: 'tile', items: [['Маленький', '5'], ['Обычный', '25']] },
+    { label: 'Доска', unit: 'см', group: 'board', items: sizes(LAM_SIZES, 'boardL', 'boardW') },
+    { label: 'Планка', unit: 'см', group: 'lvt', items: sizes(LVT_SIZES, 'lvtL', 'lvtW') },
+  ]);
+  addPresets(CALCS.room, [PAINT_CANS('paint')]);
+  (CALCS.room.presets.find((p) => p.fieldId === 'rollL') || { items: [] }).items.splice(1, 0, ['Средний', '15']);
+  addPresets(CALCS.facade, [
+    { label: 'Мешок штукатурки', fieldId: 'plasterBag', unit: 'кг', group: 'plaster', items: [['Обычный', '25'], ['Большой', '30']] },
+    PAINT_CANS('paint'),
+  ]);
+  addPresets(CALCS.roof, [
+    proflist('sheet', [['Металлочерепица', '1.1', '1.19']]),
+    { label: 'Рулон', unit: 'м', group: 'roll', items: [['1×10', { rollW: '1', rollL: '10' }], ['1×15', { rollW: '1', rollL: '15' }]] },
+  ]);
+  addPresets(CALCS.masonry, [{ label: 'Мешок раствора', fieldId: 'bagKg', unit: 'кг', items: [['Маленький', '25'], ['Средний', '40'], ['Большой', '50']] }]);
+  addPresets(CALCS.fence, [proflist('proflist')]);
+  addPresets(CALCS.screed, [
+    { label: 'Мешок цемента', fieldId: 'cemBag', unit: 'кг', group: 'cps', items: [['Маленький', '25'], ['Обычный', '50']] },
+    { label: 'Мешок наливного пола', fieldId: 'selfBag', unit: 'кг', group: 'self', items: [['Обычный', '20'], ['Большой', '25']] },
+  ]);
+  addPresets(CALCS.drywall, [{ label: 'Ширина листа', fieldId: 'sheetW', unit: 'см', items: [['Обычный', '120'], ['Малоформатный', '60']] }]);
+
   /* ---------- Подсказки «?» у полей остальных калькуляторов ----------
      help: поле → текст (или «режим:поле», если в разных режимах поле значит разное);
      helpPics: поля, чей размер калькулятор подсвечивает на схеме (draw, view.focus). */
@@ -5431,11 +5472,16 @@ const CALCS = {
         const row = h('div', { class: 'calc-presets', 'data-group': pr.group || '' });
         row.appendChild(h('span', { class: 'calc-presets-label', text: pr.label + ':' }));
         pr.items.forEach(([label, value]) => {
-          const b = h('button', { type: 'button', class: 'calc-preset', text: label + ' · ' + value + ' ' + pr.unit });
+          // value — число для одного поля pr.fieldId или объект { поле: значение } (размер: длина и ширина сразу)
+          const sets = typeof value === 'object' ? value : { [pr.fieldId]: value };
+          const text = typeof value === 'object' ? label + ' ' + pr.unit : label + ' · ' + value + ' ' + pr.unit;
+          const b = h('button', { type: 'button', class: 'calc-preset', text });
           b.addEventListener('click', () => {
-            state.values[pr.fieldId] = value;
-            const input = fieldsBox.querySelector('[name="' + pr.fieldId + '"]');
-            if (input) input.value = value;
+            Object.entries(sets).forEach(([id, val]) => {
+              state.values[id] = val;
+              const input = fieldsBox.querySelector('[name="' + id + '"]');
+              if (input) input.value = val;
+            });
             render();
           });
           row.appendChild(b);
